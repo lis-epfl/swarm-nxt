@@ -85,9 +85,9 @@ void Controller::SendTrajectoryMessage() {
   
   while (distance < DISTANCE_TOL) {
     if (cur_traj_index_ < num_traj_points) {
-      cur_traj_index++;
       tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
       distance = tf2::tf2Distance(cur_pos_, cur_target_);
+      cur_traj_index_++;
     } else {
       reached_dest_ = true;
       break; 
@@ -189,9 +189,8 @@ void Controller::Loop() {
       if (num_traj_messages_sent_ > 100 /* && altitude correct */) {
         // we are done with taking off, move to follow traj
         // dont do this yet!
-        // change_px4_state("OFFBOARD");
+        change_px4_state("OFFBOARD");
       }
-      // start sending trajectory messages
       break;
     case ControllerState::FollowingTrajectory:
       RCLCPP_INFO(logger, "state: following trajectory");
@@ -213,10 +212,11 @@ void Controller::Loop() {
   }
 
   if (state_ != ControllerState::Idle && !mavros_state_.armed) {
-    RCLCPP_INFO(logger, "Transitioning to non-offboad since controller was disarmed");
     if (mavros_state_.mode == "OFFBOARD") {
       // get the system back to idle
-      change_px4_state("AUTO.LOITER");
+      
+	    RCLCPP_INFO(logger, "Transitioning to non-offboad since controller was disarmed");
+	    change_px4_state("AUTO.LOITER");
     }
   }
 }
