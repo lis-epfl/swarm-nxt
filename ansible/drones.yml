@@ -7,7 +7,8 @@
   tasks: 
   # TODO check if kernel exists, if it does not then patch and build. 
   # build reqs: gcc-aarch64-linux-gnu bc binutils bison dwarves flex gcc git gnupg2 gzip libelf-dev libncurses5-dev libssl-dev make openssl perl-base rsync tar xz-utils
-  
+  # regardless, send the files over. 
+
   - name: Perform a safe upgrade # installs new packages if needed
     ansible.builtin.apt:
       upgrade: "safe"
@@ -27,7 +28,7 @@
       src: templates/jetson_clocks.j2
       dest: /etc/systemd/system/jetson_clocks.service
 
-  - name: Start and enable service
+  - name: Start and enable clocks service
     ansible.builtin.systemd:
       name: jetson_clocks
       state: started
@@ -45,4 +46,34 @@
     ansible.builtin.wait_for_connection:
       delay: 10
       timeout: 120 
+  
+  - name: Ensure power save disable service
+    ansible.builtin.template: 
+      src: templates/disable-wifi-powersave.j2
+      dest: /etc/systemd/system/disable-wifi-powersave.service
+  
+  - name: Start and enable the power save inhibition service
+    ansible.builtin.systemd:
+      name: disable-wifi-powersave
+      state: started
+      enabled: true
+      daemon_reload: true
 
+  - name: "Setup VNC"
+    block: 
+      - name: Enable Automatic Login
+        ansible.builtin.lineinfile: 
+          path: /etc/gdm3/custom.conf
+          regexp: 'AutomaticLoginEnable'
+          line: 'AutomaticLoginEnable=true'
+      - name: Set automatic login user
+        ansible.builtin.lineinfile: 
+          path: /etc/gdm3/custom.conf
+          regexp: 'AutomaticLogin'
+          line: 'AutomaticLogin=lis'
+      - name: Install xorg dummy
+        ansible.builtin.apt: 
+          name: 
+            - xserver-xorg-video-dummy
+            - vino
+      
