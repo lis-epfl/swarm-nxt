@@ -5,8 +5,9 @@
   become: yes # runs everything with sudo 
 
   tasks: 
-  - name: Ensure that the patched kernel exists
-    local_action: ansible.builtin.command 
+  # TODO check if kernel exists, if it does not then patch and build. 
+  # build reqs: gcc-aarch64-linux-gnu bc binutils bison dwarves flex gcc git gnupg2 gzip libelf-dev libncurses5-dev libssl-dev make openssl perl-base rsync tar xz-utils
+  
   - name: Perform a safe upgrade # installs new packages if needed
     ansible.builtin.apt:
       upgrade: "safe"
@@ -32,8 +33,16 @@
       state: started
       enabled: true
       daemon_reload: true
-  - name: Check if 
 
 
-  # - name: Set max power mode # must be last since it reboots the system.
-  #   ansible.builtin.command: nvpmodel -m 0 --force
+  - name: Set max power mode 
+    ansible.builtin.command: nvpmodel -m 0 --force
+    async: 1
+    poll: 0 # skip to next task 
+    ignore_errors: true # TODO: make this less fragile
+  
+  - name: Wait for the system to come back up
+    ansible.builtin.wait_for_connection:
+      delay: 10
+      timeout: 120 
+
