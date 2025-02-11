@@ -1,0 +1,13 @@
+---
+- name: Pre-Setup
+  hosts: drones
+  remote_user: lis
+
+  tasks: 
+  - name: Perform a safe upgrade # installs new packages if needed
+    ansible.builtin.apt:
+      upgrade: "safe"
+  - name: Ensure apt packages are installed
+    ansible.builtin.apt: 
+      name: python3-pip htop sysstat
+      state: latest
