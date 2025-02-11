@@ -44,8 +44,8 @@
   
   - name: Wait for the system to come back up
     ansible.builtin.wait_for_connection:
-      delay: 10
-      timeout: 120 
+      # delay: 10
+      timeout: 360 
   
   - name: Ensure power save disable service
     ansible.builtin.template: 
@@ -76,4 +76,54 @@
           name: 
             - xserver-xorg-video-dummy
             - vino
-      
+      - name: Add vino to graphical session wants
+        ansible.builtin.file: 
+          src: /usr/lib/systemd/user/vino-server.service
+          path: /usr/lib/systemd/user/graphical-session.target.wants/vino-server.service
+          state: "link"
+      - name: "Set gsettings"
+        become: false
+        block:
+          # TODO: for some reason the community dcom modifier doesn't work. this is a hack to keep going. 
+          - name: "Disable prompt requirement"
+            ansible.builtin.command: gsettings set org.gnome.Vino prompt-enabled false 
+          - name: "Disable encryption"
+            ansible.builtin.command: gsettings set org.gnome.Vino require-encryption false
+          - name: "Set VNC as auth method"
+            ansible.builtin.command: gsettings set org.gnome.Vino authentication-methods \"[\'vnc\']\"
+
+            # shell to allow for this evaluation 
+          - name: "Set password"
+            ansible.builtin.shell: gsettings set org.gnome.Vino vnc-password $(echo -n 'thepassword'|base64)  # TODO: actual password? 
+
+      - name: "xorg configuration"
+        ansible.builtin.blockinfile:
+          path: /etc/X11/xorg.conf
+          append_newline: true
+          prepend_newline: true
+          block: |
+            Section "Device"
+            Identifier "Dummy0"
+            Driver "dummy"
+            VideoRam 16384
+            EndSection
+
+            Section "Monitor"
+            Identifier "Monitor0"
+            HorizSync 5.0-1000.0
+            VertRefresh 5.0-200.0
+            Modeline "1280x800" 24.15 1280 1312 1400 1432 800 819 822 841
+            # Modeline "1920x1080_24.00" 173.00 1920 2048 2248 2576 1080 1083 1088 1120
+            EndSection
+
+            Section "Screen"
+            Identifier "Screen0"
+            Monitor "Monitor0"
+            Device "Dummy0"
+            DefaultDepth 24
+            SubSection "Display"
+            Depth 24
+            Virtual 1280 800
+            # Virtual 1920 1080
+            EndSubSection
+            EndSection
