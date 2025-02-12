@@ -19,6 +19,7 @@
         - python3-pip 
         - htop 
         - sysstat
+        - chrony
       state: latest
   - name: Jetson Stats
     ansible.builtin.pip:

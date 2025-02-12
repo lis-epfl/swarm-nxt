@@ -42,6 +42,7 @@
           name: 
             - gcc-arm-none-eabi
             - fuse
+            - chrony # for time sync
       - name: Allow rootless access to flight controller
         ansible.builtin.user:
           name: "{{ ansible_user_id }}"
