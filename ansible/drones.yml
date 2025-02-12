@@ -11,6 +11,7 @@
 
   - name: Perform a safe upgrade # installs new packages if needed
     ansible.builtin.apt:
+      update_cache: yes
       upgrade: "safe"
   - name: Ensure apt packages are installed
     ansible.builtin.apt: 
@@ -44,7 +45,7 @@
   
   - name: Wait for the system to come back up
     ansible.builtin.wait_for_connection:
-      # delay: 10
+      delay: 10
       timeout: 360 
   
   - name: Ensure power save disable service
@@ -90,7 +91,7 @@
           - name: "Disable encryption"
             ansible.builtin.command: gsettings set org.gnome.Vino require-encryption false
           - name: "Set VNC as auth method"
-            ansible.builtin.command: gsettings set org.gnome.Vino authentication-methods \"[\'vnc\']\"
+            ansible.builtin.command: gsettings set org.gnome.Vino authentication-methods "['vnc']"
 
             # shell to allow for this evaluation 
           - name: "Set password"
@@ -132,14 +133,29 @@
       - name: Ensure universe is present
         ansible.builtin.lineinfile:
           path: /etc/apt/sources.list
-          line: "deb http://ports.ubuntu.com/ubuntu-ports/ jammy universe"
+          line: "deb http://ports.ubuntu.com/ubuntu-ports/ jammy main restricted universe"
+          regexp: "jammy (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)"
       - name: Ensure universe updates is present
         ansible.builtin.lineinfile:
           path: /etc/apt/sources.list
-          line: "deb http://ports.ubuntu.com/ubuntu-ports/ jammy-updates universe"
-      - name: Ensure software-properties-common is installed
-        ansible.builtin.apt: 
-          name: software-properties-common
+          line: "deb http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main restricted universe"
+          regexp: "jammy-updates (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)" 
+      - name: Add ROS 2 apt
+        block:
+          - name: Add apt key 
+            ansible.builtin.get_url:
+              url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
+              dest: /usr/share/keyrings/ros-archive-keyring.gpg
+
+          - name: Add ROS Repository
+            ansible.builtin.apt_repository:
+              repo: "deb [arch=arm64 signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_distribution_release }} main"
+              state: present
+          - name: Download ROS
+            ansible.builtin.apt:
+              name: ros-humble-ros-base
+              update_cache: true
+              state: latest
         
 
         
