@@ -1,0 +1,59 @@
+---
+- name: Host Dependencies
+  hosts: localhost
+  connection: local 
+  become: yes
+
+  tasks: 
+    - name: Setup ROS
+      block: 
+        - name: Add ROS 2 apt
+          block:
+            - name: Get software-properties-common
+              ansible.builtin.apt: 
+                name: software-properties-common
+
+            - name: Ensure universe is added
+              ansible.builtin.shell: apt-add-repository -y universe
+
+            - name: Add apt key 
+              ansible.builtin.get_url:
+                url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
+                dest: /usr/share/keyrings/ros-archive-keyring.gpg
+            
+            - name: Get architecture
+              ansible.builtin.shell: dpkg --print-architecture
+              register: deb_arch
+              changed_when: false 
+
+            - name: Add ROS Repository
+              ansible.builtin.apt_repository:
+                repo: "deb [arch={{ deb_arch.stdout }} signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_distribution_release }} main"
+                state: present
+            - name: Download ROS
+              ansible.builtin.apt:
+                name: ros-humble-desktop
+                update_cache: true
+                state: latest
+    - name: NXT-FC Subset # Still need to do the git clone of the flight controller repo, and run the dependency script
+      block: 
+      - name: NXT APT Dependencies
+        ansible.builtin.apt:
+          name: 
+            - gcc-arm-none-eabi
+            - fuse
+      - name: Allow rootless access to flight controller
+        ansible.builtin.user:
+          name: "{{ ansible_user_id }}"
+          groups: dialout
+          append: true
+      - name: Remove modemmanager
+        ansible.builtin.apt:
+          name: modemmanager
+          state: absent
+
+      
+    
+    - name: VNC Viewer
+      ansible.builtin.apt:
+        name: gvncviewer
