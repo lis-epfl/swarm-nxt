@@ -156,6 +156,18 @@
               name: ros-humble-ros-base
               update_cache: true
               state: latest
+  - name: NXT compatability
+    block: 
+      - name: Allow rootless access to flight controller
+        ansible.builtin.user:
+          name: "{{ ansible_user_id }}"
+          groups: dialout
+          append: true
+      - name: Remove modemmanager
+        ansible.builtin.apt:
+          name: modemmanager
+          state: absent
+
         
 
         
