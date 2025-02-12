@@ -133,13 +133,13 @@
       - name: Ensure universe is present
         ansible.builtin.lineinfile:
           path: /etc/apt/sources.list
-          line: "deb http://ports.ubuntu.com/ubuntu-ports/ jammy main restricted universe"
-          regexp: "jammy (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)"
+          line: "deb http://ports.ubuntu.com/ubuntu-ports/ {{ ansible_distribution_release }} main restricted universe"
+          regexp: "{{ ansible_distribution_release }} (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)"
       - name: Ensure universe updates is present
         ansible.builtin.lineinfile:
           path: /etc/apt/sources.list
-          line: "deb http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main restricted universe"
-          regexp: "jammy-updates (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)" 
+          line: "deb http://ports.ubuntu.com/ubuntu-ports/ {{ ansible_distribution_release }}-updates main restricted universe"
+          regexp: "{{ ansible_distribution_release }}-updates (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)" 
       - name: Add ROS 2 apt
         block:
           - name: Add apt key 
