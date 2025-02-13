@@ -25,7 +25,7 @@
       - name: Send and extract patched kernel if it does exist
         when: patched_kernel_file.stat.exists and patched_kernel_file.stat.checksum == '54d7125a049bebc9393aa4af2a842c8584ebd683e6b89330ee8e6bfdcffc0dfc'
         ansible.builtin.unarchive: 
-          src: patched-kernel.tar.gz
+          src: patched-kernel/patched-kernel.tar.gz
           dest: /tmp
     
       - name: Create patched kernel if it does not exist
