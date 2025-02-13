@@ -5,9 +5,113 @@
   become: yes # runs everything with sudo 
 
   tasks: 
-  # TODO check if kernel exists, if it does not then patch and build. 
-  # build reqs: gcc-aarch64-linux-gnu bc binutils bison dwarves flex gcc git gnupg2 gzip libelf-dev libncurses5-dev libssl-dev make openssl perl-base rsync tar xz-utils
-  # regardless, send the files over. 
+  - name: Check if kernel needs to be patched # if the wifi interface doesn't exist, we need to patch the kernel (or its not plugged in)
+    ansible.builtin.shell: ifconfig wlP1p1s0
+    changed_when: false
+    register: ifconfig_result
+    ignore_errors: true # don't fail the playbook if we get an error, we use this result as a conditional next
+
+  - name: Patched kernel operations
+    when: ifconfig_result.rc != 0
+    block:
+      - name: Check if patched kernel exists
+        ansible.builtin.stat:
+          path: "patched-kernel/patched-kernel.tar.gz"
+          checksum_algorithm: sha256
+          get_checksum: yes
+        register: patched_kernel_file
+        delegate_to: 127.0.0.1
+        become: no
+      - name: Send and extract patched kernel if it does exist
+        when: patched_kernel_file.stat.exists and patched_kernel_file.stat.checksum == '54d7125a049bebc9393aa4af2a842c8584ebd683e6b89330ee8e6bfdcffc0dfc'
+        ansible.builtin.unarchive: 
+          src: patched-kernel.tar.gz
+          dest: /tmp
+    
+      - name: Create patched kernel if it does not exist
+        when: patched_kernel_file.stat.exists == false or patched_kernel_file.stat.checksum != '54d7125a049bebc9393aa4af2a842c8584ebd683e6b89330ee8e6bfdcffc0dfc'
+        block: 
+          - name: Get sources
+            ansible.builtin.get_url:
+              url: https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.0/sources/public_sources.tbz2
+              dest: /tmp/public_sources.tbz2
+          - name: Extract kernel_sources
+            ansible.builtin.unarchive: 
+              src: /tmp/public_sources.tbz2
+              dest: /tmp
+              remote_src: yes
+              include: Linux_for_Tegra/source/kernel_src.tbz2
+          - name: Extract the kernel folder
+            ansible.builtin.unarchive:
+              src: /tmp/Linux_for_Tegra/source/kernel_src.tbz2
+              dest: /tmp
+              remote_src: yes
+          - name: Patch defconfig
+            ansible.builtin.blockinfile:
+              path: /tmp/kernel/kernel-jammy-src/arch/arm64/configs/defconfig
+              block: |
+                CONFIG_WLAN=y
+                CONFIG_WLAN_VENDOR_INTEL=y
+                CONFIG_IWLWIFI=m
+                CONFIG_IWLWIFI_LEDS=y
+                CONFIG_IWLDVM=m
+                CONFIG_IWLMVM=m
+                CONFIG_IWLWIFI_OPMODE_MODULAR=y
+          - name: Ensure build dependencies
+            ansible.builtin.apt: 
+              name: 
+                - gcc-aarch64-linux-gnu 
+                - bc 
+                - binutils 
+                - bison
+                - dwarves
+                - flex
+                - gcc
+                - git
+                - gnupg2
+                - gzip
+                - libelf-dev
+                - libncurses5-dev
+                - libssl-dev
+                - make
+                - openssl
+                - pahole
+                - perl-base
+                - rsync
+                - tar
+                - xz-utils
+              state: latest
+              update_cache: yes
+
+          - name: Build the kernel (will take a long time!)
+            community.general.make: 
+              chdir: /tmp/kernel
+              params:
+                ARCH: arm64
+          - name: Archive the kernel
+            community.general.archive: 
+              path: /tmp/kernel
+              dest: /tmp/patched-kernel.tar.gz
+          - name: Compute the hash
+            ansible.builtin.shell: cd /tmp && sha256sum patched-kernel.tar.gz > /tmp/patched-kernel.tar.gz.sha256
+          - name: Move into a subfolder for copy
+            ansible.builtin.shell: mkdir -p /tmp/patched-kernel && mv /tmp/patched-kernel.tar.gz* /tmp/patched-kernel/
+          - name: Copy archive
+            become: false
+            ansible.builtin.synchronize:
+              src: /tmp/patched-kernel
+              dest: .
+              mode: pull
+          - name: Check if copy was good
+            local_action: ansible.builtin.command cd patched-kernel && sha256sum --check patched-kernel/patched-kernel.tar.gz.sha256
+              # changed_when: false
+      
+      - name: Install the patched kernel
+        community.general.make:
+          chdir: /tmp/kernel
+          target: install
+          params:
+            ARCH: arm64
 
   - name: Perform a safe upgrade # installs new packages if needed
     ansible.builtin.apt:
