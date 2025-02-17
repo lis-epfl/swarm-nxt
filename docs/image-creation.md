@@ -1,12 +1,4 @@
-# Software Setup
-
-This section describes how to setup the software on the host computer and the target. We use [Ansible](https://www.redhat.com/en/ansible-collaborative) to facilitate idempotent configuration. 
-
-## Hardware Setup 
-
-1. Install the empty storage card, WiFi card, and the Jetson compute unit to the carrier board. Ensure that each device is correctly seated. 
-2. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
-3. Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board
+# Image Creation
 
 ## Raw Image Setup 
 
@@ -42,7 +34,8 @@ Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/
 !!! warning
     If you get an error like "cannot stat /dev/nvme0n1", ensure that the flash storage is fully seated.
 
-The raw image was created after these steps. 1
+!!! note
+    The raw image was created after these steps.
 
 
 ## Password-Free Access
@@ -55,14 +48,18 @@ For password free access to the Orin, follow these steps:
 4. Add your key to the agent `ssh-add`
 5. Ensure that you can access the device without a password: `ssh lis@192.168.55.1`
 
-## Set Hostname
-
-For easier reference to the device, you can set the hostname per-device by ssh'ing in and running `sudo hostnamectl hostname nxt<num>`
-
-We track the hostnames that have been assigned in [this](https://docs.google.com/spreadsheets/d/1uuXMoGTHYXsHLR0sF3Sd2kVL-pUlbTp2RO5qc1V2LAo/edit) spreadsheet. 
-
 
 ## Ansible Installation 
+
+Install ansible on the host computer: [Link](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip). We want to install the full ansible package with: `python3 -m pip install --user ansible`. 
+
+Then, clone the [repo](https://github.com/lis-epfl/onix-nxt), and open a terminal in the ansible directory. To make the following process faster, download the patched-kernel tarball from the [Google Drive](https://drive.google.com/drive/u/1/folders/1XL-hTVf6IsB96XvfQLSesLO4FHOVjW6y). Place this file in a folder called `ansible/patched-kernel` inside the repo. 
+
+Run `ansible-playbook -i inventory.ini drone-setup.yml -K`. It will ask you for a BECOME password. It is the root password of the orin (`orin`). There should be no failed steps.
+
+!!! note
+    The post install image was created after this step. 
+
 
 ## Backups and Restores
 
