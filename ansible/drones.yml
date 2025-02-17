@@ -265,7 +265,7 @@
     block: 
       - name: Allow rootless access to flight controller
         ansible.builtin.user:
-          name: "{{ ansible_user_id }}"
+          name: "lis"
           groups: dialout
           append: true
       - name: Remove modemmanager
