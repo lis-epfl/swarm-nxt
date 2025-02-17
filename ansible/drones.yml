@@ -272,6 +272,9 @@
         ansible.builtin.apt:
           name: modemmanager
           state: absent
+      - name: Install mavsdk
+        ansible.builtin.pip:
+          name: mavsdk
 
         
 
