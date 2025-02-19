@@ -7,6 +7,7 @@
     - name: path
       prompt: Where do you want things downloaded? 
       private: false
+      default: "~/nxt_flight_controller"
 
   tasks: 
       - name: Make path
