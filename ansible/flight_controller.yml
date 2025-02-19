@@ -1,0 +1,53 @@
+- name: Flight Controller Host Dependencies
+  hosts: localhost
+  connection: local 
+  become: yes
+
+  vars-prompt: 
+    - name: path
+      prompt: Where do you want things downloaded? 
+      private: false
+
+  tasks: 
+      - name: NXT APT Dependencies
+        ansible.builtin.apt:
+          name: 
+            - gcc-arm-none-eabi
+            - fuse
+            - gstreamer1.0-plugins-bad
+            - gstreamer1.0-libav
+            - gstreamer1.0-gl
+            - libfuse2
+            - libxcb-xinerama0 
+            - libxkbcommon-x11-0 
+            - libxcb-cursor-dev
+            - chrony # for time sync
+      - name: Allow rootless access to flight controller
+        ansible.builtin.user:
+          name: "{{ ansible_user_id }}"
+          groups: dialout
+          append: true
+      - name: Remove modemmanager
+        ansible.builtin.apt:
+          name: modemmanager
+          state: absent
+      - name: Download necessary items
+        become: false
+        block: 
+        - name: Get QGroundControl
+          ansible.builtin.get_url:
+            url: https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage
+            dest: "{{ path }}/QGroundControl.AppImage"
+            mode: '0755' # executable for us
+        - name: Clone Git Repository
+          ansible.builtin.git: 
+            repo: "https://github.com/Peize-Liu/PX4-Autopilot.git"
+            dest: "{{ path }}/PX4-Autopilot"
+        - name: Build bootloader
+          community.general.make:
+            chdir: "{{ path }}/PX4-Autopilot"
+            target: hkust_nxt-dual_bootloader
+        - name: Build main code
+          community.general.make:
+            chdir: "{{ path }}/PX4-Autopilot"
+            target: kust_nxt-dual        

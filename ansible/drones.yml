@@ -129,6 +129,7 @@
     ansible.builtin.pip:
       name: 
         - jetson-stats
+
   - name: Ensure Jetson clocks service
     ansible.builtin.template: 
       src: templates/jetson_clocks.j2
@@ -140,7 +141,6 @@
       state: started
       enabled: true
       daemon_reload: true
-
 
   - name: Set max power mode 
     ansible.builtin.command: nvpmodel -m 0 --force
