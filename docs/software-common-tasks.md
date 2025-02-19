@@ -1,5 +1,8 @@
 # Common Software Tasks
 
+## Ansible Installation 
+
+Install ansible on the host computer: `python3 -m pip install --user ansible`. For more information, see the [Ansible Documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip)
 
 ## Password-Free Access
 

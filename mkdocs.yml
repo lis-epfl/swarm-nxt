@@ -3,6 +3,7 @@ nav:
   - Home: index.md
   - Software Setup: software-setup.md
   - Image Creation Steps: image-creation.md
+  - Flight Controller Setup: nxt-setup.md
   - Common Software Tasks: software-common-tasks.md
 theme: readthedocs
 markdown_extensions:
