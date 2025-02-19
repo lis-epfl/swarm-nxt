@@ -18,6 +18,7 @@
           mode: "0755"
       - name: NXT APT Dependencies
         ansible.builtin.apt:
+          update_cache: true
           name: 
             - gcc-arm-none-eabi
             - fuse
@@ -30,7 +31,7 @@
             - libxcb-cursor-dev
             - chrony # for time sync
       - name: Allow rootless access to flight controller
-        ansible.builtin.user:
+        ansible.builtin.user: # Add the current user to the dialout group
           name: "{{ ansible_user_id }}"
           groups: dialout
           append: true
