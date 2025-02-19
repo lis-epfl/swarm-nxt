@@ -1,2 +1,2 @@
-# Onix NXT
-Swarm MPC Control on Onix NXT
+# Omni NXT
+Swarm MPC Control on Omni NXT
