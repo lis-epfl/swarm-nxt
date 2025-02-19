@@ -22,13 +22,13 @@ Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/
 5. Reply Y to showing all Jetson versions. Select JetPack 6.2
 6. Additional SDKs: <!-- TODO: which ones? -->
 7. Customize install settings: Y
-6. Select all the options by using the arrow keys and space to select, enter to continue
-7. Reply Y to "Do you want to flash Jetson Orin NX module?". Select Pre-Config for OEM Config. 
+8. Select all the options by using the arrow keys and space to select, enter to continue
+9. Reply Y to "Do you want to flash Jetson Orin NX module?". Select Pre-Config for OEM Config. 
 10. Username: lis, Password: orin
-8. Choose NVME for the storage device
-11. Wait for the installation to finish. 
-12. Proxy mode
-9. Select the IP that you want the device to have. This documentation assumes `192.168.55.1`
+11. Choose NVME for the storage device
+12. Wait for the installation to finish. 
+13. Select proxy mode
+14. Select the IP that you want the device to have. This documentation assumes `192.168.55.1`
 
 
 !!! warning
@@ -40,18 +40,11 @@ Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/
 
 ## Password-Free Access
 
-For password free access to the Orin, follow these steps: 
-
-1. Ensure that you have an SSH key in ~/.ssh 
-2. With the USB connected, run `ssh-copy-id lis@192.168.55.1`
-3. Make sure that the ssh-agent is on: ``eval `ssh-agent` `` 
-4. Add your key to the agent `ssh-add`
-5. Ensure that you can access the device without a password: `ssh lis@192.168.55.1`
-
+See [Password-Free Access](software-common-tasks.md#password-free-access)
 
 ## Ansible Installation 
 
-Install ansible on the host computer: [Link](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip). We want to install the full ansible package with: `python3 -m pip install --user ansible`. 
+Install ansible on the host computer: `python3 -m pip install --user ansible`. For more information, see the [Ansible Documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip)
 
 Then, clone the [repo](https://github.com/lis-epfl/onix-nxt), and open a terminal in the ansible directory. To make the following process faster, download the patched-kernel tarball from the [Google Drive](https://drive.google.com/drive/u/1/folders/1XL-hTVf6IsB96XvfQLSesLO4FHOVjW6y). Place this file in a folder called `ansible/patched-kernel` inside the repo. 
 

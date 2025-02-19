@@ -1,8 +1,13 @@
-# NXT Firmware Setup
+# Flight Controller Setup
+
+## Host Computer Dependencies
+t
+
+
 
 ## Flashing Firmware
 
-1. Install 
+1. Connect a USB-C cable to the flight controller 
 
 
 <!-- TODO: 
