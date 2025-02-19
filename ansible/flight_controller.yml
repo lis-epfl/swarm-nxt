@@ -3,12 +3,18 @@
   connection: local 
   become: yes
 
-  vars-prompt: 
+  vars_prompt: 
     - name: path
       prompt: Where do you want things downloaded? 
       private: false
 
   tasks: 
+      - name: Make path
+        become: false
+        ansible.builtin.file: 
+          path: "{{ path }}"
+          state: directory
+          mode: "0755"
       - name: NXT APT Dependencies
         ansible.builtin.apt:
           name: 
@@ -43,6 +49,7 @@
           ansible.builtin.git: 
             repo: "https://github.com/Peize-Liu/PX4-Autopilot.git"
             dest: "{{ path }}/PX4-Autopilot"
+            force: yes
         - name: Build bootloader
           community.general.make:
             chdir: "{{ path }}/PX4-Autopilot"
@@ -50,4 +57,4 @@
         - name: Build main code
           community.general.make:
             chdir: "{{ path }}/PX4-Autopilot"
-            target: kust_nxt-dual        
+            target: hkust_nxt-dual        
