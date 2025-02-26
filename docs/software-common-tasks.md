@@ -8,7 +8,8 @@ Install ansible on the host computer: `python3 -m pip install --user ansible`. F
 
 For password free access to the Orin, follow these steps: 
 
-1. Ensure that you have an SSH key in ~/.ssh 
+1. Ensure that you have an SSH key in ~/.ssh
+    1. If not, run `ssh-keygen -t ed25519 -C <yourCommentHere>`
 2. With the USB connected, run `ssh-copy-id lis@192.168.55.1`
 3. Make sure that the ssh-agent is on: ``eval `ssh-agent` `` 
 4. Add your key to the agent: `ssh-add`
