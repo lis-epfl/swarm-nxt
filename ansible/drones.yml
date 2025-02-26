@@ -261,8 +261,15 @@
               name: 
                 - ros-humble-ros-base
                 - ros-dev-tools
+                - ros-humble-mavros
+                - ros-humble-mavros-extras
               update_cache: true
               state: latest
+          - name: Get geoids
+            ansible.builtin.shell: geographiclib-get-geoids all
+          - name: Patch pluginlists
+            ansible.
+                  
   - name: NXT compatability
     block: 
       - name: Allow rootless access to flight controller

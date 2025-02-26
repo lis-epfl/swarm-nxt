@@ -35,8 +35,12 @@
                 name: 
                   - ros-humble-desktop
                   - ros-dev-tools
+                  - ros-humble-mavros
+                  - ros-humble-mavros-extras
                 update_cache: true
-                state: latest    
+                state: latest   
+            - name: Install geoids
+              ansible.builtin.shell: geographiclib-get-geoids all 
     - name: VNC Viewer
       ansible.builtin.apt:
         name: gvncviewer
