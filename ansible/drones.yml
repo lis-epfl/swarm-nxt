@@ -268,7 +268,9 @@
           - name: Get geoids
             ansible.builtin.shell: geographiclib-get-geoids all
           - name: Patch pluginlists
-            ansible.
+            ansible.builtin.template:
+              src: templates/px4_pluginlists.yaml
+              dest: /opt/ros/humble/share/mavros/launch/px4_pluginlists.yaml 
                   
   - name: NXT compatability
     block: 
