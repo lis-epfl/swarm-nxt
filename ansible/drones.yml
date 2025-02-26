@@ -258,7 +258,9 @@
               state: present
           - name: Download ROS
             ansible.builtin.apt:
-              name: ros-humble-ros-base
+              name: 
+                - ros-humble-ros-base
+                - ros-dev-tools
               update_cache: true
               state: latest
   - name: NXT compatability

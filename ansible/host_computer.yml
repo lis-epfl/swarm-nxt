@@ -32,7 +32,9 @@
                 state: present
             - name: Download ROS
               ansible.builtin.apt:
-                name: ros-humble-desktop
+                name: 
+                  - ros-humble-desktop
+                  - ros-dev-tools
                 update_cache: true
                 state: latest    
     - name: VNC Viewer
