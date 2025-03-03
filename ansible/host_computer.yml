@@ -44,3 +44,15 @@
     - name: VNC Viewer
       ansible.builtin.apt:
         name: gvncviewer
+    - name: Chrony Setup
+      block: 
+        - name: Get Chrony
+          ansible.builtin.apt: Chrony
+        - name: Set allowed subnets
+          ansible.builtin.blockinfile:
+            path: /etc/chrony/chrony.conf
+            marker: "# ANSIBLE MANAGED BLOCK"
+            block: |
+              {% for subnet in chrony_allowed_subnets %}
+              allow {{ subnet }}
+              {% endfor %}
