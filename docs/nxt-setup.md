@@ -65,6 +65,7 @@ Then, follow one of the steps below:
 1. Click on the Q button on the top left, click on Vehicle Setup, and parameters. 
 2. Click the tools button and select "Load from file". 
 3. Select the parameter file that can be found on the Google Drive. 
+4. Follow the [Sensor Calibration](#sensors) and [Radio Calibration](#remote-control) steps since they need to be done for each drone/RC individually.
 
 !!! warning
     This pre-saved file assumes the same settings as the Manual Setup below. If anything has changed, make sure to change it before starting. 
@@ -179,3 +180,58 @@ If you run `cat extras.txt`, the mavlink stream line should be present.
 You can reboot the flight controller with `reboot` in the console. Connect the appropriate port to the THS1 port on the Onix, and SSH in. To test if the telemetry is streaming, run `python3 docs/examples/mavsdk_imu.py`. The rate should be roughly 250Hz. 
 
 
+#### Remote Control
+
+Ensure the Taranis has been setup following the [Remote Control Setup Instructions](remote-control-setup.md). 
+
+Go to the radio tab and follow the calibration procedure. 
+
+Go to the flight modes page and set the channels like the image: 
+
+![](images/flight_modes.png)
+
+#### Safety Setup
+
+On the Safety tab: 
+
+1. Set the battery failsafe to land mode
+2. Set the RC loss failsafe to land mode
+3. Set the geofence failsafe to land mode
+4. Set the land mode speed to 0.3m/s and disarm after 7s. You will have to force save.
+
+On the parameters tab: 
+
+1. Set `COM_OBL_RC_ACT` to Land Mode
+
+
+#### Sensors
+
+On the sensors tab: 
+
+Click on the orientations sub-tab, and set the autopilot orientation to `ROTATION_ROLL_180_YAW_90`. Reboot if prompted.
+
+!!! important
+    This is true if the arrow on the flight controller is pointed to the right if looked at from the bottom (orin on the back)
+
+Calibrate the gyroscope by putting the drone on a level surface, and then clicking the gyroscope button and following the wizard. 
+
+Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. 
+
+#### EKF Setup
+
+Set the following parameters in the Parameters screen: 
+
+| **Parameter**       | **Value**        | **Notes**                                       |
+|---------------------|------------------|-------------------------------------------------|
+| `EKF2_ACC_NOISE`   | max_value (1.00)  |                                                 |
+| `EKF2_ACC_B_NOISE` | max_value (0.01)  |                                                 |
+| `EKF2_GYR_NOISE`   | max_value (0.1)   |                                                 |
+| `EKF2_GYR_B_NOISE` | max_value (0.01)  |                                                 |
+| `EKF2_EV_NOISE_MD` | 0.0               |                                                 |
+| `EKF2_EVP_NOISE`   | 0                 | Need to force save                              |
+| `EKF2_EVA_NOISE`   | 0                 |                                                 |
+| `EKF2_EV_CTRL`     | 11                | Horizontal, Vertical, and Yaw should be checked |
+| `EKF2_HGT_REF`     | Vision            |                                                 |
+| `EKF2_GPS_CTRL`    | 0                 |                                                 |
+| `EKF2_BARO_CTRL`   | 0                 |                                                 |
+| `EKF2_RNG_CTRL`    | 0                 |                                                 |
