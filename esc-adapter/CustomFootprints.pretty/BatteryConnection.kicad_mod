@@ -1,0 +1,98 @@
+(footprint "BatteryConnection"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 -3 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "454e6cf5-3f05-4bb2-a926-04e20c5ec0c5")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "BatteryConnection"
+		(at 0 3 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "0c45ef47-1e04-40aa-b836-94c301b296ad")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "14b778d8-acde-4f12-b111-1f986cbcecf7")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "475094bb-cbaf-452d-89e2-816416d8da13")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "23b18b19-5698-4580-b8a1-c96f89ca719f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_text user "${REFERENCE}"
+		(at 0 5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "58028507-cc52-4b81-99be-4525cf047e90")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at 0 0)
+		(size 3 3)
+		(drill 2.125)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "604600d5-22e6-4bc3-a239-f995e172605d")
+	)
+	(pad "2" thru_hole circle
+		(at 6.5 0)
+		(size 3 3)
+		(drill 2.125)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "e310f89b-ac99-4419-bb18-4d40ebb65d5e")
+	)
+)
