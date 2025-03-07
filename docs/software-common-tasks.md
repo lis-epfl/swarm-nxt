@@ -38,3 +38,17 @@ wifi-sec.key-mgmt wpa-eap \
 ```
 
 Replace YourUsername, YourPassword with your GASPAR credentials. You can find the bssid of your local router by `nmcli device wifi list`. Use that instead of `AA:BB:CC:DD:EE:FF`.
+
+## Wireless Connection to QGroundControl
+
+Ensure the drone is connected to the same Wi-Fi network as the computer running QGroundControl. Run the following command on the drone: 
+
+```
+mavproxy.py --master=/dev/ttyTHS1 --baudrate=921600 --out=udp:<ip_of_host_computer>:14550
+```
+
+The connection should be established in QGroundControl right away.
+
+
+## Position Estimate Setup
+

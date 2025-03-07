@@ -41,18 +41,38 @@
                 state: latest   
             - name: Install geoids
               ansible.builtin.shell: geographiclib-get-geoids all 
+            
+            - name: Set domain id
+              ansible.builtin.blockinfile: 
+                path: ~/.bashrc
+                block: |
+                  export ROS_DOMAIN_ID={{ ros_domain_id }}
+                
+                
     - name: VNC Viewer
       ansible.builtin.apt:
         name: gvncviewer
     - name: Chrony Setup
       block: 
         - name: Get Chrony
-          ansible.builtin.apt: Chrony
+          ansible.builtin.apt: 
+            name: chrony
+        - name: Remove all sources
+          ansible.builtin.replace: 
+            path: /etc/chrony/chrony.conf
+            regexp: "^((pool)|(sourcedir))"
+            replace: "# \\1"
         - name: Set allowed subnets
           ansible.builtin.blockinfile:
             path: /etc/chrony/chrony.conf
-            marker: "# ANSIBLE MANAGED BLOCK"
-            block: |
+            marker: "# {mark} ANSIBLE MANAGED BLOCK"
+            block: | # change the allowed subnets in ansible/group_vars/all
               {% for subnet in chrony_allowed_subnets %}
               allow {{ subnet }}
               {% endfor %}
+          register: chrony_conf
+        - name: Restart the service
+          when: chrony_conf.changed
+          ansible.builtin.systemd_service:
+            name: chronyd
+            state: restarted

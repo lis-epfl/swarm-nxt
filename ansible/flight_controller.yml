@@ -29,7 +29,6 @@
             - libxcb-xinerama0 
             - libxkbcommon-x11-0 
             - libxcb-cursor-dev
-            - chrony # for time sync
       - name: Allow rootless access to flight controller
         ansible.builtin.user: # Add the current user to the dialout group
           name: "{{ ansible_user_id }}"

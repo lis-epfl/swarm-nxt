@@ -271,7 +271,20 @@
             ansible.builtin.template:
               src: templates/px4_pluginlists.yaml
               dest: /opt/ros/humble/share/mavros/launch/px4_pluginlists.yaml 
-                  
+          - name: Set bashrc
+            ansible.builtin.blockinfile: 
+              path: ~/.bashrc
+              block: |
+                export ROS_DOMAIN_ID={{ ros_domain_id }}
+          - name: Ensure ros2_ws exists
+            ansible.builtin.file:
+              path: /home/lis/ros2_ws/src
+              state: directory
+          - name: Get optitrack package
+            ansible.builtin.git:
+              repo: https://github.com/lis-epfl/optitrack_packages_ros2/
+              dest: /home/lis/ros2_ws/src/optitrack_packages_ros2
+              
   - name: NXT compatability
     block: 
       - name: Allow rootless access to flight controller
@@ -283,10 +296,34 @@
         ansible.builtin.apt:
           name: modemmanager
           state: absent
-      - name: Install mavsdk
+      - name: Install mavtools
         ansible.builtin.pip:
-          name: mavsdk
-
+          name: 
+            - mavsdk
+            - mavproxy
+  - name: Chrony Configuration 
+    block:
+      - name: Install Chrony
+        ansible.builtin.apt: 
+          name: chrony
+      - name: Remove all sources
+        ansible.builtin.replace: 
+          path: /etc/chrony/chrony.conf
+          regexp: "^((pool)|(sourcedir))" 
+          replace: "# \\1"
+      - name: Add host IPs
+        ansible.builtin.blockinfile: 
+          path: /etc/chrony/chrony.conf
+          block: | # change the possible ips and chrony min/max poll in ansible/group_vars/all
+              {% for host_ip in possible_host_ips %}
+              server {{ host_ip }} iburst minpoll {{ chrony_minpoll }} maxpoll {{ chrony_maxpoll }}
+              {% endfor %}
+      - name: Restart chronyd
+        ansible.builtin.systemd:
+          name: chronyd
+          state: restarted
         
+
+      
 
         

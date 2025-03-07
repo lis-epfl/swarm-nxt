@@ -74,12 +74,20 @@ Then, follow one of the steps below:
 
 You can also set the settings manually. Navigate to the parameters tab, and you can search for these using the search box. Double click to edit.
 
+#### Airframe
+
+!!! important
+    You must do this first, since it will reset the other values.
+
+Under airframe, select Quadcopter X, Generic Quadcopter. Click on apply and restart. 
+
+
 #### General Settings
 
 - If indoors, no GPS (assumed default)
-    - `COM_ARM_WO_GPS`: Warning
-    - `COM_ARM_MAG`: Warning
-    - `SYS_HAS_MAG`, `SYS_HAS_GPS`, `SYS_HAS_BARO`: Set to 0. 
+    - `COM_ARM_WO_GPS`: Warning 
+    - `COM_ARM_MAG_STR`: Warning
+    - `SYS_HAS_MAG`, `SYS_HAS_GPS`, `SYS_HAS_BARO`: Set to 0/Disabled. 
 - `RC_PORT_CONFIG`: Radio Controller 
 - `IMU_GYRO_RATEMAX`: 2000Hz
 - `IMU_INTEG_RATE`: 400Hz
@@ -91,12 +99,11 @@ You can also set the settings manually. Navigate to the parameters tab, and you 
 Navigate to the power tab and fill in these settings: 
 
 - Source: Power Module
-- Set the number of cells and voltage per cell to match the battery that is used. 
-- Max Volt: 4.05V
 
-#### Airframe
+Set the following items to match the battery you're using. We have provided the settings for the battery that we used: 
 
-Under airframe, select Quadcopter X, Generic Quadcopter. Click on apply and restart. 
+- Set the number cells:  6 
+- Full Voltage: 4.05V
 
 #### Actuators
 Open the MAVLink console (in the Analyze Tools menu accessible from the Q button on the main screen). Input the coordinates of the actuators. It is done this way since the Actuators tab truncates values to two decimal places. 
@@ -123,7 +130,7 @@ These positions are relative to the center of gravity of the drone, so ensure th
 Under PWM MAIN, select DShot600 for MAIN 1-4. Click on "Identify & Assign Motors" and follow the process. For collision safety, ensure that the Onix is located closer to the rear rotors (rotors 2 and 4 in the image). 
 
 !!! important
-    Ensure the motors are unmounted before the next step
+    Ensure the propellers are unmounted before the next step
 
 Set the spin direction for each motor so that it matches the image. Enable the slider, slide it up a bit and ensure the rotation direction is correct. 
 
@@ -141,6 +148,9 @@ In the parameters tab, set the following settings:
 - `MAV_0_CONFIG`: TELEM 2
 - `SER_TEL2_BAUD`: 921600 8N1
 
+!!! note 
+    If another port was selected for `MAV_0_CONFIG`, you may have to restart the flight controller by pressing Tools > Reboot Vehicle before the `SER_TEL2_BAUD` is visible. 
+    
 Go back to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
 
 In the console, run the following commands: 
@@ -171,7 +181,7 @@ echo "mavlink stream -d /dev/ttyS1 -s HIGHRES_IMU -r 1000" > extras.txt
 ```
 
 !!! note
-    The HKUST GitHub suggests that the correct port is /dev/ttyS2 for TELEM1, but /dev/ttyS1 is tested and works. An issue has been filed [here](https://github.com/HKUST-Aerial-Robotics/Nxt-FC/issues/22)
+    The HKUST GitHub suggests that the correct port is /dev/ttyS2 for TELEM1, but /dev/ttyS1 is tested and works. An [issue](https://github.com/HKUST-Aerial-Robotics/Nxt-FC/issues/22) has been filed 
 
 If you run `cat extras.txt`, the mavlink stream line should be present. 
 
@@ -235,3 +245,5 @@ Set the following parameters in the Parameters screen:
 | `EKF2_GPS_CTRL`    | 0                 |                                                 |
 | `EKF2_BARO_CTRL`   | 0                 |                                                 |
 | `EKF2_RNG_CTRL`    | 0                 |                                                 |
+
+Restart the drone by going to Tools > Restart.
