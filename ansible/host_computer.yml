@@ -4,6 +4,8 @@
   connection: local 
   become: yes
 
+  ros_path: "~/ros2_ws"
+
   tasks: 
     - name: Setup ROS
       block: 
@@ -47,8 +49,6 @@
                 path: ~/.bashrc
                 block: |
                   export ROS_DOMAIN_ID={{ ros_domain_id }}
-                
-                
     - name: VNC Viewer
       ansible.builtin.apt:
         name: gvncviewer
@@ -76,3 +76,16 @@
           ansible.builtin.systemd_service:
             name: chronyd
             state: restarted
+    - name: Optitrack Packages
+      become: false
+      block: 
+        - name: Make ws folder
+          ansible.builtin.file:
+            path: "{{ ros_path }}/src"
+            state: directory
+        - name: Get optitrack packages
+          ansible.builtin.git: 
+            src: https://github.com/lis-epfl/optitrack_packages_ros2/
+            dest: "{{ ros_path }}/src"
+          
+
