@@ -3,8 +3,8 @@
   hosts: localhost
   connection: local 
   become: yes
-
-  ros_path: "~/ros2_ws"
+  vars:
+    ros_path: "~/ros2_omninxt_ws"
 
   tasks: 
     - name: Setup ROS
@@ -39,6 +39,7 @@
                   - ros-dev-tools
                   - ros-humble-mavros
                   - ros-humble-mavros-extras
+                  - ros-humble-plotjuggler
                 update_cache: true
                 state: latest   
             - name: Install geoids
@@ -85,7 +86,8 @@
             state: directory
         - name: Get optitrack packages
           ansible.builtin.git: 
-            src: https://github.com/lis-epfl/optitrack_packages_ros2/
+            repo: https://github.com/lis-epfl/optitrack_packages_ros2/
             dest: "{{ ros_path }}/src"
+        - name: Patch 
           
 
