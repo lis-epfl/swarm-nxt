@@ -265,26 +265,28 @@
                 - ros-humble-mavros-extras
               update_cache: true
               state: latest
+
+          - name: Set bashrc
+            become: false
+            ansible.builtin.blockinfile: 
+              path: /home/lis/.bashrc
+              block: |
+                source /opt/ros/humble/setup.bash
+                export ROS_DOMAIN_ID={{ ros_domain_id }}
+
           - name: Get geoids
             ansible.builtin.shell: geographiclib-get-geoids all
+
           - name: Patch pluginlists
             ansible.builtin.template:
               src: templates/px4_pluginlists.yaml
               dest: /opt/ros/humble/share/mavros/launch/px4_pluginlists.yaml 
-          - name: Set bashrc
-            ansible.builtin.blockinfile: 
-              path: ~/.bashrc
-              block: |
-                export ROS_DOMAIN_ID={{ ros_domain_id }}
-          - name: Ensure ros2_ws exists
-            ansible.builtin.file:
-              path: /home/lis/ros2_ws/src
-              state: directory
-          - name: Get optitrack package
-            ansible.builtin.git:
-              repo: https://github.com/lis-epfl/optitrack_packages_ros2/
-              dest: /home/lis/ros2_ws/src/optitrack_packages_ros2
-              
+
+          - name: Patch px4_rate
+            ansible.builtin.template:
+              src: templates/px4_config.j2 
+              dest: /opt/ros/humble/share/mavros/launch/px4_config.yaml 
+             
   - name: NXT compatability
     block: 
       - name: Allow rootless access to flight controller

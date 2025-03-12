@@ -1,0 +1,12 @@
+[Unit]
+Description=MAVROS
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/lis/mocap_start.sh
+User=lis
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,92 @@
+---
+- name: Pre-Setup
+  hosts: drones
+  remote_user: lis
+  become: yes # runs everything with sudo 
+  vars: 
+    gcs_url: "100.108.99.105"
+
+  tasks: 
+    - name: Create mavros launch script 
+      become: false
+      ansible.builtin.template: 
+        src: scripts/mavros_start.sh
+        dest: /home/lis/mavros_start.sh
+        mode: "755"
+      
+
+    - name: Install mavros service 
+      ansible.builtin.template: 
+        src: templates/mavros_service.j2
+        dest: /etc/systemd/system/mavros.service
+
+      
+    - name: Start and enable mavros service
+      ansible.builtin.systemd: 
+        name: mavros
+        state: started
+        enabled: true
+        daemon_reload: true
+    
+    - name: Ensure ros2_ws exists
+      ansible.builtin.file:
+        path: /home/lis/ros2_ws/src
+        state: directory
+
+    - name: Mocap to Vision
+      when: "position_estimation == 'optitrack'"
+      block: 
+      - name: Create mocap_to_vision script
+        become: false
+        ansible.builtin.template: 
+          src: scripts/mocap_start.sh
+          dest: /home/lis/mocap_start.sh
+          mode: "755"
+      
+      - name: Install mocap service 
+        ansible.builtin.template: 
+          src: templates/mocap_service.j2
+          dest: /etc/systemd/system/mocap.service
+
+        
+      - name: Start and enable mocap service
+        ansible.builtin.systemd: 
+          name: mocap
+          state: started
+          enabled: true
+          daemon_reload: true
+    
+      - name: Get optitrack package
+        ansible.builtin.git:
+          repo: https://github.com/lis-epfl/optitrack_packages_ros2/
+          dest: /home/lis/ros2_ws/src/optitrack_packages_ros2
+          force: yes
+
+      - name: Remove multiplexer
+        ansible.builtin.file: 
+          path: /home/lis/ros2_ws/src/optitrack_packages_ros2/optitrack_multiplexer_ros2
+          state: absent
+
+      - name: Remove wrapper
+        ansible.builtin.file: 
+          path: /home/lis/ros2_ws/src/optitrack_packages_ros2/optitrack_wrapper_ros2
+          state: absent
+      
+      - name: Get mocap to vision package
+        ansible.builtin.git: 
+          repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
+          dest: /home/lis/ros2_ws/src/mocap_to_vision_pose_ros2
+          force: yes 
+
+      - name: Set correct pose topic for mocap_to_vision_pose # TODO: Perhaps patch mocap_to_vision_pose_ros2
+        ansible.builtin.replace: 
+          path: /home/lis/ros2_ws/src/mocap_to_vision_pose_ros2/config/config.yaml
+          regexp: "/optitrack_multiplexer_node/rigid_body/[A-Za-z_0-9]+"
+          replace: "/optitrack_multiplexer_node/rigid_body/{{ ansible_facts['nodename'] }}"
+      
+      - name: Build mocap_to_vision_pose
+        become: false
+        ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
+        args:
+          chdir: /home/lis/ros2_ws
+
