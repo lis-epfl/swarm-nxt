@@ -41,14 +41,10 @@ Replace YourUsername, YourPassword with your GASPAR credentials. You can find th
 
 ## Wireless Connection to QGroundControl
 
-Ensure the drone is connected to the same Wi-Fi network as the computer running QGroundControl. Run the following command on the drone: 
+Ensure the inventory file has all of the drones you want to connect under the `[drones]` header. 
 
-```
-mavproxy.py --master=/dev/ttyTHS1 --baudrate=921600 --out=udp:<ip_of_host_computer>:14550
-```
+Run the `drones_preflight` ansible playbook: 
 
-The connection should be established in QGroundControl right away.
-
-
-## Position Estimate Setup
-
+1. Change directory to the ansible folder: `cd /path/to/repo/ansible`
+2. Run `ansible-playbook -i inventory.ini drones_preflight.yml -K`
+3. 

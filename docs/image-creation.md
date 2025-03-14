@@ -1,5 +1,8 @@
 # Image Creation
 
+!!! important
+    You do not need to follow these steps if you are simply flashing a pre-made image. 
+
 ## Raw Image Setup 
 
 These steps describe how to build the intial image for the NVIDIA Orin board. These steps are only necessary if you want to rebuild the raw image. 

@@ -2,7 +2,7 @@
 
 This section describes how to setup the software on the host computer and the target. 
 
-## Hardware Setup 
+## Hardware Prerequisites 
 
 1. Install the empty storage card, WiFi card, and the Jetson compute unit to the carrier board. Ensure that each device is correctly seated. 
 2. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
@@ -63,7 +63,4 @@ See [Password-Free Access](software-common-tasks.md#password-free-access)
 
 ## Set Hostname
 
-For easier reference to the device, you can set the hostname per-device by ssh'ing in and running `sudo hostnamectl hostname nxt<num>`
-
-We track the hostnames that have been assigned in [this](https://docs.google.com/spreadsheets/d/1uuXMoGTHYXsHLR0sF3Sd2kVL-pUlbTp2RO5qc1V2LAo/edit) spreadsheet. 
-
+Set the hostname per-device by ssh'ing in and running `sudo hostnamectl hostname nxt<num>`. Label your device with this name for easy reference. This will make managing multiple devices much easier. 
