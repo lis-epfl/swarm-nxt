@@ -3,10 +3,9 @@ Description=MAVROS
 After=multi-user.target
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/bin/bash /home/lis/mavros_start.sh
 User=lis
-RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target

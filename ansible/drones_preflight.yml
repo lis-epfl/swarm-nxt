@@ -13,7 +13,6 @@
         src: scripts/mavros_start.sh
         dest: /home/lis/mavros_start.sh
         mode: "755"
-      
 
     - name: Install mavros service 
       ansible.builtin.template: 
@@ -24,8 +23,8 @@
     - name: Start and enable mavros service
       ansible.builtin.systemd: 
         name: mavros
-        state: started
-        enabled: true
+        state: restarted
+        enabled: false
         daemon_reload: true
     
     - name: Ensure ros2_ws exists
@@ -36,26 +35,6 @@
     - name: Mocap to Vision
       when: "position_estimation == 'optitrack'"
       block: 
-      - name: Create mocap_to_vision script
-        become: false
-        ansible.builtin.template: 
-          src: scripts/mocap_start.sh
-          dest: /home/lis/mocap_start.sh
-          mode: "755"
-      
-      - name: Install mocap service 
-        ansible.builtin.template: 
-          src: templates/mocap_service.j2
-          dest: /etc/systemd/system/mocap.service
-
-        
-      - name: Start and enable mocap service
-        ansible.builtin.systemd: 
-          name: mocap
-          state: started
-          enabled: true
-          daemon_reload: true
-    
       - name: Get optitrack package
         ansible.builtin.git:
           repo: https://github.com/lis-epfl/optitrack_packages_ros2/
@@ -82,11 +61,57 @@
         ansible.builtin.replace: 
           path: /home/lis/ros2_ws/src/mocap_to_vision_pose_ros2/config/config.yaml
           regexp: "/optitrack_multiplexer_node/rigid_body/[A-Za-z_0-9]+"
-          replace: "/optitrack_multiplexer_node/rigid_body/{{ ansible_facts['nodename'] }}"
+          replace: "/optitrack_multiplexer_node/rigid_body/{{ ansible_facts['nodename'] }}" # Set this to the hostname. 
       
       - name: Build mocap_to_vision_pose
         become: false
         ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
         args:
           chdir: /home/lis/ros2_ws
+
+      - name: Create mocap_to_vision script
+        become: false
+        ansible.builtin.template: 
+          src: scripts/mocap_start.sh
+          dest: /home/lis/mocap_start.sh
+          mode: "755"
+      
+      - name: Install mocap service 
+        ansible.builtin.template: 
+          src: templates/mocap_service.j2
+          dest: /etc/systemd/system/mocap.service
+
+        
+      - name: Start and enable mocap service
+        ansible.builtin.systemd: 
+          name: mocap
+          state: restarted
+          enabled: false
+          daemon_reload: true
+      
+
+    - name: "Collect systemd stats"
+      ansible.builtin.service_facts:
+    
+    - name: "Mocap Checks"
+      when: "position_estimation == 'optitrack'"
+      block:
+      - name: Wait for one minute before checking... # this can be better if 
+        ansible.builtin.pause:
+          seconds: 60
+      
+      - name: Mocap running check
+        when: "position_estimation == 'optitrack'"
+        ansible.builtin.assert: 
+          that: "services['mocap.service']['state'] == 'running' and services['mocap.service']['status'] != 'failed'"
+          fail_msg: "Mocap is not running properly!"
+      
+    
+    - name: Mavros running check
+      ansible.builtin.assert: 
+        that: "services['mavros.service']['state'] == 'running' and services['mavros.service']['status'] != 'failed'"
+        fail_msg: "Mavros is not running properly!" 
+
+
+      
 

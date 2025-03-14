@@ -1,5 +1,6 @@
 set -x
 
+export ROS_DOMAIN_ID={{ ros_domain_id }}
 GCS_URL="udp://@{{ gcs_url }}:14550"
 
 source /opt/ros/humble/setup.bash
