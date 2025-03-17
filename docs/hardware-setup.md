@@ -2,7 +2,7 @@
 
 This file takes you through the hardware setup process for the OmniNXT Drone. The bill of materials can be found [here](https://docs.google.com/spreadsheets/d/1R3wPALCepJXdboiaurltGrkgvVYNo0OVzrUW1RJAQ7c/edit?gid=0#gid=0). 
 
-3D print all of the necessary items that are labelled with the manfacturer "Self". 
+3D print all of the necessary items that are labelled with the manufacturer "Self". 
 
 ## Flight Controller and ESC
 
@@ -40,7 +40,7 @@ This file takes you through the hardware setup process for the OmniNXT Drone. Th
 ### Fastening Assembly to Frame
 
 1. Stack the ESC and flight controller such that the big side of the rubber stoppers are touching. The MicroSD Card slot should be above the ESC power connection. 
-2. Prepare the assembly: 
+2. Prepare the assembly: <!--TODOx2 -->
 	1. With the flight controller on the bottom, insert two M2X? bolts on the side with the USB-C port. The head of the bolt should be on the same side as the flight controller
 	2. Insert two M2x? bolts on the opposite side of the USB-C port. 
 	3. Place the 6mm nylon spacers over all of the bolts. 
@@ -107,16 +107,16 @@ For each of the cameras, perform the following tasks:
 2. Plug in the OAK camera board via USB-C to a laptop computer with ROS installed
 3. Download and install the driver package: <!--TODO-->
 4. Check for focus on each of the cameras, and change the focus by turning the lenses on their holders. 
-5. If continuing in this order, disconnect the cameras from the OAK camera board. 
+<!--5. If continuing in this order, disconnect the cameras from the OAK camera board.-->
 
 ### Camera Mounts
 
 1. Use a soldering iron at 215℃ to insert the M2 threaded inserts into the six holes of each camera mount
-2. Bolt each camera to a mount by using four M2x? bolts. The cables should be exiting towards the flange on the mount.
+2. Bolt each camera to a mount by using four M2x? bolts. The cables should be exiting towards the flange on the mount. <!--TODO-->
 3. Bolt the camera mounts to the camera holder frame. 
 
 ### OAK Board
 
 1. Connect the four camera cables to the OAK board. Ensure that the orientation of the board is as it would be in the final assembly, and do not allow any camera cable to be twisted. 
-2. Place the two halves of the 3D-printed OAK board cover around the OAK board. Place it on the frame, and bolt it down <!--TODO: how is this secured?-->
-3. 
+2. Put the two halves of the cover around the OAK board, and bolt the assembly to the frame with 4 M2x14 bolts. 
+3. Put the camera frame on the metal standoffs above the orin, and bolt down with four M3x6 bolts.
