@@ -1,10 +1,15 @@
 ---
 - name: Pre-Setup
-  hosts: local_drone
+  hosts: drones
   remote_user: lis
   become: yes # runs everything with sudo 
+  vars_prompt: 
+    - name: hostname
+      prompt: "Enter the hostname the device should have (it should be unique)"
+      confirm: true
+      private: false
 
-  tasks: 
+  tasks:       
   - name: Check if kernel needs to be patched # if the wifi interface doesn't exist, we need to patch the kernel (or its not plugged in)
     ansible.builtin.shell: ifconfig wlP1p1s0
     changed_when: false
@@ -125,6 +130,7 @@
         - sysstat
         - chrony
       state: latest
+
   - name: Jetson Stats
     ansible.builtin.pip:
       name: 
@@ -324,3 +330,13 @@
         ansible.builtin.systemd:
           name: chronyd
           state: restarted
+  - name: Set hostname
+    block:
+    - name: "Set hostname in system"
+      ansible.builtin.hostname: 
+          name: "{{ hostname }}"
+    - name: Modify /etc/hosts
+      ansible.builtin.replace:
+        path: /etc/hosts
+        regexp: '(127\.0\.1\.1\s+).+'
+        replace: \1{{ hostname }}

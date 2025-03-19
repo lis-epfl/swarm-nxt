@@ -55,7 +55,10 @@ username: lis
 password: orin
 ```
 
-You can [run the ansible playbook](image-creation.md#ansible-installation) to update the software if needed. 
+[Run the ansible playbook](image-creation.md#run-ansible-playbook) to update the software and set the hostname. 
+
+!!! important
+    It is very important that you set a unique hostname. We recommend following a structured naming pattern, and recording the assigned names somewhere to avoid duplicate naming.
 
 ## Password-Free Access
 

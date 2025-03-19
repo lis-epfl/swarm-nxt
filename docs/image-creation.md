@@ -53,10 +53,10 @@ Make sure Ansible is installed following the [setup instructions](software-commo
 
 Then, clone the [repo](https://github.com/lis-epfl/onix-nxt), and open a terminal in the ansible directory. To make the following process faster, download the patched-kernel tarball from the [Google Drive](https://drive.google.com/drive/u/1/folders/1XL-hTVf6IsB96XvfQLSesLO4FHOVjW6y). Place this file in a folder called `ansible/patched-kernel` inside the repo. 
 
-Ensure you are in the `ansible/` folder of the repository. Run `ansible-playbook -i inventory.ini drone-setup.yml -K`. It will ask you for a BECOME password. It is the root password of the orin (`orin`). There should be no failed steps.
+Ensure you are in the `ansible/` folder of the repository. Run `ansible-playbook -i inventory.ini drone_setup.yml -K`. It will ask you for a BECOME password. It is the root password of the orin (`orin`). There should be no failed steps.
 
 !!! note
-    The post install image was created after this step. 
+    The post install image was created after this step, with the hostname set to `ubuntu`
 
 
 ## Backups and Restores
