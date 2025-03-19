@@ -65,7 +65,7 @@ Then, follow one of the steps below:
 1. Click on the Q button on the top left, click on Vehicle Setup, and parameters. 
 2. Click the tools button and select "Load from file". 
 3. Select the parameter file that can be found on the Google Drive. 
-4. Follow the [Sensor Calibration](#sensors) and [Radio Calibration](#remote-control) steps since they need to be done for each drone/RC individually.
+4. Follow the [Propeller Setup](#propeller-numbering-and-spin-direction), [Sensor Calibration](#sensors) and [Radio Calibration](#remote-control) steps since they need to be done for each drone/RC individually.
 
 !!! warning
     This pre-saved file assumes the same settings as the Manual Setup below. If anything has changed, make sure to change it before starting. 
@@ -103,6 +103,7 @@ Navigate to the power tab and fill in these settings:
 Set the following items to match the battery you're using. We have provided the settings for the battery that we used: 
 
 - Set the number cells:  6 
+- Empty Voltage: 2.56V 
 - Full Voltage: 4.05V
 
 #### Actuators
@@ -123,20 +124,29 @@ param set CA_ROTOR3_PY 0.0535
 ```
 
 
-These positions are relative to the center of gravity of the drone, so ensure that the battery is placed such that the CoG is truly at the middle of the drone. Then, go back to the Vehicle Setup menu and open the Actuators tab. __DO NOT TOUCH THE POSITION TEXTBOXES__ since the values will truncate to two decimal places. Ensure that the photo under "Actuator Testing" looks correct: 
+These positions are relative to the center of gravity of the drone, so ensure that the battery is placed such that the CoG is truly at the middle of the drone. Then, go back to the Vehicle Setup menu and open the Actuators tab. __DO NOT TOUCH THE POSITION TEXTBOXES__ since the values will truncate to two decimal places. 
+
+#### Propeller Numbering and Spin Direction
+
+Ensure that the photo under "Actuator Testing" looks correct: 
 
 ![](images/actuator_setting.png)
 
 Under PWM MAIN, select DShot600 for MAIN 1-4. Click on "Identify & Assign Motors" and follow the process. For collision safety, ensure that the Onix is located closer to the rear rotors (rotors 2 and 4 in the image). 
 
 !!! important
+	The top of the quadroter is the side with the Onix. 
+
+!!! important
     Ensure the propellers are unmounted before the next step
 
-Set the spin direction for each motor so that it matches the image. Enable the slider, slide it up a bit and ensure the rotation direction is correct. 
+Set the spin direction for each motor so that it matches the image. Enable the slider, slide it  up a bit and ensure the rotation direction is correct. 
 
 !!! important
     Manually verify the spin direction individually for each motor, since the spin direction may not match QGroundControl
 
+You can install the propellers by following the steps in [Hardware Setup > Propeller Installation](hardware-setup.md#propeller-setup) at any time after this. 
+ 
 #### Telemetry
 
 You can choose to use either the TELEM1 or TELEM2 port for providing telemetry to the Orin. 

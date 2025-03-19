@@ -1,10 +1,12 @@
 site_name: Omni NXT
 nav: 
   - Home: index.md
+  - Hardware Setup: hardware-setup.md
   - Software Setup: software-setup.md
   - Image Creation Steps: image-creation.md
   - Flight Controller Setup: nxt-setup.md
   - Remote Controller Setup: remote-control-setup.md
+  - Position Estimation Setup: position-estimate-setup.md
   - Common Software Tasks: software-common-tasks.md
 theme: readthedocs
 markdown_extensions:

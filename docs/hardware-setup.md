@@ -72,6 +72,18 @@ This file takes you through the hardware setup process for the OmniNXT Drone. Th
    <!--TODO: Insert image-->
 3. Bolt the prop guard onto the Oddity RC standoffs with M3x8 bolts. 
 
+## Propeller Installation 
+
+!!! warning
+	You should perform the [Propeller Setup](nxt-setup.md#propeller-numbering-and-spin-direction) before fixing the propellers. 
+
+1. Ensure that the [Propeller Setup](nxt-setup.md#propeller-numbering-and-spin-direction) is finished. You will have to remove the propellers before performing that step. 
+2. Observe the rotation direction in the propeller setup image. The Orin is on the back (near propeller \#2 and \#4). T
+3. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type.   
+
+   ![](images/actuator_setting.png)
+   
+![](images/hw/prop_direction_rear.jpg)
 ## Camera Assembly
 
 ### Cameras
@@ -105,11 +117,14 @@ For each of the cameras, perform the following tasks:
 
 1. Insert all of the camera cables into the OAK camera board.
 2. Plug in the OAK camera board via USB-C to a laptop computer with ROS installed
-3. Download and install the driver package: <!--TODO-->
+3. Download and install the driver package: 
 4. Check for focus on each of the cameras, and change the focus by turning the lenses on their holders. 
 <!--5. If continuing in this order, disconnect the cameras from the OAK camera board.-->
 
 ### Camera Mounts
+
+!!! warning
+	Be careful not to tug on the cables too much. They can tear.
 
 1. Use a soldering iron at 215℃ to insert the M2 threaded inserts into the six holes of each camera mount
 2. Bolt each camera to a mount by using four M2x? bolts. The cables should be exiting towards the flange on the mount. <!--TODO-->

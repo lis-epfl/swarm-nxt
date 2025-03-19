@@ -82,7 +82,7 @@
           dest: /etc/systemd/system/mocap.service
 
         
-      - name: Start and enable mocap service
+      - name: Start mocap service
         ansible.builtin.systemd: 
           name: mocap
           state: restarted
@@ -90,16 +90,16 @@
           daemon_reload: true
       
 
-    - name: "Collect systemd stats"
-      ansible.builtin.service_facts:
     
     - name: "Mocap Checks"
       when: "position_estimation == 'optitrack'"
       block:
-      - name: Wait for one minute before checking... # this can be better if 
+      - name: Wait for one minute before checking... # this can be better if we can check ros
         ansible.builtin.pause:
           seconds: 60
       
+      - name: "Collect systemd stats"
+        ansible.builtin.service_facts:
       - name: Mocap running check
         when: "position_estimation == 'optitrack'"
         ansible.builtin.assert: 

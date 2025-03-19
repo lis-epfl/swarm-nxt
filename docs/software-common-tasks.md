@@ -22,7 +22,14 @@ SSH into the Orin. The following is a reference for commands that you can use wi
 
 To see available Wi-Fi networks: `nmcli device wifi list`
 
-To connect to a network with simple auth (open or WPA2/WPA3 password): `sudo nmtui` -> Activate Connection
+To connect to a network with simple auth (open or WPA2/WPA3 password): `sudo nmtui` -> Activate Connection, or: 
+
+```shell
+sudo nmcli connection add type wifi \ 
+con-name "NetworkName" \
+ssid "SSID" \
+password "password"
+```
 
 To connect to a more complicated network (eduroam/epfl): 
 ```bash
@@ -37,14 +44,19 @@ wifi-sec.key-mgmt wpa-eap \
 802-11-wireless.bssid "AA:BB:CC:DD:EE:FF"
 ```
 
+
 Replace YourUsername, YourPassword with your GASPAR credentials. You can find the bssid of your local router by `nmcli device wifi list`. Use that instead of `AA:BB:CC:DD:EE:FF`.
 
+To activate a connection, you can either use `sudo nmtui`, or: 
+
+`nmcli con up <Name>`
 ## Wireless Connection to QGroundControl
 
 Ensure the inventory file has all of the drones you want to connect under the `[drones]` header. 
 
 Run the `drones_preflight` ansible playbook: 
 
-1. Change directory to the ansible folder: `cd /path/to/repo/ansible`
-2. Run `ansible-playbook -i inventory.ini drones_preflight.yml -K`
-3. 
+1. Open QGroundControl
+2. Change directory to the ansible folder: `cd /path/to/repo/ansible`
+3. Run `ansible-playbook -i inventory.ini drones_preflight.yml -K`
+4. Once this is done, the drone should be connected to QGroundControl. You can verify by clicking the Q button > Vehicle Setup > Parameters > Tools > Reboot Vehicle. 
