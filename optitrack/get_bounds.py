@@ -41,6 +41,7 @@ h = [
 
 parser = argparse.ArgumentParser()
 parser.add_argument("filename", help="The csv file exported from `ros2 topic echo --csv <topicname>`")
+parser.add_argument("--show-track", help="If set, shows the track of the tracked object throughout the csv.", action="store_true")
 
 args = parser.parse_args()
 data = pd.read_csv(args.filename, names=h, index_col=False)
@@ -60,7 +61,8 @@ hull = scipy.spatial.ConvexHull(validPoints_xyz)
 fig = plt.figure()
 ax = fig.add_subplot(projection="3d")
 
-# ax.scatter(validPoints_xyz["rb_x"], validPoints_xyz["rb_y"], validPoints_xyz["rb_z"])
+if args.show_track:
+    ax.scatter(validPoints_xyz["rb_x"], validPoints_xyz["rb_y"], validPoints_xyz["rb_z"])
 
 for simplex in hull.simplices:
     ax.plot(
