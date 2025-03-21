@@ -123,6 +123,7 @@
         - name: Check if we're tracking
           ansible.builtin.shell: /tmp/chronyc_check.py
           register: chronyc_check
+          changed_when: false
 
 
 
