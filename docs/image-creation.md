@@ -16,7 +16,7 @@ These steps describe how to build the intial image for the NVIDIA Orin board. Th
 7. On the host computer, run `lsusb`. This sequence was a success if an entry with NVIDIA Corp. APX is visible (`ID 0955:7323 NVIDIA Corp. APX`)
 
 
-Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/sdk-manager). Then, run the following steps: 
+Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/sdk-manager). Your computer should be running the same OS version as you would like to be installed on the Orin. If not, you can run it in docker. These instructions can be found on the NVIDIA SDK Manager page.  Then, run the following steps: 
 
 1. Install the SDK Manager: `sudo dpkg -i /path/to/sdkmanager.deb`. If required, install any missing dependencies with `sudo apt --fix-broken install`
 2. Run the sdkmanager: `sdkmanager --cli`

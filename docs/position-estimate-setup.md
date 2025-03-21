@@ -25,9 +25,6 @@ Assumptions:
 
 ### Host Computer Setup
 
-!!! TODO
-	Automate this. 
-
 1. On the host computer, open the [ROS workspace](https://docs.ros.org/en/humble/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) and clone this [repository](https://github.com/lis-epfl/optitrack_packages_ros2/) into the src folder
 2. Edit the file in `src/optitrack_packages_ros2/optitrack_multiplexer_ros2/config/optitrack_multiplexer_config.yaml`, and add all of the rigid bodies that you want to track under "rigid_body_names"
 3. Run `colcon build --symlink-install`
@@ -36,11 +33,15 @@ Assumptions:
 
 ### Drone Setup
 
-On each drone, follow these steps: 
+You can run the `drone_preflight.yml` ansible with the `position_estimate` variable set to "optitrack" in `group_vars/all`: 
 
-1. SSH in, and change to the ROS Workspace directory. 
-2. Clone 
+Ensure that the `inventory.ini` file has all of the drones you wish to target under the `[drones]` group. Also, make sure you put the domain name or IP of the ground control station in `drones_preflight.yml`.
 
+
+```bash
+cd ansible/
+ansible-playbook -i inventory.ini drones_preflight.yml -K
+```
 
 
 

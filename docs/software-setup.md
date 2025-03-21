@@ -1,4 +1,4 @@
-#Software Setup
+# Software Setup
 
 This section describes how to setup the software on the host computer and the target. 
 
