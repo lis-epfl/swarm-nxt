@@ -111,6 +111,20 @@
       ansible.builtin.assert: 
         that: "services['mavros.service']['state'] == 'running' and services['mavros.service']['status'] != 'failed'"
         fail_msg: "Mavros is not running properly!" 
+    
+    - name: Chrony Tracking Check
+      block: 
+        - name: Copy script
+          ansible.builtin.copy: 
+            src: scripts/chronyc_check.py
+            dest: /tmp/chronyc_check.py
+            mode: '0755'
+          
+        - name: Check if we're tracking
+          ansible.builtin.shell: /tmp/chronyc_check.py
+          register: chronyc_check
+
+
 
 
       
