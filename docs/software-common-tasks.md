@@ -52,11 +52,10 @@ To activate a connection, you can either use `sudo nmtui`, or:
 `nmcli con up <Name>`
 ## Wireless Connection to QGroundControl
 
-Ensure the inventory file has all of the drones you want to connect under the `[drones]` header. 
+This is done with mavros. This should be done with the preflight Ansible. You can inspect the script in `ansible/scripts/mavros_start.sh` and the lines related to Mavros in `ansible/drones_preflight.yml`. 
 
-Run the `drones_preflight` ansible playbook: 
+## Get IP of Computer
 
-1. Open QGroundControl
-2. Change directory to the ansible folder: `cd /path/to/repo/ansible`
-3. Run `ansible-playbook -i inventory.ini drones_preflight.yml -K`
-4. Once this is done, the drone should be connected to QGroundControl. You can verify by clicking the Q button > Vehicle Setup > Parameters > Tools > Reboot Vehicle. 
+You can get the internet protocol address of a Linux computer by running `ifconfig` and looking for the four numbers after `inet` under the interface that you care about. Wireless interfaces typically begin with `w`, and ethernet interfaces typically begin with `e`. 
+
+On most networks, you can usually use `hostname.local` in place of the IP address if the two computers are on the same network. Replace `hostname` with the hostname of the computer. You can get the hostname by running: `hostname` or `hostnamectl` on the computer. 

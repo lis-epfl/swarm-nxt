@@ -1,5 +1,5 @@
 ---
-- name: Pre-Setup
+- name: Preflight
   hosts: drones
   remote_user: lis
   become: yes # runs everything with sudo 
