@@ -1,5 +1,7 @@
 # Common Software Tasks
 
+The various subheadings of this document are linked in other pages. This page is meant as a reference for commonly performed tasks.
+
 ## Ansible Installation 
 
 Install ansible on the host computer: `python3 -m pip install --user ansible`. For more information, see the [Ansible Documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip)
@@ -59,3 +61,16 @@ This is done with mavros. This should be done with the preflight Ansible. You ca
 You can get the internet protocol address of a Linux computer by running `ifconfig` and looking for the four numbers after `inet` under the interface that you care about. Wireless interfaces typically begin with `w`, and ethernet interfaces typically begin with `e`. 
 
 On most networks, you can usually use `hostname.local` in place of the IP address if the two computers are on the same network. Replace `hostname` with the hostname of the computer. You can get the hostname by running: `hostname` or `hostnamectl` on the computer. 
+
+## Check EKF Tracking
+
+To check EKF tracking, perform the following steps:
+
+1. On the host computer, make sure ros is sourced: `source /opt/ros/humble/setup.bash`
+2. Ensure the `ROS_DOMAIN_ID` is set to the same value as the drones. By default, this is 1. You can check in `ansible/group_vars/all`: `export ROS_DOMAIN_ID=<domain id>`
+3. Run plotjuggler: `ros2 run plotjuggler plotjuggler`
+4. In plotjuggler, add:
+	1. `/mavros/local_position/pose`  xyz, orientation quaternions (EKF Output)
+	2. `/mavros/vision_pose/pose_cov` xyz, orientation quaternions (optitrack)
+5. Move the drone around in all directions and ensure there are no discontinuities, and the values are tracking each other. 
+6. Rotate the drone in different directions and ensure the values are tracking each other

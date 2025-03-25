@@ -1,7 +1,7 @@
 # Image Creation
 
 !!! important
-    You do not need to follow these steps if you are simply flashing a pre-made image. 
+    You do not need to follow all of these steps if you are simply flashing a pre-made image. 
 
 ## Raw Image Setup 
 

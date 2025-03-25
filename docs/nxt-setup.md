@@ -257,3 +257,20 @@ Set the following parameters in the Parameters screen:
 | `EKF2_RNG_CTRL`    | 0                 |                                                 |
 
 Restart the drone by going to Tools > Restart.
+
+
+## PID Tuning
+
+1. Follow all the steps in the [Pre-Flight Checklist](index.md#pre-flight-checklist)
+2. Launch the vehicle in position mode, and fly it slowly. Make sure that it feels decently well to operate. 
+3. Hover the drone at 1.5 m, and ensure that it the drone is in the center of a 2x2x2m cube of free space. 
+4. In QGroundControl, click on the Q on the top left and open the vehicle setup menu
+5. Click on PID Tuning
+6. Enable autotune
+7. Autotune the rate controller. 
+8. Land, and save the parameters
+9. Takeoff again in a safety volume of 2x2x2m. 
+10. Autotune the attitude controller.
+11. Land. 
+
+If the autotune fails, you can increase the `MC_AT_SYSID_AMP` parameter by steps of 0.5, and trigger the autotune again. 

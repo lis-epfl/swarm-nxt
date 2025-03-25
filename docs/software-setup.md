@@ -63,7 +63,3 @@ password: orin
 ## Password-Free Access
 
 See [Password-Free Access](software-common-tasks.md#password-free-access)
-
-## Set Hostname
-
-Set the hostname per-device by ssh'ing in and running `sudo hostnamectl hostname nxt<num>`. Label your device with this name for easy reference. This will make managing multiple devices much easier. 
