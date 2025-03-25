@@ -20,4 +20,5 @@
       - local*
       - global_position
       - home_position
+      - geofence 
 
