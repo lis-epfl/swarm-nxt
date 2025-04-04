@@ -1,0 +1,11 @@
+[Unit]
+Description=MAVROS
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /home/lis/mavros_start.sh
+User=lis
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,93 @@
+---
+- name: Host Dependencies
+  hosts: localhost
+  connection: local 
+  become: yes
+  vars:
+    ros_path: "~/ros2_omninxt_ws"
+
+  tasks: 
+    - name: Setup ROS
+      block: 
+        - name: Add ROS 2 apt
+          block:
+            - name: Get software-properties-common
+              ansible.builtin.apt: 
+                name: software-properties-common
+
+            - name: Ensure universe is added
+              ansible.builtin.shell: apt-add-repository -y universe
+
+            - name: Add apt key 
+              ansible.builtin.get_url:
+                url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
+                dest: /usr/share/keyrings/ros-archive-keyring.gpg
+            
+            - name: Get architecture
+              ansible.builtin.shell: dpkg --print-architecture
+              register: deb_arch
+              changed_when: false 
+
+            - name: Add ROS Repository
+              ansible.builtin.apt_repository:
+                repo: "deb [arch={{ deb_arch.stdout }} signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_distribution_release }} main"
+                state: present
+            - name: Download ROS
+              ansible.builtin.apt:
+                name: 
+                  - ros-humble-desktop
+                  - ros-dev-tools
+                  - ros-humble-mavros
+                  - ros-humble-mavros-extras
+                  - ros-humble-plotjuggler
+                update_cache: true
+                state: latest   
+            - name: Install geoids
+              ansible.builtin.shell: geographiclib-get-geoids all 
+            
+            - name: Set domain id
+              ansible.builtin.blockinfile: 
+                path: ~/.bashrc
+                block: |
+                  export ROS_DOMAIN_ID={{ ros_domain_id }}
+    - name: VNC Viewer
+      ansible.builtin.apt:
+        name: gvncviewer
+    - name: Chrony Setup
+      block: 
+        - name: Get Chrony
+          ansible.builtin.apt: 
+            name: chrony
+        - name: Remove all sources
+          ansible.builtin.replace: 
+            path: /etc/chrony/chrony.conf
+            regexp: "^((pool)|(sourcedir))"
+            replace: "# \\1"
+        - name: Set allowed subnets
+          ansible.builtin.blockinfile:
+            path: /etc/chrony/chrony.conf
+            marker: "# {mark} ANSIBLE MANAGED BLOCK"
+            block: | # change the allowed subnets in ansible/group_vars/all
+              {% for subnet in chrony_allowed_subnets %}
+              allow {{ subnet }}
+              {% endfor %}
+          register: chrony_conf
+        - name: Restart the service
+          when: chrony_conf.changed
+          ansible.builtin.systemd_service:
+            name: chronyd
+            state: restarted
+    - name: Optitrack Packages
+      become: false
+      block: 
+        - name: Make ws folder
+          ansible.builtin.file:
+            path: "{{ ros_path }}/src"
+            state: directory
+        - name: Get optitrack packages
+          ansible.builtin.git: 
+            repo: https://github.com/lis-epfl/optitrack_packages_ros2/
+            dest: "{{ ros_path }}/src"
+        - name: Patch 
+          
+

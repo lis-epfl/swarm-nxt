@@ -1,0 +1,61 @@
+- name: Flight Controller Host Dependencies
+  hosts: localhost
+  connection: local 
+  become: yes
+
+  vars_prompt: 
+    - name: path
+      prompt: Where do you want things downloaded? 
+      private: false
+      default: "~/nxt_flight_controller"
+
+  tasks: 
+      - name: Make path
+        become: false
+        ansible.builtin.file: 
+          path: "{{ path }}"
+          state: directory
+          mode: "0755"
+      - name: NXT APT Dependencies
+        ansible.builtin.apt:
+          update_cache: true
+          name: 
+            - gcc-arm-none-eabi
+            - fuse
+            - gstreamer1.0-plugins-bad
+            - gstreamer1.0-libav
+            - gstreamer1.0-gl
+            - libfuse2
+            - libxcb-xinerama0 
+            - libxkbcommon-x11-0 
+            - libxcb-cursor-dev
+      - name: Allow rootless access to flight controller
+        ansible.builtin.user: # Add the current user to the dialout group
+          name: "{{ ansible_user_id }}"
+          groups: dialout
+          append: true
+      - name: Remove modemmanager
+        ansible.builtin.apt:
+          name: modemmanager
+          state: absent
+      - name: Download necessary items
+        become: false
+        block: 
+        - name: Get QGroundControl
+          ansible.builtin.get_url:
+            url: https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage
+            dest: "{{ path }}/QGroundControl.AppImage"
+            mode: '0755' # executable for us
+        - name: Clone Git Repository
+          ansible.builtin.git: 
+            repo: "https://github.com/Peize-Liu/PX4-Autopilot.git"
+            dest: "{{ path }}/PX4-Autopilot"
+            force: yes
+        - name: Build bootloader
+          community.general.make:
+            chdir: "{{ path }}/PX4-Autopilot"
+            target: hkust_nxt-dual_bootloader
+        - name: Build main code
+          community.general.make:
+            chdir: "{{ path }}/PX4-Autopilot"
+            target: hkust_nxt-dual        

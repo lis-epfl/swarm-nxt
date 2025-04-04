@@ -1,0 +1,11 @@
+[Unit]
+Description=Disable Wi-Fi Power Save
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/sbin/iw dev wlP1p1s0 set power_save off
+RemainAfterExit=yes
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target

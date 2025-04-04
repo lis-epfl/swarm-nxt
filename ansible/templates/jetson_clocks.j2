@@ -1,0 +1,11 @@
+[Unit]
+Description=Enable Jetson Clocks at Boot
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/jetson_clocks
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,342 @@
+---
+- name: Pre-Setup
+  hosts: drones
+  remote_user: lis
+  become: yes # runs everything with sudo 
+  vars_prompt: 
+    - name: hostname
+      prompt: "Enter the hostname the device should have (it should be unique)"
+      confirm: true
+      private: false
+
+  tasks:       
+  - name: Check if kernel needs to be patched # if the wifi interface doesn't exist, we need to patch the kernel (or its not plugged in)
+    ansible.builtin.shell: ifconfig wlP1p1s0
+    changed_when: false
+    register: ifconfig_result
+    ignore_errors: true # don't fail the playbook if we get an error, we use this result as a conditional next
+
+  - name: Patched kernel operations
+    when: ifconfig_result.rc != 0
+    block:
+      - name: Check if patched kernel exists
+        ansible.builtin.stat:
+          path: "patched-kernel/patched-kernel.tar.gz"
+          checksum_algorithm: sha256
+          get_checksum: yes
+        register: patched_kernel_file
+        delegate_to: 127.0.0.1
+        become: no
+      - name: Send and extract patched kernel if it does exist
+        when: patched_kernel_file.stat.exists and patched_kernel_file.stat.checksum == '54d7125a049bebc9393aa4af2a842c8584ebd683e6b89330ee8e6bfdcffc0dfc'
+        ansible.builtin.unarchive: 
+          src: patched-kernel/patched-kernel.tar.gz
+          dest: /tmp
+    
+      - name: Create patched kernel if it does not exist
+        when: patched_kernel_file.stat.exists == false or patched_kernel_file.stat.checksum != '54d7125a049bebc9393aa4af2a842c8584ebd683e6b89330ee8e6bfdcffc0dfc'
+        block: 
+          - name: Get sources
+            ansible.builtin.get_url:
+              url: https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.0/sources/public_sources.tbz2
+              dest: /tmp/public_sources.tbz2
+          - name: Extract kernel_sources
+            ansible.builtin.unarchive: 
+              src: /tmp/public_sources.tbz2
+              dest: /tmp
+              remote_src: yes
+              include: Linux_for_Tegra/source/kernel_src.tbz2
+          - name: Extract the kernel folder
+            ansible.builtin.unarchive:
+              src: /tmp/Linux_for_Tegra/source/kernel_src.tbz2
+              dest: /tmp
+              remote_src: yes
+          - name: Patch defconfig
+            ansible.builtin.blockinfile:
+              path: /tmp/kernel/kernel-jammy-src/arch/arm64/configs/defconfig
+              block: |
+                CONFIG_WLAN=y
+                CONFIG_WLAN_VENDOR_INTEL=y
+                CONFIG_IWLWIFI=m
+                CONFIG_IWLWIFI_LEDS=y
+                CONFIG_IWLDVM=m
+                CONFIG_IWLMVM=m
+                CONFIG_IWLWIFI_OPMODE_MODULAR=y
+          - name: Ensure build dependencies
+            ansible.builtin.apt: 
+              name: 
+                - gcc-aarch64-linux-gnu 
+                - bc 
+                - binutils 
+                - bison
+                - dwarves
+                - flex
+                - gcc
+                - git
+                - gnupg2
+                - gzip
+                - libelf-dev
+                - libncurses5-dev
+                - libssl-dev
+                - make
+                - openssl
+                - pahole
+                - perl-base
+                - rsync
+                - tar
+                - xz-utils
+              state: latest
+              update_cache: yes
+
+          - name: Build the kernel (will take a long time!)
+            community.general.make: 
+              chdir: /tmp/kernel
+              params:
+                ARCH: arm64
+          - name: Archive the kernel
+            community.general.archive: 
+              path: /tmp/kernel
+              dest: /tmp/patched-kernel.tar.gz
+          - name: Compute the hash
+            ansible.builtin.shell: cd /tmp && sha256sum patched-kernel.tar.gz > /tmp/patched-kernel.tar.gz.sha256
+          - name: Move into a subfolder for copy
+            ansible.builtin.shell: mkdir -p /tmp/patched-kernel && mv /tmp/patched-kernel.tar.gz* /tmp/patched-kernel/
+          - name: Copy archive
+            become: false
+            ansible.builtin.synchronize:
+              src: /tmp/patched-kernel
+              dest: .
+              mode: pull
+          - name: Check if copy was good
+            local_action: ansible.builtin.command cd patched-kernel && sha256sum --check patched-kernel/patched-kernel.tar.gz.sha256
+              # changed_when: false
+      
+      - name: Install the patched kernel
+        community.general.make:
+          chdir: /tmp/kernel
+          target: install
+          params:
+            ARCH: arm64
+
+  - name: Perform a safe upgrade # installs new packages if needed
+    ansible.builtin.apt:
+      update_cache: yes
+      upgrade: "safe"
+  - name: Ensure apt packages are installed
+    ansible.builtin.apt: 
+      name: 
+        - python3-pip 
+        - htop 
+        - sysstat
+        - chrony
+      state: latest
+
+  - name: Jetson Stats
+    ansible.builtin.pip:
+      name: 
+        - jetson-stats
+
+  - name: Ensure Jetson clocks service
+    ansible.builtin.template: 
+      src: templates/jetson_clocks.j2
+      dest: /etc/systemd/system/jetson_clocks.service
+
+  - name: Start and enable clocks service
+    ansible.builtin.systemd:
+      name: jetson_clocks
+      state: started
+      enabled: true
+      daemon_reload: true
+
+  - name: Set max power mode 
+    ansible.builtin.command: nvpmodel -m 0 --force
+    async: 1
+    poll: 0 # skip to next task 
+    ignore_errors: true # TODO: make this less fragile
+  
+  - name: Wait for the system to come back up
+    ansible.builtin.wait_for_connection:
+      delay: 10
+      timeout: 360 
+  
+  - name: Ensure power save disable service
+    ansible.builtin.template: 
+      src: templates/disable-wifi-powersave.j2
+      dest: /etc/systemd/system/disable-wifi-powersave.service
+  
+  - name: Start and enable the power save inhibition service
+    ansible.builtin.systemd:
+      name: disable-wifi-powersave
+      state: started
+      enabled: true
+      daemon_reload: true
+
+  - name: "Setup VNC"
+    block: 
+      - name: Enable Automatic Login
+        ansible.builtin.lineinfile: 
+          path: /etc/gdm3/custom.conf
+          regexp: 'AutomaticLoginEnable'
+          line: 'AutomaticLoginEnable=true'
+      - name: Set automatic login user
+        ansible.builtin.lineinfile: 
+          path: /etc/gdm3/custom.conf
+          regexp: 'AutomaticLogin'
+          line: 'AutomaticLogin=lis'
+      - name: Install xorg dummy
+        ansible.builtin.apt: 
+          name: 
+            - xserver-xorg-video-dummy
+            - vino
+      - name: Add vino to graphical session wants
+        ansible.builtin.file: 
+          src: /usr/lib/systemd/user/vino-server.service
+          path: /usr/lib/systemd/user/graphical-session.target.wants/vino-server.service
+          state: "link"
+      - name: "Set gsettings"
+        become: false
+        block:
+          # TODO: for some reason the community dcom modifier doesn't work. this is a hack to keep going. 
+          - name: "Disable prompt requirement"
+            ansible.builtin.command: gsettings set org.gnome.Vino prompt-enabled false 
+          - name: "Disable encryption"
+            ansible.builtin.command: gsettings set org.gnome.Vino require-encryption false
+          - name: "Set VNC as auth method"
+            ansible.builtin.command: gsettings set org.gnome.Vino authentication-methods "['vnc']"
+
+            # shell to allow for this evaluation 
+          - name: "Set password"
+            ansible.builtin.shell: gsettings set org.gnome.Vino vnc-password $(echo -n 'thepassword'|base64)  # TODO: actual password? 
+
+      - name: "xorg configuration"
+        ansible.builtin.blockinfile:
+          path: /etc/X11/xorg.conf
+          append_newline: true
+          prepend_newline: true
+          block: |
+            Section "Device"
+            Identifier "Dummy0"
+            Driver "dummy"
+            VideoRam 16384
+            EndSection
+
+            Section "Monitor"
+            Identifier "Monitor0"
+            HorizSync 5.0-1000.0
+            VertRefresh 5.0-200.0
+            Modeline "1280x800" 24.15 1280 1312 1400 1432 800 819 822 841
+            # Modeline "1920x1080_24.00" 173.00 1920 2048 2248 2576 1080 1083 1088 1120
+            EndSection
+
+            Section "Screen"
+            Identifier "Screen0"
+            Monitor "Monitor0"
+            Device "Dummy0"
+            DefaultDepth 24
+            SubSection "Display"
+            Depth 24
+            Virtual 1280 800
+            # Virtual 1920 1080
+            EndSubSection
+            EndSection
+  - name: Setup ROS
+    block: 
+      - name: Ensure universe is present
+        ansible.builtin.lineinfile:
+          path: /etc/apt/sources.list
+          line: "deb http://ports.ubuntu.com/ubuntu-ports/ {{ ansible_distribution_release }} main restricted universe"
+          regexp: "{{ ansible_distribution_release }} (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)"
+      - name: Ensure universe updates is present
+        ansible.builtin.lineinfile:
+          path: /etc/apt/sources.list
+          line: "deb http://ports.ubuntu.com/ubuntu-ports/ {{ ansible_distribution_release }}-updates main restricted universe"
+          regexp: "{{ ansible_distribution_release }}-updates (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)" 
+      - name: Add ROS 2 apt
+        block:
+          - name: Add apt key 
+            ansible.builtin.get_url:
+              url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
+              dest: /usr/share/keyrings/ros-archive-keyring.gpg
+
+          - name: Add ROS Repository
+            ansible.builtin.apt_repository:
+              repo: "deb [arch=arm64 signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_distribution_release }} main"
+              state: present
+          - name: Download ROS
+            ansible.builtin.apt:
+              name: 
+                - ros-humble-ros-base
+                - ros-dev-tools
+                - ros-humble-mavros
+                - ros-humble-mavros-extras
+              update_cache: true
+              state: latest
+
+          - name: Set bashrc
+            become: false
+            ansible.builtin.blockinfile: 
+              path: /home/lis/.bashrc
+              block: |
+                source /opt/ros/humble/setup.bash
+                export ROS_DOMAIN_ID={{ ros_domain_id }} 
+
+          - name: Get geoids
+            ansible.builtin.shell: geographiclib-get-geoids all
+
+          - name: Patch pluginlists
+            ansible.builtin.template:
+              src: templates/px4_pluginlists.yaml
+              dest: /opt/ros/humble/share/mavros/launch/px4_pluginlists.yaml 
+
+          - name: Patch px4_rate
+            ansible.builtin.template:
+              src: templates/px4_config.j2 
+              dest: /opt/ros/humble/share/mavros/launch/px4_config.yaml 
+             
+  - name: NXT compatability
+    block: 
+      - name: Allow rootless access to flight controller
+        ansible.builtin.user:
+          name: "lis"
+          groups: dialout
+          append: true
+      - name: Remove modemmanager
+        ansible.builtin.apt:
+          name: modemmanager
+          state: absent
+      - name: Install mavtools
+        ansible.builtin.pip:
+          name: 
+            - mavsdk
+            - mavproxy
+  - name: Chrony Configuration 
+    block:
+      - name: Install Chrony
+        ansible.builtin.apt: 
+          name: chrony
+      - name: Remove all sources
+        ansible.builtin.replace: 
+          path: /etc/chrony/chrony.conf
+          regexp: "^((pool)|(sourcedir))" 
+          replace: "# \\1"
+      - name: Add host IPs
+        ansible.builtin.blockinfile: 
+          path: /etc/chrony/chrony.conf
+          block: | # change the possible ips and chrony min/max poll in ansible/group_vars/all
+              {% for host_ip in possible_host_ips %}
+              server {{ host_ip }} iburst minpoll {{ chrony_minpoll }} maxpoll {{ chrony_maxpoll }}
+              {% endfor %}
+      - name: Restart chronyd
+        ansible.builtin.systemd:
+          name: chronyd
+          state: restarted
+  - name: Set hostname
+    block:
+    - name: "Set hostname in system"
+      ansible.builtin.hostname: 
+          name: "{{ hostname }}"
+    - name: Modify /etc/hosts
+      ansible.builtin.replace:
+        path: /etc/hosts
+        regexp: '(127\.0\.1\.1\s+).+'
+        replace: \1{{ hostname }}

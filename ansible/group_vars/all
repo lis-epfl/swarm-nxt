@@ -1,0 +1,11 @@
+ros_domain_id: "1"
+position_estimation: "optitrack"
+possible_host_ips: 
+  - 192.168.194.
+  - 100.80.31.97
+chrony_minpoll: 2
+chrony_maxpoll: 3
+chrony_allowed_subnets: 
+  - 128.179.204.0/21
+  - 192.168.194.198/24
+  - 100.92.209.103/32
