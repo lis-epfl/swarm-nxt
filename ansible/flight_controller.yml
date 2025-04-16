@@ -48,7 +48,8 @@
             mode: '0755' # executable for us
         - name: Clone Git Repository
           ansible.builtin.git: 
-            repo: "https://github.com/Peize-Liu/PX4-Autopilot.git"
+            repo: "https://github.com/PX4/PX4-Autopilot"
+            tag: v1.15.4
             dest: "{{ path }}/PX4-Autopilot"
             force: yes
         - name: Build bootloader
