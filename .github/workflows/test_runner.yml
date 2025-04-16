@@ -1,0 +1,46 @@
+name: Build and Test ROS2 Node
+
+on:
+  push:
+    branches:
+      - main
+      - safety # for testing only
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup ROS 2 Humble
+      uses: ros-tooling/setup-ros@v0.3
+      with:
+        version: humble
+
+    - name: Prepare workspace
+      run: |
+        mkdir -p src
+        ln -s $GITHUB_WORKSPACE/bounds_checker_ros2 src/bounds_checker_ros2
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        rosdep update
+        rosdep install --from-paths src --ignore-src -r -y
+
+    - name: Build the workspace
+      run: |
+        colcon build --event-handlers console_cohesion+
+
+    - name: Source the workspace
+      run: echo "source install/setup.bash" >> $GITHUB_ENV
+
+    - name: Run tests
+      run: |
+        colcon test --event-handlers console_cohesion+
+        colcon test-result --verbose
