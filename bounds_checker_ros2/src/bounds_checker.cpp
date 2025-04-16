@@ -12,11 +12,15 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker")
 
 
 
-void BoundsChecker::loadHullFromFile(const std::string& filepath)
+void BoundsChecker::loadHullFromFile(const std::filesystem::path& filepath)
 {
   auto logger = this->get_logger();
   are_planes_valid_ = false;
   using json = nlohmann::json;
+
+  if (!std::filesystem::exists(filepath)) {
+    throw std::runtime_error("File " + filepath.string() + " does not exist");
+  }
 
   std::ifstream file(filepath);
   if (!file.is_open())
@@ -82,6 +86,11 @@ void BoundsChecker::clearPlanes()
 {
   are_planes_valid_ = false;
   planes_.clear();
+}
+
+std::vector<bounds_checker_ros2::msg::Plane> BoundsChecker::getPlanes()
+{
+    return planes_;
 }
 
 } // namespace bounds_checker

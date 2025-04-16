@@ -14,12 +14,13 @@ class BoundsChecker : public ::rclcpp::Node
 public:
   BoundsChecker();
 
-  void loadHullFromFile(const std::string& filepath);
+  void loadHullFromFile(const std::filesystem::path& filepath);
   bool isPointInHull(const geometry_msgs::msg::Point& point);
   void clearPlanes();
 
-private:
+  std::vector<bounds_checker_ros2::msg::Plane> getPlanes();
 
+private:
 
   std::vector<bounds_checker_ros2::msg::Plane> planes_;
   bool are_planes_valid_ = false; 

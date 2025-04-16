@@ -5,28 +5,38 @@
 
 using namespace bounds_checker;
 
+std::filesystem::path getTestFilePath(const std::string& filename) {
+    std::filesystem::path src_file_path = __FILE__;
+    auto parent_path = src_file_path.parent_path();
+
+    auto test_file_path = parent_path / "test_plane_files" / filename; 
+
+    return test_file_path;
+}
+
 TEST(BoundsCheckerTest, GetPlanesReturnsCorrectData) {
     // Arrange
     auto bc = BoundsChecker(); 
     // Act
-    bc.loadHullFromFile("/tmp/test_plane_files/invalid1.json");
+    std::filesystem::path invalid_file = getTestFilePath("invalid1.json");
+    bc.loadHullFromFile(invalid_file);
+    auto planes = bc.getPlanes();
 
-
-    // Assert
     ASSERT_FALSE(planes.empty()) << "Planes list should not be empty.";
-    
-    // Add more assertions based on the expected behavior of get_planes
-    // For example:
-    // ASSERT_EQ(planes.size(), expected_size);
-    // ASSERT_EQ(planes[0].some_property, expected_value);
+}
+
+TEST(BoundsCheckerTest, NonExistentFileErrorThrown) {
+    // Arrange
+    auto bc = BoundsChecker(); 
+    // Act
+    std::filesystem::path non_existent = getTestFilePath("non_existent.json");
+    ASSERT_THROW(bc.loadHullFromFile(non_existent), std::runtime_error) << "Expected std::runtime_error when loading a non-existent file.";
 }
 
 
 TEST(BoundsCheckerTest, PointInsideTest) {
-    // Arrange
     auto bc = BoundsChecker(); 
-    // Act
-    bc.loadHullFromFile("/tmp/test_plane_files/valid_cube_111m.json");
+    bc.loadHullFromFile(getTestFilePath("valid_cube_111m.json"));
 
     geometry_msgs::msg::Point point;
     point.x = 0;
@@ -45,10 +55,8 @@ TEST(BoundsCheckerTest, PointInsideTest) {
 
 
 TEST(BoundsCheckerTest, PointOutsideTest) {
-    // Arrange
     auto bc = BoundsChecker(); 
-    // Act
-    bc.loadHullFromFile("/tmp/test_plane_files/valid_cube_111m.json");
+    bc.loadHullFromFile(getTestFilePath("valid_cube_111m.json"));
 
     geometry_msgs::msg::Point point;
     point.x = 2;
