@@ -9,7 +9,7 @@ TEST(BoundsCheckerTest, GetPlanesReturnsCorrectData) {
     // Arrange
     auto bc = BoundsChecker(); 
     // Act
-    bc.load_hull_from_file("/tmp/test_plane_files/invalid1.json");
+    bc.loadHullFromFile("/tmp/test_plane_files/invalid1.json");
 
 
     // Assert
@@ -26,20 +26,20 @@ TEST(BoundsCheckerTest, PointInsideTest) {
     // Arrange
     auto bc = BoundsChecker(); 
     // Act
-    bc.load_hull_from_file("/tmp/test_plane_files/valid_cube_111m.json");
+    bc.loadHullFromFile("/tmp/test_plane_files/valid_cube_111m.json");
 
     geometry_msgs::msg::Point point;
     point.x = 0;
     point.y = 0.5;
     point.z = 0.6;
 
-    ASSERT_TRUE(bc.is_point_in_hull(point)) << "Point [0, 0.5, 0.6] is inside the convex hull of 1x1x1m";
+    ASSERT_TRUE(bc.isPointInHull(point)) << "Point [0, 0.5, 0.6] is inside the convex hull of 1x1x1m";
 
     point.x = 1;
     point.y = 0;
     point.z = 0;
 
-    ASSERT_TRUE(bc.is_point_in_hull(point)) << "Point [1, 0, 0] is on the surface (and therefore inside) a convex hull of 1x1x1m";
+    ASSERT_TRUE(bc.isPointInHull(point)) << "Point [1, 0, 0] is on the surface (and therefore inside) a convex hull of 1x1x1m";
 
 }
 
@@ -48,14 +48,14 @@ TEST(BoundsCheckerTest, PointOutsideTest) {
     // Arrange
     auto bc = BoundsChecker(); 
     // Act
-    bc.load_hull_from_file("/tmp/test_plane_files/valid_cube_111m.json");
+    bc.loadHullFromFile("/tmp/test_plane_files/valid_cube_111m.json");
 
     geometry_msgs::msg::Point point;
     point.x = 2;
     point.y = 0;
     point.z = 0;
 
-    ASSERT_FALSE(bc.is_point_in_hull(point)) << "Point [2, 0, 0] is outside the convex hull of 1x1x1m";
+    ASSERT_FALSE(bc.isPointInHull(point)) << "Point [2, 0, 0] is outside the convex hull of 1x1x1m";
 
 
 }

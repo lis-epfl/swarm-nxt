@@ -12,7 +12,7 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker")
 
 
 
-void BoundsChecker::load_hull_from_file(const std::string& filepath)
+void BoundsChecker::loadHullFromFile(const std::string& filepath)
 {
   auto logger = this->get_logger();
   are_planes_valid_ = false;
@@ -58,7 +58,7 @@ void BoundsChecker::load_hull_from_file(const std::string& filepath)
   are_planes_valid_ = valid_parse;
 }
 
-bool BoundsChecker::is_point_in_hull(const geometry_msgs::msg::Point& point)
+bool BoundsChecker::isPointInHull(const geometry_msgs::msg::Point& point)
 {
   if (!are_planes_valid_) {
     return false;
@@ -78,7 +78,7 @@ bool BoundsChecker::is_point_in_hull(const geometry_msgs::msg::Point& point)
   return true;
 }
 
-void BoundsChecker::clear_planes()
+void BoundsChecker::clearPlanes()
 {
   are_planes_valid_ = false;
   planes_.clear();

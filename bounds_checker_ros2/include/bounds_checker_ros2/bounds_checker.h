@@ -14,9 +14,9 @@ class BoundsChecker : public ::rclcpp::Node
 public:
   BoundsChecker();
 
-  void load_hull_from_file(const std::string& filepath);
-  bool is_point_in_hull(const geometry_msgs::msg::Point& point);
-  void clear_planes();
+  void loadHullFromFile(const std::string& filepath);
+  bool isPointInHull(const geometry_msgs::msg::Point& point);
+  void clearPlanes();
 
 private:
 
