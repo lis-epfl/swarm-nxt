@@ -4,7 +4,7 @@
   remote_user: lis
   become: yes # runs everything with sudo 
   vars: 
-    gcs_url: "100.108.99.105"
+    gcs_url: "100.108.99.105" # get this machine's url. 
 
   tasks: 
     - name: Create mavros launch script 
@@ -32,6 +32,8 @@
         path: /home/lis/ros2_ws/src
         state: directory
 
+
+    # move this stuff to drone setup instead of preflight
     - name: Mocap to Vision
       when: "position_estimation == 'optitrack'"
       block: 
@@ -56,12 +58,14 @@
           repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
           dest: /home/lis/ros2_ws/src/mocap_to_vision_pose_ros2
           force: yes 
+      
+      # end doing on setup
 
       - name: Set correct pose topic for mocap_to_vision_pose # TODO: Perhaps patch mocap_to_vision_pose_ros2
         ansible.builtin.replace: 
           path: /home/lis/ros2_ws/src/mocap_to_vision_pose_ros2/config/config.yaml
           regexp: "/optitrack_multiplexer_node/rigid_body/[A-Za-z_0-9]+"
-          replace: "/optitrack_multiplexer_node/rigid_body/{{ ansible_facts['nodename'] }}" # Set this to the hostname. 
+          replace: "/optitrack_multiplexer_node/rigid_body/{{ ansible_facts['nodename'] }}" # this will be dynamic so can drop
       
       - name: Build mocap_to_vision_pose
         become: false
