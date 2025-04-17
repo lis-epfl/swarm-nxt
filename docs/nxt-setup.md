@@ -222,6 +222,10 @@ On the Safety tab:
 On the parameters tab: 
 
 1. Set `COM_OBL_RC_ACT` to Land Mode
+2. Set `CBRK_SUPPLY_CHK` to 0. 
+
+!!! important
+    If you do not set the `CBRK_SUPPLY_CHK` to zero, none of the battery related checks will execute!
 
 
 #### Sensors
