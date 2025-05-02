@@ -5,8 +5,21 @@
   become: yes
   vars:
     ros_path: "~/ros2_omninxt_ws"
-
+    fc_path: "~/nxt_flight_controller"
+        
   tasks: 
+    - name: Add WiFi
+      community.general.nmcli: 
+        type: wifi
+        conn_name: default_drones
+        ifname: "{{ host_wifi_interface }}"
+        ssid: "{{ wifi_ssid }}"
+        wifi_sec: 
+          key-mgmt: wpa-psk
+          psk: "{{ wifi_password }}"
+        autoconnect: true
+        state: present
+        
     - name: Setup ROS
       block: 
         - name: Add ROS 2 apt
@@ -88,6 +101,57 @@
           ansible.builtin.git: 
             repo: https://github.com/lis-epfl/optitrack_packages_ros2/
             dest: "{{ ros_path }}/src"
-        - name: Patch 
+
+
+    - name: Make path
+      become: false
+      ansible.builtin.file: 
+        path: "{{ fc_path }}"
+        state: directory
+        mode: "0755"
+    - name: NXT APT Dependencies
+      ansible.builtin.apt:
+        update_cache: true
+        name: 
+          - gcc-arm-none-eabi
+          - fuse
+          - gstreamer1.0-plugins-bad
+          - gstreamer1.0-libav
+          - gstreamer1.0-gl
+          - libfuse2
+          - libxcb-xinerama0 
+          - libxkbcommon-x11-0 
+          - libxcb-cursor-dev
+    - name: Allow rootless access to flight controller
+      ansible.builtin.user: # Add the current user to the dialout group
+        name: "{{ ansible_user_id }}"
+        groups: dialout
+        append: true
+    - name: Remove modemmanager
+      ansible.builtin.apt:
+        name: modemmanager
+        state: absent
+    - name: Download necessary items
+      become: false
+      block: 
+      - name: Get QGroundControl
+        ansible.builtin.get_url:
+          url: https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage
+          dest: "{{ fc_path }}/QGroundControl.AppImage"
+          mode: '0755' # executable for us
+      - name: Clone Git Repository
+        ansible.builtin.git: 
+          repo: "https://github.com/PX4/PX4-Autopilot"
+          tag: v1.15.4
+          dest: "{{ fc_path }}/PX4-Autopilot"
+          force: yes
+      - name: Build bootloader
+        community.general.make:
+          chdir: "{{ fc_path }}/PX4-Autopilot"
+          target: hkust_nxt-dual_bootloader
+      - name: Build main code
+        community.general.make:
+          chdir: "{{ fc_path }}/PX4-Autopilot"
+          target: hkust_nxt-dual        
           
 

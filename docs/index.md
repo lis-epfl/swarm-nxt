@@ -1,5 +1,6 @@
+<!-- TODO: Add some pictures -->
 
-This documentation describes how to build and install the OmniNXT drone. 
+This documentation describes how to build and install the OmniNXT drone.
 
 For hardware setup, follow [Hardware Setup](hardware-setup.md)
 

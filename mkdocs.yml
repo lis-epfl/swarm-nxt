@@ -2,6 +2,7 @@ site_name: Omni NXT
 nav: 
   - Home: index.md
   - Hardware Setup: hardware-setup.md
+  - IT Infrastructure Setup: it-infra-setup.md
   - Software Setup: software-setup.md
   - Image Creation Steps: image-creation.md
   - Flight Controller Setup: nxt-setup.md

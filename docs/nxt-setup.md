@@ -1,36 +1,14 @@
 # Flight Controller Setup
 
-## Host Computer Dependencies
-
-### Automatable Dependencies
-
-For easily running through the automatable steps, ensure Ansible is installed on the host computer by following the steps [here](software-common-tasks.md#ansible-installation). 
-
-Clone the [repository](https://github.com/lis-epfl/onix-nxt). Then, change to the ansible directory and run: 
-
-```bash
-ansible-playbook -i inventory.ini flight_controller.yml -K
-``` 
-
-Enter your password for sudo as the BECOME password. Next, it will ask you for a path to store the downloaded assets. You can specify one, or use the default by pressing enter. We will refer to this path as `/path/to/assets`
-
-You can do these steps manually by looking through the `flight_controller.yml` file.
-
-### Non-Automatable Dependencies
-
-1. Download [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software) if you do not have it. 
-2. Extract the folder, open it in terminal, and run `sudo ./SetupSTM32CubeProgrammer-<version>.linux` (replace `<version>` with the version you've downloaded)
-3. Walk through the wizard and install the program. 
-
 ## Flashing Firmware
 
 !!! important  
-    All the steps above must be finished prior to this section
+	Ensure you have fully run the host computer setup in the [IT Infrastructure Setup Guide](it-infra-setup.md)
 
 ### Bootloader
 
 1. Ensure the flight controller is powered off, unplug any power from the drone. 
-2. While pressing the BOOT button beside the MicroSD card, connect the USB-C cable to the PC and release the boot button. 
+2. While pressing the BOOT button beside the MicroSD card, connect the USB-C cable to the PC and release the boot butto.n. 
 3. Open the STM32CubeProgrammer by navigating to where it was installed in a terminal (`/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin` by default), and running `sudo ./STM32CubeProgrammer`
 4. On the blue dropdown next to the green connect button, select USB. 
 5. Click the refresh button until a port is automatically selected under port. If it doesn't show up, ensure the board is in DFU mode by unplugging the USB-C cable, and holding the BOOT button while plugging it in again. 
@@ -135,7 +113,7 @@ Ensure that the photo under "Actuator Testing" looks correct:
 Under PWM MAIN, select DShot600 for MAIN 1-4. Click on "Identify & Assign Motors" and follow the process. For collision safety, ensure that the Onix is located closer to the rear rotors (rotors 2 and 4 in the image). 
 
 !!! important
-	The top of the quadroter is the side with the Onix. 
+	The top of the quadroter is the side with the Orin. 
 
 !!! important
     Ensure the propellers are unmounted before the next step
@@ -146,6 +124,15 @@ Set the spin direction for each motor so that it matches the image. Enable the s
     Manually verify the spin direction individually for each motor, since the spin direction may not match QGroundControl
 
 You can install the propellers by following the steps in [Hardware Setup > Propeller Installation](hardware-setup.md#propeller-setup) at any time after this. 
+
+#### Propeller Installation 
+
+1. Observe the rotation direction in the propeller setup image. The Orin is on the back (near propeller \#2 and \#4). 
+2. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type.   
+
+   ![](images/actuator_setting.png)
+   
+![](images/hw/prop_direction_rear.jpg)
  
 #### Telemetry
 

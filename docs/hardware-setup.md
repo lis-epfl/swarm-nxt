@@ -9,15 +9,18 @@ This file takes you through the hardware setup process for the OmniNXT Drone. Th
 ### Soldering 
 
 1. Insert the antivibration rubber pieces into the four holes of both the ESC and the flight controller. On the ESC, the shorter side should be on the side with the eight pin connection port.  On the flight controller, the shorter side of the rubber piece should be on the SD card side. 
-2. Cut each of the motor wires to 55mm (the picture is 5mm too long). Measure from the foot of the heatshrink.
+2. Cut each of the motor wires to 55mm. Measure from the foot of the heatshrink.
 3. Cut a orin power cable from the base of the female side: 
     1. 10cm on the red wire
     2. 9.5cm on the black wire
-4. Strip 1cm from the included black and red wires from the ESC kit, and solder them in the appropriate cups of the XT60 male connector. <!-- TODO --> 
-5. Solder the other end of the cables to one of the pairs of holes in the esc adapter board. Ensure the wire is coming out such that the positive pad on the top is on the right side. 
-6. Solder the orin power cable to the other pair of holes in the esc adapter board
-7. Solder each of the motors to one triad of pins on the ESC. 
-8. Solder the esc adapter board at a 90 degree angle pointing away from the flight controller. 
+4. Take the XT60 Cable (CAB-004) and cut it to the following lengths: 
+	1. Red: 11cm from the edge of the connector
+	2. Black: 10cm from the edge of the connector 
+5. Strip around 5mm from each wire of CAB-004 and add solder to each wire
+6. Strip around 5mm from each wire of the orin power cable and add solder to each wire
+7. Solder the red wires of CAB-004 and the orin power cable together on the positive pad of the ESC
+8. Solder the black wires of CAB-004 and the orin power cable together on the negative pad of the ESC
+9. Solder each of the motors to one triad of pins on the ESC. 
 
 !!! warning
     Ensure that each motor's wires are connected to three consecutive pads on the ESC, with one of them in the corner. It does not matter which motor wire goes on which pin other than this. 
@@ -26,15 +29,6 @@ This file takes you through the hardware setup process for the OmniNXT Drone. Th
 ![](images/hw/motor_lengths.jpg)
 ![](images/hw/battery_length.jpg)
 
-
-### Serial Connection Cable 
-
-1. Get the cables in this picture
-   ![](images/hw/serial_cables.jpg)
-2. Cut them both in half, and then cut the coloured wire 1.2cm shorter. 
-3. Connect the coloured wires to the gray wires in an order such that the coloured wires connect to these pins on the Orin connector. We recommend using solder seal connectors to make this easier.
-   
-   ![](images/hw/serial_order.jpg)
 
 
 ### Fastening Assembly to Frame
@@ -48,8 +42,7 @@ This file takes you through the hardware setup process for the OmniNXT Drone. Th
 4. Loosely thread the M2 nuts onto each of the bolts 
 5. For each of the bolts, hold the nut with your finger in the divet, and use a screwdriver to tighten the bolt. It should be snug, and equally tight across the four bolts. Do not overtighten, the ESC can contact the flight controller!
 6. Fasten the motors to the frame with the shorter bolts that were included in the packaging. Ensure that the cables are close to the frame, you can twist them together to ensure this. 
-7. Flash the flight controller with the bootloader: [FC Setup](nxt-setup.md)
-8. Connect the RC receiver to the appropriate port on the flight controller, and tape it down to the frame as shown
+7. Connect the RC receiver to the appropriate port on the flight controller, and tape it down to the frame as shown
    <!-- TODO: Insert picture -->
 
 
@@ -58,11 +51,10 @@ This file takes you through the hardware setup process for the OmniNXT Drone. Th
 1. Insert the NVME SSD to the corresponding port, and bolt it down with an M2x6 bolt. 
 2. Attach the Wi-Fi antenna to the adapter. It does not matter which port goes into which antenna. [YouTube Video](https://youtu.be/8tzWKIt1v1E?t=40)
 3. Insert the Wi-Fi adapter to the corresponding port, and bolt it down using an M2x4 bolt. 
-4. Follow the [Software Setup](software-setup.md) steps on the Orin. 
-5. Attach the carrier board and Orin to the other side of the frame as the flight controller. Use 5mm nylon spacers between the carrier board and the frame, and M3x12 bolts on the top. 
-6. Remove the orange covers off of the bolt holes on the carrier board.
-7. Bolt the orin down to the carrier board with 2 M2x6 Nylon bolts 
-8. Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front of the drone. 
+4. Attach the carrier board and Orin to the other side of the frame as the flight controller. Use 5mm nylon spacers between the carrier board and the frame, and M3x12 bolts on the top. 
+5. Remove the orange covers off of the bolt holes on the carrier board.
+6. Bolt the orin down to the carrier board with 2 M2x6 Nylon bolts 
+7. Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front of the drone. 
 
 ## Frame Preparation 
 
@@ -72,18 +64,9 @@ This file takes you through the hardware setup process for the OmniNXT Drone. Th
    <!--TODO: Insert image-->
 3. Bolt the prop guard onto the Oddity RC standoffs with M3x8 bolts. 
 
-## Propeller Installation 
-
 !!! warning
-	You should perform the [Propeller Setup](nxt-setup.md#propeller-numbering-and-spin-direction) before fixing the propellers. 
+	Do not install the propellers yet! They will be installed during the software setup section.  
 
-1. Ensure that the [Propeller Setup](nxt-setup.md#propeller-numbering-and-spin-direction) is finished. You will have to remove the propellers before performing that step. 
-2. Observe the rotation direction in the propeller setup image. The Orin is on the back (near propeller \#2 and \#4). T
-3. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type.   
-
-   ![](images/actuator_setting.png)
-   
-![](images/hw/prop_direction_rear.jpg)
 ## Camera Assembly
 
 ### Cameras
