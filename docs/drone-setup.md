@@ -1,0 +1,457 @@
+# Drone Setup
+
+## Hardware Setup 
+
+This section takes you through the hardware setup process for the OmniNXT Drone. The bill of materials can be found [here](https://docs.google.com/spreadsheets/d/1R3wPALCepJXdboiaurltGrkgvVYNo0OVzrUW1RJAQ7c/edit?gid=0#gid=0). 
+
+3D print all of the necessary items that are labelled with the manufacturer "Self". 
+
+### Flight Controller and ESC
+
+#### Soldering 
+
+1. Insert the antivibration rubber pieces into the four holes of both the ESC and the flight controller. On the ESC, the shorter side should be on the side with the eight pin connection port.  On the flight controller, the shorter side of the rubber piece should be on the SD card side. 
+2. Cut each of the motor wires to 55mm. Measure from the foot of the heatshrink.
+3. Cut a orin power cable from the base of the female side: 
+    1. 10cm on the red wire
+    2. 9.5cm on the black wire
+4. Take the XT60 Cable (CAB-004) and cut it to the following lengths: 
+	1. Red: 11cm from the edge of the connector
+	2. Black: 10cm from the edge of the connector 
+5. Strip around 5mm from each wire of CAB-004 and add solder to each wire
+6. Strip around 5mm from each wire of the orin power cable and add solder to each wire
+7. Solder the red wires of CAB-004 and the orin power cable together on the positive pad of the ESC
+8. Solder the black wires of CAB-004 and the orin power cable together on the negative pad of the ESC
+9. Solder each of the motors to one triad of pins on the ESC. 
+
+!!! warning
+    Ensure that each motor's wires are connected to three consecutive pads on the ESC, with one of them in the corner. It does not matter which motor wire goes on which pin other than this. 
+
+
+![](images/hw/motor_lengths.jpg)
+![](images/hw/battery_length.jpg)
+
+
+
+#### Fastening Assembly to Frame
+
+1. Stack the ESC and flight controller such that the big side of the rubber stoppers are touching. The MicroSD Card slot should be above the ESC power connection. 
+2. Prepare the assembly: <!--TODOx2 -->
+	1. With the flight controller on the bottom, insert two M2X? bolts on the side with the USB-C port. The head of the bolt should be on the same side as the flight controller
+	2. Insert two M2x? bolts on the opposite side of the USB-C port. 
+	3. Place the 6mm nylon spacers over all of the bolts. 
+3. Orient the center of the frame over the assembly. The USB-C port should be facing towards the side if the frame with the cutout. The side with the divets for the nuts should be on the top. 
+4. Loosely thread the M2 nuts onto each of the bolts 
+5. For each of the bolts, hold the nut with your finger in the divet, and use a screwdriver to tighten the bolt. It should be snug, and equally tight across the four bolts. Do not overtighten, the ESC can contact the flight controller!
+6. Fasten the motors to the frame with the shorter bolts that were included in the packaging. Ensure that the cables are close to the frame, you can twist them together to ensure this. 
+7. Connect the RC receiver to the appropriate port on the flight controller, and tape it down to the frame as shown
+   <!-- TODO: Insert picture -->
+
+
+### Orin Connection 
+
+1. Insert the NVME SSD to the corresponding port, and bolt it down with an M2x6 bolt. 
+2. Attach the Wi-Fi antenna to the adapter. It does not matter which port goes into which antenna. [YouTube Video](https://youtu.be/8tzWKIt1v1E?t=40)
+3. Insert the Wi-Fi adapter to the corresponding port, and bolt it down using an M2x4 bolt. 
+
+4. Attach the carrier board and Orin to the other side of the frame as the flight controller. Use 5mm nylon spacers between the carrier board and the frame, and M3x12 bolts on the top. 
+5. Remove the orange covers off of the bolt holes on the carrier board.
+6. Bolt the orin down to the carrier board with 2 M2x6 Nylon bolts 
+7. Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front of the drone. 
+
+### Frame Preparation 
+
+1. Bolt (M3x8) the five oddity RC standoffs at the marked locations in the image below. They should be protruding on the side with the flight controller. 
+   <!--TODO: Insert image-->
+2. Bolt four M3 40mm standoffs with M3x10 bolts. These should be on the Orin side.
+   <!--TODO: Insert image-->
+3. Bolt the prop guard onto the Oddity RC standoffs with M3x8 bolts. 
+
+!!! warning
+	Do not install the propellers yet! They will be installed during the software setup section.  
+
+### Camera Assembly
+
+#### Cameras
+
+For each of the cameras, perform the following tasks: 
+
+##### Cable Preparation
+
+1. Insert the camera cable into the camera. The side with the pads labelled FSIN and STROBE should be on the side of the camera. 
+	1. Use a flathead screwdriver to pull out the retaining clip from the connector. 
+	2. Insert the cable with the exposed contacts facing the PCB, push until it hits the back of the connector
+	3. Secure the cable by pushing the retaining clip back in
+2. Cut the microwire to a length of 30mm. 
+3. Scratch around 4mm of coating off of both ends. The colour should change, and you can check with a magnifying glass or microscope. 
+4. Apply some solder to both sides of the microwire
+5. Solder one side of the microwire to the port labelled `F` on the camera board. The wire should come out on the opposite side of the camera.
+6. Solder the other side to the pad lablled `FSIN` on the cable. 
+7. Use the Kapton tape to secure the microwire, ensuring that the tape is providing strain relief for the solder connection
+
+##### Lens Switch
+
+1. Unscrew the lens that the camera ships with, and discard.
+2. Unbolt the existing lens mount. 
+3. Bolt the lens mount that came with the fisheye lens. 
+4. Screw in the fisheye lens into the mount. 
+
+##### Test and Focus
+
+!!! note
+	This step can be done anytime. However, it is suggested to test the camera setup now before things are bolted in more permanently. 
+
+1. Insert all of the camera cables into the OAK camera board.
+2. Plug in the OAK camera board via USB-C to a laptop computer with ROS installed
+3. Download and install the driver package: 
+4. Check for focus on each of the cameras, and change the focus by turning the lenses on their holders. 
+<!--5. If continuing in this order, disconnect the cameras from the OAK camera board.-->
+
+#### Camera Mounts
+
+!!! warning
+	Be careful not to tug on the cables too much. They can tear.
+
+1. Use a soldering iron at 215℃ to insert the M2 threaded inserts into the six holes of each camera mount
+2. Bolt each camera to a mount by using four M2x? bolts. The cables should be exiting towards the flange on the mount. <!--TODO-->
+3. Bolt the camera mounts to the camera holder frame. 
+
+#### OAK Board
+
+1. Connect the four camera cables to the OAK board. Ensure that the orientation of the board is as it would be in the final assembly, and do not allow any camera cable to be twisted. 
+2. Put the two halves of the cover around the OAK board, and bolt the assembly to the frame with 4 M2x14 bolts. 
+3. Put the camera frame on the metal standoffs above the orin, and bolt down with four M3x6 bolts.
+
+
+
+## Flight Controller Setup
+
+### Flashing Firmware
+
+!!! important  
+	Ensure you have fully run the host computer setup in the [IT Infrastructure Setup Guide](it-infra-setup.md)
+
+#### Bootloader
+
+1. Ensure the flight controller is powered off, unplug any power from the drone. 
+2. While pressing the BOOT button beside the MicroSD card, connect the USB-C cable to the PC and release the boot butto.n. 
+3. Open the STM32CubeProgrammer by navigating to where it was installed in a terminal (`/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin` by default), and running `sudo ./STM32CubeProgrammer`
+4. On the blue dropdown next to the green connect button, select USB. 
+5. Click the refresh button until a port is automatically selected under port. If it doesn't show up, ensure the board is in DFU mode by unplugging the USB-C cable, and holding the BOOT button while plugging it in again. 
+6. Open the menu on the left side and select "Erasing & Programming"
+7. Under file path, click browse and find the bootloader bin file. It was built in the automatable dependencies playbook. It will be in `/path/to/assets/PX4-Autopilot/build/hkust_nxt-dual_bootloader/hkust_nxt-dual_bootloader.bin`
+8. Check Verify programming, and Run after programming. Ensure the start address is `0x08000000`.
+9. Click on start Start Programming. 
+
+#### Main Program
+
+1. Navigate to `/path/to/assets` in a terminal 
+2. Open QGroundControl: `./QGroundControl.AppImage`. 
+3. Click on the Q symbol on the top left, and click on vehicle setup. 
+4. Click on the firmware tab, and unplug and replug the USB cable to the flight controller. 
+5. A pop-up should come up named "Firmware Setup". Select PX4 Pro, and check advanced settings. Select "Custom firmware file..." and click Ok
+6. In the file picker, navigate to `/path/to/assets/PX4-Autopilot/build/hkust_nxt-dual_default` and select the `hkust_nxt-dual_default.px4` file. 
+7. You should see tabs such as "Airframe" and "Sensors" once the flash is complete. 
+
+### Post-Flash Setup
+
+First, ensure that the units in QGroundControl are set to SI Units: 
+
+1. Click on the Q on the top left
+2. Click on application settings
+3. In the general tab under units, ensure that they are Meters, Meters, SquareMeters, Meters/second, Celsius. 
+
+
+Then, follow one of the steps below: 
+
+#### Using a Pre-Saved Parameter File
+
+1. Click on the Q button on the top left, click on Vehicle Setup, and parameters. 
+2. Click the tools button and select "Load from file". 
+3. Select the parameter file that can be found on the Google Drive. 
+4. Follow the [Propeller Setup](#propeller-numbering-and-spin-direction), [Sensor Calibration](#sensors) and [Radio Calibration](#remote-control) steps since they need to be done for each drone/RC individually.
+
+!!! warning
+	This pre-saved file assumes the same settings as the Manual Setup below. If anything has changed, make sure to change it before starting. 
+
+#### Manual Setup
+
+You can also set the settings manually. Navigate to the parameters tab, and you can search for these using the search box. Double click to edit.
+
+##### Airframe
+
+!!! important
+	You must do this first, since it will reset the other values.
+
+Under airframe, select Quadcopter X, Generic Quadcopter. Click on apply and restart. 
+
+
+##### General Settings
+
+- If indoors, no GPS (assumed default)
+	- `COM_ARM_WO_GPS`: Warning 
+	- `COM_ARM_MAG_STR`: Warning
+	- `SYS_HAS_MAG`, `SYS_HAS_GPS`, `SYS_HAS_BARO`: Set to 0/Disabled. 
+- `RC_PORT_CONFIG`: Radio Controller 
+- `IMU_GYRO_RATEMAX`: 2000Hz
+- `IMU_INTEG_RATE`: 400Hz
+- `MAV_0_MODE`: External Vision
+- `MAV_0_RATE`: 92160 B/s
+
+##### Power
+
+Navigate to the power tab and fill in these settings: 
+
+- Source: Power Module
+
+Set the following items to match the battery you're using. We have provided the settings for the battery that we used: 
+
+- Set the number cells:  6 
+- Empty Voltage: 2.56V 
+- Full Voltage: 4.05V
+
+##### Actuators
+Open the MAVLink console (in the Analyze Tools menu accessible from the Q button on the main screen). Input the coordinates of the actuators. It is done this way since the Actuators tab truncates values to two decimal places. 
+
+```
+param set CA_ROTOR0_PX 0.0535
+param set CA_ROTOR0_PY 0.0535
+
+param set CA_ROTOR1_PX -0.0535
+param set CA_ROTOR1_PY -0.0535
+
+param set CA_ROTOR2_PX 0.0535
+param set CA_ROTOR2_PY -0.0535
+
+param set CA_ROTOR3_PX -0.0535
+param set CA_ROTOR3_PY 0.0535
+```
+
+
+These positions are relative to the center of gravity of the drone, so ensure that the battery is placed such that the CoG is truly at the middle of the drone. Then, go back to the Vehicle Setup menu and open the Actuators tab. __DO NOT TOUCH THE POSITION TEXTBOXES__ since the values will truncate to two decimal places. 
+
+##### Propeller Numbering and Spin Direction
+
+Ensure that the photo under "Actuator Testing" looks correct: 
+
+![](images/actuator_setting.png)
+
+Under PWM MAIN, select DShot600 for MAIN 1-4. Click on "Identify & Assign Motors" and follow the process. For collision safety, ensure that the Onix is located closer to the rear rotors (rotors 2 and 4 in the image). 
+
+!!! important
+	The top of the quadroter is the side with the Orin. 
+
+!!! important
+	Ensure the propellers are unmounted before the next step
+
+Set the spin direction for each motor so that it matches the image. Enable the slider, slide it  up a bit and ensure the rotation direction is correct. 
+
+!!! important
+	Manually verify the spin direction individually for each motor, since the spin direction may not match QGroundControl
+
+You can install the propellers by following the steps in [Hardware Setup > Propeller Installation](hardware-setup.md#propeller-setup) at any time after this. 
+
+##### Propeller Installation 
+
+1. Observe the rotation direction in the propeller setup image. The Orin is on the back (near propeller \#2 and \#4). 
+2. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type.   
+
+   ![](images/actuator_setting.png)
+   
+![](images/hw/prop_direction_rear.jpg)
+ 
+##### Telemetry
+
+You can choose to use either the TELEM1 or TELEM2 port for providing telemetry to the Orin. 
+
+__TELEM2 Port (Preferred)__:
+
+In the parameters tab, set the following settings: 
+
+- `MAV_0_CONFIG`: TELEM 2
+- `SER_TEL2_BAUD`: 921600 8N1
+
+!!! note 
+	If another port was selected for `MAV_0_CONFIG`, you may have to restart the flight controller by pressing Tools > Reboot Vehicle before the `SER_TEL2_BAUD` is visible. 
+	
+Go back to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
+
+In the console, run the following commands: 
+```
+cd fs/microsd
+mkdir etc/
+cd etc
+echo "mavlink stream -d /dev/ttyS3 -s HIGHRES_IMU -r 1000" > extras.txt
+```
+
+If you run `cat extras.txt`, the mavlink stream line should be present. 
+
+
+
+__TELEM1 Port__:
+
+If the TELEM2 port is broken, you can use the TELEM1 port instead. On the parameter screen, change `MAV_0_CONFIG` to TELEM 1.
+
+
+Then, open the MAVLink console under "Analyze Tools", and run the following commands: 
+
+``` 
+param set SER_TEL1_BAUD 921600
+cd fs/microsd
+mkdir etc/
+cd etc
+echo "mavlink stream -d /dev/ttyS1 -s HIGHRES_IMU -r 1000" > extras.txt
+```
+
+!!! note
+	The HKUST GitHub suggests that the correct port is /dev/ttyS2 for TELEM1, but /dev/ttyS1 is tested and works. An [issue](https://github.com/HKUST-Aerial-Robotics/Nxt-FC/issues/22) has been filed 
+
+If you run `cat extras.txt`, the mavlink stream line should be present. 
+
+
+
+You can reboot the flight controller with `reboot` in the console. Connect the appropriate port to the THS1 port on the Onix, and SSH in. To test if the telemetry is streaming, run `python3 docs/examples/mavsdk_imu.py`. The rate should be roughly 250Hz. 
+
+
+##### Remote Control
+
+Ensure the Taranis has been setup following the [Remote Control Setup Instructions](remote-control-setup.md). 
+
+Go to the radio tab and follow the calibration procedure. 
+
+Go to the flight modes page and set the channels like the image: 
+
+![](images/flight_modes.png)
+
+##### Safety Setup
+
+On the Safety tab: 
+
+1. Set the battery failsafe to land mode
+2. Set the RC loss failsafe to land mode
+3. Set the geofence failsafe to land mode
+4. Set the land mode speed to 0.3m/s and disarm after 7s. You will have to force save.
+
+On the parameters tab: 
+
+1. Set `COM_OBL_RC_ACT` to Land Mode
+2. Set `CBRK_SUPPLY_CHK` to 0. 
+
+!!! important
+	If you do not set the `CBRK_SUPPLY_CHK` to zero, none of the battery related checks will execute!
+
+
+##### Sensors
+
+On the sensors tab: 
+
+Click on the orientations sub-tab, and set the autopilot orientation to `ROTATION_ROLL_180_YAW_90`. Reboot if prompted.
+
+!!! important
+	This is true if the arrow on the flight controller is pointed to the right if looked at from the bottom (orin on the back)
+
+Calibrate the gyroscope by putting the drone on a level surface, and then clicking the gyroscope button and following the wizard. 
+
+Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. 
+
+##### EKF Setup
+
+Set the following parameters in the Parameters screen: 
+
+| **Parameter**       | **Value**        | **Notes**                                       |
+|---------------------|------------------|-------------------------------------------------|
+| `EKF2_ACC_NOISE`   | max_value (1.00)  |                                                 |
+| `EKF2_ACC_B_NOISE` | max_value (0.01)  |                                                 |
+| `EKF2_GYR_NOISE`   | max_value (0.1)   |                                                 |
+| `EKF2_GYR_B_NOISE` | max_value (0.01)  |                                                 |
+| `EKF2_EV_NOISE_MD` | 0.0               |                                                 |
+| `EKF2_EVP_NOISE`   | 0                 | Need to force save                              |
+| `EKF2_EVA_NOISE`   | 0                 |                                                 |
+| `EKF2_EV_CTRL`     | 11                | Horizontal, Vertical, and Yaw should be checked |
+| `EKF2_HGT_REF`     | Vision            |                                                 |
+| `EKF2_GPS_CTRL`    | 0                 |                                                 |
+| `EKF2_BARO_CTRL`   | 0                 |                                                 |
+| `EKF2_RNG_CTRL`    | 0                 |                                                 |
+
+Restart the drone by going to Tools > Restart.
+
+
+### PID Tuning
+
+1. Follow all the steps in the [Pre-Flight Checklist](index.md#pre-flight-checklist)
+2. Launch the vehicle in position mode, and fly it slowly. Make sure that it feels decently well to operate. 
+3. Hover the drone at 1.5 m, and ensure that it the drone is in the center of a 2x2x2m cube of free space. 
+4. In QGroundControl, click on the Q on the top left and open the vehicle setup menu
+5. Click on PID Tuning
+6. Enable autotune
+7. Autotune the rate controller. 
+8. Land, and save the parameters
+9. Takeoff again in a safety volume of 2x2x2m. 
+10. Autotune the attitude controller.
+11. Land. 
+
+If the autotune fails, you can increase the `MC_AT_SYSID_AMP` parameter by steps of 0.5, and trigger the autotune again. 
+
+## Software Setup
+
+
+1. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
+2. Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board
+3. Ensure that the devkit is turned off and the power unplugged, but ready to be plugged in
+4. Press the button labelled "REC" on the Devboard
+5. While pressing the REC button, press the RES button
+6. Release the RES button while still pressing the REC button
+7. Connect the power to the Jetson, and release the REC button after the power is connected
+8. On the host computer, run `lsusb`. This sequence was a success if an entry with NVIDIA Corp. APX is visible (`ID 0955:7323 NVIDIA Corp. APX`)
+9. Run the sdkmanager: `sdkmanager --cli`
+10. Login, and then select the following options: install -> jetson -> target hardare
+11. Select Jetson Orin NX, it should already be pre-selected
+12. Reply Y to showing all Jetson versions. Select JetPack 6.2
+13. Select both additional SDKs
+14. Do not customize install settings
+15. Reply N to flashing the Jetson Orin NX Module
+
+
+### Flashing Process 
+
+Wait until the SDK is installed, then run the following steps: 
+
+1. Open the `~/nvidia/nvidia_sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra` folder. Open a terminal in this folder. 
+2. Download the post-install image from the [Google Drive](https://drive.google.com/drive/folders/1IpKJmJZyAb2P-46V7JcgBnGyn-WECAMc). Run the following command: `tar -xvf /path/to/tarball -C /home/nvidia/nvidia-sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra/tools/backup_restore`. This will take a while.
+3. Once this is done, run this command to flash the Jetson: `sudo ./tools/backup_restore/l4t_backup_restore.sh -e nvme0n1 -r jetson-orin-nano-devkit-nvme`. This will also take a while.
+4. Press the button labelled RES on the Jetson once the command has completed. 
+
+!!! important
+    Ensure you are in the `Linux_for_Tegra` folder
+
+### Post-Flash Setup
+
+On the host computer, you should be able to SSH into the Orin now: `ssh lis@192.168.55.1`. This connection is provided through the USB Recovery port. These are the default credentials: 
+
+```
+username: lis
+password: orin
+```
+
+#### Password-Free Access
+
+For password free access to the Orin, follow these steps: 
+
+1. Ensure that you have an SSH key in ~/.ssh
+    1. If not, run `ssh-keygen -t ed25519 -C <yourCommentHere>`
+2. With the USB connected, run `ssh-copy-id lis@192.168.55.1`
+3. Make sure that the ssh-agent is on: ``eval `ssh-agent` `` 
+4. Add your key to the agent: `ssh-add`
+5. Ensure that you can access the device without a password: `ssh lis@192.168.55.1`
+
+
+#### Ansible 
+
+On the host computer, navigate to the `ansible/` directory of the omni-nxt repo and run the playbook: 
+
+``ansible-playbook -i inventory.ini drone_setup.yml -K``
+
+Enter the sudo password of the orin when prompted. 
+
+!!! important
+    It is very important that you set a unique hostname. We recommend following a structured naming pattern, and recording the assigned names somewhere to avoid duplicate naming. Label your drone with this hostname.

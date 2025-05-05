@@ -8,7 +8,7 @@ We recommend using the Ubiquiti Amplifi configured with the following settings (
 - Band optimization enabled
 - WPA2/WPA3 PSK Authentication
 
-Note down the SSID and password that you put
+Ensure you edit the ssid and password variables in the `ansible/group_vars/all` file as described in [Host Computer Setup](#host-computer-setup)
 
 # Host Computer
 
@@ -45,6 +45,8 @@ This procedure will install required packages on the host computer and configure
 6. Download [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software) if you do not have it. 
 7. Extract the folder, open it in terminal, and run `sudo ./SetupSTM32CubeProgrammer-<version>.linux` (replace `<version>` with the version you've downloaded)
 8. Walk through the wizard and install the program. 
+9. Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/sdk-manager). Install it by running `sudo dpkg -i /path/to/sdkmanager.deb`. If required, install any missing dependencies with `sudo apt --fix-broken install`
+
 
 
 
