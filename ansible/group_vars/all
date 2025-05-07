@@ -13,3 +13,8 @@ drone_wifi_interface: wlP1p1s0
 # Advanced Settings
 chrony_minpoll: 2
 chrony_maxpoll: 3
+
+host_ros_path: "~/ros2_omninxt_ws"
+host_fc_path: "~/nxt_flight_controller"
+
+optitrack_server_ip: "192.168.194.150"

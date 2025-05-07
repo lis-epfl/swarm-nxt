@@ -3,9 +3,7 @@
   hosts: localhost
   connection: local 
   become: yes
-  vars:
-    ros_path: "~/ros2_omninxt_ws"
-    fc_path: "~/nxt_flight_controller"
+
         
   tasks: 
     - name: Add WiFi
@@ -95,18 +93,17 @@
       block: 
         - name: Make ws folder
           ansible.builtin.file:
-            path: "{{ ros_path }}/src"
+            path: "{{ host_ros_path }}/src"
             state: directory
         - name: Get optitrack packages
           ansible.builtin.git: 
             repo: https://github.com/lis-epfl/optitrack_packages_ros2/
-            dest: "{{ ros_path }}/src"
-
+            dest: "{{ host_ros_path }}/src"
 
     - name: Make path
       become: false
       ansible.builtin.file: 
-        path: "{{ fc_path }}"
+        path: "{{ host_fc_path }}"
         state: directory
         mode: "0755"
     - name: NXT APT Dependencies
@@ -137,21 +134,21 @@
       - name: Get QGroundControl
         ansible.builtin.get_url:
           url: https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage
-          dest: "{{ fc_path }}/QGroundControl.AppImage"
+          dest: "{{ host_fc_path }}/QGroundControl.AppImage"
           mode: '0755' # executable for us
       - name: Clone Git Repository
         ansible.builtin.git: 
           repo: "https://github.com/PX4/PX4-Autopilot"
           tag: v1.15.4
-          dest: "{{ fc_path }}/PX4-Autopilot"
+          dest: "{{ host_fc_path }}/PX4-Autopilot"
           force: yes
       - name: Build bootloader
         community.general.make:
-          chdir: "{{ fc_path }}/PX4-Autopilot"
+          chdir: "{{ host_fc_path }}/PX4-Autopilot"
           target: hkust_nxt-dual_bootloader
       - name: Build main code
         community.general.make:
-          chdir: "{{ fc_path }}/PX4-Autopilot"
+          chdir: "{{ host_fc_path }}/PX4-Autopilot"
           target: hkust_nxt-dual        
           
 
