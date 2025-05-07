@@ -1,0 +1,15 @@
+---
+- name: Command
+  hosts: drones
+  remote_user: lis
+  become: yes # runs everything with sudo
+  vars_prompt: 
+    - name: command
+      prompt: "What command do you want to run on all of the drones (WARNING: Runs as sudo!)?"
+      private: false  
+
+  tasks:
+    - name: Shutdown
+      ansible.builtin.command: '{{ command }}'
+
+
