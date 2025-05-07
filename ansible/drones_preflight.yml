@@ -4,9 +4,19 @@
   remote_user: lis
   become: yes # runs everything with sudo 
   vars: 
-    gcs_url: "100.108.99.105" # get this machine's url. 
+    gcs_url: "adminlis-ThinkPad-T450s.local" # get this machine's url. 
 
-  tasks: 
+  tasks:
+    - name: Add host IPs
+      ansible.builtin.blockinfile:
+       path: /etc/chrony/chrony.conf
+       block: | # change the possible ips and chrony min/max poll in ansible/group_vars/all
+           server {{ gcs_url }}  iburst minpoll {{ chrony_minpoll }} maxpoll {{ chrony_maxpoll }}
+    - name: Restart chronyd
+      ansible.builtin.systemd:
+        name: chronyd
+        state: restarted
+
     - name: Create mavros launch script 
       become: false
       ansible.builtin.template: 
@@ -101,26 +111,31 @@
           ansible.builtin.shell: /tmp/chronyc_check.py
           register: chronyc_check
           changed_when: false
+    
 
-
+- name: Local Actions
+  connection: local
+  hosts: localhost
+  tasks:
     - name: Local Mocap
       when: "position_estimation == 'optitrack'"
       delegate_to: 127.0.0.1
-      block: 
+      connection: local
+      block:
       - name: Modify wrapper config file
         ansible.builtin.lineinfile: 
-          path: "{{ host_ros_path }}/src/optitrack_packages_ros2/optitrack_wrapper_ros2/config/optitrack_wrapper_config.yaml"
+          path: "{{ host_ros_path }}/src/optitrack_wrapper_ros2/config/optitrack_wrapper_config.yaml"
           regexp: "^(\\s+)server_address:\\s?.*"
           backrefs: true
           line: "\\1server_address: \"{{ optitrack_server_ip }}\""
       - name: Modify multiplexer config file
         ansible.builtin.lineinfile: 
-          path: "{{ host_ros_path }}/src/optitrack_packages_ros2/optitrack_multiplexer_ros2/config/optitrack_multiplexer_config.yaml"
+          path: "{{ host_ros_path }}/src/optitrack_multiplexer_ros2/config/optitrack_multiplexer_config.yaml"
           regexp: "^(\\s+)rigid_body_names:\\s?.*"
           backrefs: true
-          line: "\\1rigid_body_names: \"{{ ansible_play_batch |  map('regex_replace', '\\.local$', '') | join(',') }}\""
+          line: "\\1rigid_body_names: \"{{ groups['drones'] |  map('regex_replace', '\\.local$', '') | join(',') }}\""
       
-      # modify the local config variables for the stuff to export
+        # modify the local config variables for the stuff to export
 
 
 

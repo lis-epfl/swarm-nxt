@@ -345,17 +345,6 @@
           path: /etc/chrony/chrony.conf
           regexp: "^((pool)|(sourcedir))" 
           replace: "# \\1"
-      - name: Add host IPs
-        ansible.builtin.blockinfile: 
-          path: /etc/chrony/chrony.conf
-          block: | # change the possible ips and chrony min/max poll in ansible/group_vars/all
-              {% for host_ip in possible_host_ips %}
-              server {{ host_ip }} iburst minpoll {{ chrony_minpoll }} maxpoll {{ chrony_maxpoll }}
-              {% endfor %}
-      - name: Restart chronyd
-        ansible.builtin.systemd:
-          name: chronyd
-          state: restarted
   - name: Set hostname
     block:
     - name: "Set hostname in system"
