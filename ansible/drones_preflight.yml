@@ -1,4 +1,30 @@
 ---
+
+- name: Preflight Local Actions
+  connection: local
+  hosts: localhost
+  tasks:
+    - name: Local Mocap
+      when: "position_estimation == 'optitrack'"
+      delegate_to: 127.0.0.1
+      connection: local
+      block:
+      - name: Modify wrapper config file
+        ansible.builtin.lineinfile: 
+          path: "{{ host_ros_path }}/src/optitrack_wrapper_ros2/config/optitrack_wrapper_config.yaml"
+          regexp: "^(\\s+)server_address:\\s?.*"
+          backrefs: true
+          line: "\\1server_address: \"{{ optitrack_server_ip }}\""
+      - name: Modify multiplexer config file
+        ansible.builtin.lineinfile: 
+          path: "{{ host_ros_path }}/src/optitrack_multiplexer_ros2/config/optitrack_multiplexer_config.yaml"
+          regexp: "^(\\s+)rigid_body_names:\\s?.*"
+          backrefs: true
+          line: "\\1rigid_body_names: \"{{ groups['drones'] |  map('regex_replace', '\\.local$', '') | join(',') }}\""
+      
+        # modify the local config variables for the stuff to export
+
+
 - name: Preflight
   hosts: drones
   remote_user: lis
@@ -119,29 +145,7 @@
           changed_when: false
     
 
-- name: Local Actions
-  connection: local
-  hosts: localhost
-  tasks:
-    - name: Local Mocap
-      when: "position_estimation == 'optitrack'"
-      delegate_to: 127.0.0.1
-      connection: local
-      block:
-      - name: Modify wrapper config file
-        ansible.builtin.lineinfile: 
-          path: "{{ host_ros_path }}/src/optitrack_wrapper_ros2/config/optitrack_wrapper_config.yaml"
-          regexp: "^(\\s+)server_address:\\s?.*"
-          backrefs: true
-          line: "\\1server_address: \"{{ optitrack_server_ip }}\""
-      - name: Modify multiplexer config file
-        ansible.builtin.lineinfile: 
-          path: "{{ host_ros_path }}/src/optitrack_multiplexer_ros2/config/optitrack_multiplexer_config.yaml"
-          regexp: "^(\\s+)rigid_body_names:\\s?.*"
-          backrefs: true
-          line: "\\1rigid_body_names: \"{{ groups['drones'] |  map('regex_replace', '\\.local$', '') | join(',') }}\""
-      
-        # modify the local config variables for the stuff to export
+
 
 
 
