@@ -1,6 +1,8 @@
+# IT Infrastructure Setup 
+
 These instructions need to be followed once to setup the infrastructure to setup and operate the drones. 
 
-# Networking
+## Networking
 
 We recommend using the Ubiquiti Amplifi configured with the following settings (*verify these*): 
 
@@ -10,7 +12,7 @@ We recommend using the Ubiquiti Amplifi configured with the following settings (
 
 Ensure you edit the ssid and password variables in the `ansible/group_vars/all` file as described in [Host Computer Setup](#host-computer-setup)
 
-# Host Computer
+## Host Computer
 
 We recommend having a consistent and dedicated host computer that is used to run the central controller and manage the drone swarm. The requirements of this computer are as follows: 
 
@@ -19,7 +21,7 @@ We recommend having a consistent and dedicated host computer that is used to run
 - RAM: 8GB minimum
 - Ubuntu 22.04 installed
 
-## Ansible Installation 
+### Ansible Installation 
 
 On the computer, run the host computer ansible by running the following commands:
 
@@ -31,7 +33,7 @@ python3 -m pip install --user ansible
 For troubleshooting or more information, see the [Ansible Documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip). 
 
 
-## Host Computer Setup
+### Host Computer Setup
 
 This procedure will install required packages on the host computer and configure some networking. 
 
@@ -48,5 +50,8 @@ This procedure will install required packages on the host computer and configure
 9. Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/sdk-manager). Install it by running `sudo dpkg -i /path/to/sdkmanager.deb`. If required, install any missing dependencies with `sudo apt --fix-broken install`
 
 
+## Visual Odometry (Optitrack)
 
+If using Optitrack as the odometry source, you must setup and configure an instance of Motive that is connected to the Optitrack system. This computer must also connect to the network described in the [networking](#networking) section via ethernet. 
 
+This setup is out of scope for this guide. 

@@ -340,11 +340,7 @@
       - name: Install Chrony
         ansible.builtin.apt: 
           name: chrony
-      - name: Remove all sources
-        ansible.builtin.replace: 
-          path: /etc/chrony/chrony.conf
-          regexp: "^((pool)|(sourcedir))" 
-          replace: "# \\1"
+
   - name: Set hostname
     block:
     - name: "Set hostname in system"

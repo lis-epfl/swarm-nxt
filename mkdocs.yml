@@ -4,11 +4,8 @@ nav:
   - IT Infrastructure Setup: it-infra-setup.md
   - Drone Build Instructions: drone-setup.md
   - Flying: flying.md
-  - Image Creation Steps: image-creation.md
-  - Flight Controller Setup: nxt-setup.md
-  - Remote Controller Setup: remote-control-setup.md
-  - Position Estimation Setup: position-estimate-setup.md
   - Common Software Tasks: software-common-tasks.md
+  - Manual Setup Instructions: manual-setup.md
 theme: readthedocs
 markdown_extensions:
   - admonition

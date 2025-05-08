@@ -69,6 +69,14 @@ This section takes you through the hardware setup process for the OmniNXT Drone.
 
 !!! warning
 	Do not install the propellers yet! They will be installed during the software setup section.  
+### Optitrack Markers
+
+If the optitrack system is used for odometry, five markers (MSC-008) must be placed on the drone. 
+
+1. Identify the locations that you will place the five markers. The pattern they are in _must_ be: 
+	1. assymmetric
+	2. sufficiently unique compared to the other drones
+2. For each marker, use hot glue to adhere it to the drone body.
 
 ### Camera Assembly
 
@@ -153,7 +161,10 @@ For each of the cameras, perform the following tasks:
 6. In the file picker, navigate to `/path/to/assets/PX4-Autopilot/build/hkust_nxt-dual_default` and select the `hkust_nxt-dual_default.px4` file. 
 7. You should see tabs such as "Airframe" and "Sensors" once the flash is complete. 
 
-### Post-Flash Setup
+### Apply Parameter File
+
+!!! info
+	If you do not have a parameter file or want to create a new one, you can follow the steps in the [NXT Setup](nxt-setup.md) document instead of applying the parameter file as described below. 
 
 First, ensure that the units in QGroundControl are set to SI Units: 
 
@@ -161,76 +172,14 @@ First, ensure that the units in QGroundControl are set to SI Units:
 2. Click on application settings
 3. In the general tab under units, ensure that they are Meters, Meters, SquareMeters, Meters/second, Celsius. 
 
-
-Then, follow one of the steps below: 
-
-#### Using a Pre-Saved Parameter File
+Then, apply the saved parameter file (**TODO: LINK**) by following the steps below: 
 
 1. Click on the Q button on the top left, click on Vehicle Setup, and parameters. 
 2. Click the tools button and select "Load from file". 
 3. Select the parameter file that can be found on the Google Drive. 
-4. Follow the [Propeller Setup](#propeller-numbering-and-spin-direction), [Sensor Calibration](#sensors) and [Radio Calibration](#remote-control) steps since they need to be done for each drone/RC individually.
 
-!!! warning
-	This pre-saved file assumes the same settings as the Manual Setup below. If anything has changed, make sure to change it before starting. 
-
-#### Manual Setup
-
-You can also set the settings manually. Navigate to the parameters tab, and you can search for these using the search box. Double click to edit.
-
-##### Airframe
-
-!!! important
-	You must do this first, since it will reset the other values.
-
-Under airframe, select Quadcopter X, Generic Quadcopter. Click on apply and restart. 
-
-
-##### General Settings
-
-- If indoors, no GPS (assumed default)
-	- `COM_ARM_WO_GPS`: Warning 
-	- `COM_ARM_MAG_STR`: Warning
-	- `SYS_HAS_MAG`, `SYS_HAS_GPS`, `SYS_HAS_BARO`: Set to 0/Disabled. 
-- `RC_PORT_CONFIG`: Radio Controller 
-- `IMU_GYRO_RATEMAX`: 2000Hz
-- `IMU_INTEG_RATE`: 400Hz
-- `MAV_0_MODE`: External Vision
-- `MAV_0_RATE`: 92160 B/s
-
-##### Power
-
-Navigate to the power tab and fill in these settings: 
-
-- Source: Power Module
-
-Set the following items to match the battery you're using. We have provided the settings for the battery that we used: 
-
-- Set the number cells:  6 
-- Empty Voltage: 2.56V 
-- Full Voltage: 4.05V
-
-##### Actuators
-Open the MAVLink console (in the Analyze Tools menu accessible from the Q button on the main screen). Input the coordinates of the actuators. It is done this way since the Actuators tab truncates values to two decimal places. 
-
-```
-param set CA_ROTOR0_PX 0.0535
-param set CA_ROTOR0_PY 0.0535
-
-param set CA_ROTOR1_PX -0.0535
-param set CA_ROTOR1_PY -0.0535
-
-param set CA_ROTOR2_PX 0.0535
-param set CA_ROTOR2_PY -0.0535
-
-param set CA_ROTOR3_PX -0.0535
-param set CA_ROTOR3_PY 0.0535
-```
-
-
-These positions are relative to the center of gravity of the drone, so ensure that the battery is placed such that the CoG is truly at the middle of the drone. Then, go back to the Vehicle Setup menu and open the Actuators tab. __DO NOT TOUCH THE POSITION TEXTBOXES__ since the values will truncate to two decimal places. 
-
-##### Propeller Numbering and Spin Direction
+### NXT Configuration and Calibration
+#### Propeller Numbering and Spin Direction
 
 Ensure that the photo under "Actuator Testing" looks correct: 
 
@@ -251,7 +200,7 @@ Set the spin direction for each motor so that it matches the image. Enable the s
 
 You can install the propellers by following the steps in [Hardware Setup > Propeller Installation](hardware-setup.md#propeller-setup) at any time after this. 
 
-##### Propeller Installation 
+#### Propeller Installation 
 
 1. Observe the rotation direction in the propeller setup image. The Orin is on the back (near propeller \#2 and \#4). 
 2. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type.   
@@ -259,61 +208,8 @@ You can install the propellers by following the steps in [Hardware Setup > Prope
    ![](images/actuator_setting.png)
    
 ![](images/hw/prop_direction_rear.jpg)
- 
-##### Telemetry
 
-You can choose to use either the TELEM1 or TELEM2 port for providing telemetry to the Orin. 
-
-__TELEM2 Port (Preferred)__:
-
-In the parameters tab, set the following settings: 
-
-- `MAV_0_CONFIG`: TELEM 2
-- `SER_TEL2_BAUD`: 921600 8N1
-
-!!! note 
-	If another port was selected for `MAV_0_CONFIG`, you may have to restart the flight controller by pressing Tools > Reboot Vehicle before the `SER_TEL2_BAUD` is visible. 
-	
-Go back to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
-
-In the console, run the following commands: 
-```
-cd fs/microsd
-mkdir etc/
-cd etc
-echo "mavlink stream -d /dev/ttyS3 -s HIGHRES_IMU -r 1000" > extras.txt
-```
-
-If you run `cat extras.txt`, the mavlink stream line should be present. 
-
-
-
-__TELEM1 Port__:
-
-If the TELEM2 port is broken, you can use the TELEM1 port instead. On the parameter screen, change `MAV_0_CONFIG` to TELEM 1.
-
-
-Then, open the MAVLink console under "Analyze Tools", and run the following commands: 
-
-``` 
-param set SER_TEL1_BAUD 921600
-cd fs/microsd
-mkdir etc/
-cd etc
-echo "mavlink stream -d /dev/ttyS1 -s HIGHRES_IMU -r 1000" > extras.txt
-```
-
-!!! note
-	The HKUST GitHub suggests that the correct port is /dev/ttyS2 for TELEM1, but /dev/ttyS1 is tested and works. An [issue](https://github.com/HKUST-Aerial-Robotics/Nxt-FC/issues/22) has been filed 
-
-If you run `cat extras.txt`, the mavlink stream line should be present. 
-
-
-
-You can reboot the flight controller with `reboot` in the console. Connect the appropriate port to the THS1 port on the Onix, and SSH in. To test if the telemetry is streaming, run `python3 docs/examples/mavsdk_imu.py`. The rate should be roughly 250Hz. 
-
-
-##### Remote Control
+#### Remote Control
 
 Ensure the Taranis has been setup following the [Remote Control Setup Instructions](remote-control-setup.md). 
 
@@ -323,25 +219,8 @@ Go to the flight modes page and set the channels like the image:
 
 ![](images/flight_modes.png)
 
-##### Safety Setup
 
-On the Safety tab: 
-
-1. Set the battery failsafe to land mode
-2. Set the RC loss failsafe to land mode
-3. Set the geofence failsafe to land mode
-4. Set the land mode speed to 0.3m/s and disarm after 7s. You will have to force save.
-
-On the parameters tab: 
-
-1. Set `COM_OBL_RC_ACT` to Land Mode
-2. Set `CBRK_SUPPLY_CHK` to 0. 
-
-!!! important
-	If you do not set the `CBRK_SUPPLY_CHK` to zero, none of the battery related checks will execute!
-
-
-##### Sensors
+#### Sensors
 
 On the sensors tab: 
 
@@ -353,44 +232,7 @@ Click on the orientations sub-tab, and set the autopilot orientation to `ROTATIO
 Calibrate the gyroscope by putting the drone on a level surface, and then clicking the gyroscope button and following the wizard. 
 
 Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. 
-
-##### EKF Setup
-
-Set the following parameters in the Parameters screen: 
-
-| **Parameter**       | **Value**        | **Notes**                                       |
-|---------------------|------------------|-------------------------------------------------|
-| `EKF2_ACC_NOISE`   | max_value (1.00)  |                                                 |
-| `EKF2_ACC_B_NOISE` | max_value (0.01)  |                                                 |
-| `EKF2_GYR_NOISE`   | max_value (0.1)   |                                                 |
-| `EKF2_GYR_B_NOISE` | max_value (0.01)  |                                                 |
-| `EKF2_EV_NOISE_MD` | 0.0               |                                                 |
-| `EKF2_EVP_NOISE`   | 0                 | Need to force save                              |
-| `EKF2_EVA_NOISE`   | 0                 |                                                 |
-| `EKF2_EV_CTRL`     | 11                | Horizontal, Vertical, and Yaw should be checked |
-| `EKF2_HGT_REF`     | Vision            |                                                 |
-| `EKF2_GPS_CTRL`    | 0                 |                                                 |
-| `EKF2_BARO_CTRL`   | 0                 |                                                 |
-| `EKF2_RNG_CTRL`    | 0                 |                                                 |
-
-Restart the drone by going to Tools > Restart.
-
-
-### PID Tuning
-
-1. Follow all the steps in the [Pre-Flight Checklist](index.md#pre-flight-checklist)
-2. Launch the vehicle in position mode, and fly it slowly. Make sure that it feels decently well to operate. 
-3. Hover the drone at 1.5 m, and ensure that it the drone is in the center of a 2x2x2m cube of free space. 
-4. In QGroundControl, click on the Q on the top left and open the vehicle setup menu
-5. Click on PID Tuning
-6. Enable autotune
-7. Autotune the rate controller. 
-8. Land, and save the parameters
-9. Takeoff again in a safety volume of 2x2x2m. 
-10. Autotune the attitude controller.
-11. Land. 
-
-If the autotune fails, you can increase the `MC_AT_SYSID_AMP` parameter by steps of 0.5, and trigger the autotune again. 
+ 
 
 ## Software Setup
 
@@ -455,3 +297,34 @@ Enter the sudo password of the orin when prompted.
 
 !!! important
     It is very important that you set a unique hostname. We recommend following a structured naming pattern, and recording the assigned names somewhere to avoid duplicate naming. Label your drone with this hostname.
+
+
+## Flight Preparation 
+
+### PID Tuning
+
+1. Follow all the steps in the [Pre-Flight Checklist](flying.md#pre-flight-checklist)
+2. Launch the vehicle in position mode, and fly it slowly. Make sure that it feels decently well to operate. 
+3. Hover the drone at 1.5 m, and ensure that it the drone is in the center of a 2x2x2m cube of free space. 
+4. In QGroundControl, click on the Q on the top left and open the vehicle setup menu
+5. Click on PID Tuning
+6. Enable autotune
+7. Autotune the rate controller. 
+8. Land, and save the parameters
+9. Takeoff again in a safety volume of 2x2x2m. 
+10. Autotune the attitude controller.
+11. Land. 
+
+If the autotune fails, you can increase the `MC_AT_SYSID_AMP` parameter by steps of 0.5, and trigger the autotune again. 
+
+### Optitrack Setup 
+
+1. Bring the drone into view of the OptiTrack sensors
+2. Place the drone in view of the OptiTrack cameras, and ensure that the drone is facing the positive x direction of the coordinate system. 
+3. Select the drone's markers on the screen, right click, and click on create rigid body. Give each drone the same name as the hostname. This allows the automated tooling to work properly.
+
+!!! warning
+	It is very important that the drone is facing the positive x direction (orin towards the negative x direction). 
+
+
+

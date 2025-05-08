@@ -2,10 +2,6 @@
 
 The various subheadings of this document are linked in other pages. This page is meant as a reference for commonly performed tasks.
 
-## Ansible Installation 
-
-Install ansible on the host computer: `python3 -m pip install --user ansible`. For more information, see the [Ansible Documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip)
-
 ## Password-Free Access
 
 For password free access to the Orin, follow these steps: 
@@ -16,7 +12,6 @@ For password free access to the Orin, follow these steps:
 3. Make sure that the ssh-agent is on: ``eval `ssh-agent` `` 
 4. Add your key to the agent: `ssh-add`
 5. Ensure that you can access the device without a password: `ssh lis@192.168.55.1`
-
 
 ## Wi-Fi Setup
 
@@ -46,12 +41,11 @@ wifi-sec.key-mgmt wpa-eap \
 802-11-wireless.bssid "AA:BB:CC:DD:EE:FF"
 ```
 
-
 Replace YourUsername, YourPassword with your GASPAR credentials. You can find the bssid of your local router by `nmcli device wifi list`. Use that instead of `AA:BB:CC:DD:EE:FF`.
 
 To activate a connection, you can either use `sudo nmtui`, or: 
 
-`nmcli con up <Name>`
+`nmcli con up <Name>
 ## Wireless Connection to QGroundControl
 
 This is done with mavros. This should be done with the preflight Ansible. You can inspect the script in `ansible/scripts/mavros_start.sh` and the lines related to Mavros in `ansible/drones_preflight.yml`. 
@@ -61,6 +55,16 @@ This is done with mavros. This should be done with the preflight Ansible. You ca
 You can get the internet protocol address of a Linux computer by running `ifconfig` and looking for the four numbers after `inet` under the interface that you care about. Wireless interfaces typically begin with `w`, and ethernet interfaces typically begin with `e`. 
 
 On most networks, you can usually use `hostname.local` in place of the IP address if the two computers are on the same network. Replace `hostname` with the hostname of the computer. You can get the hostname by running: `hostname` or `hostnamectl` on the computer. 
+
+### Rescue Unreachable Device
+
+If you do not know the IP address of a drone, you can try these steps to find it's IP: 
+
+1. Try restarting everything first. 
+2. Try running `avahi-resolve -n hostname.local` while on the same network. 
+3. Try running `avahi-resolve -n hostname-2.local`. Sometimes, the original hostname gets reserved and this becomes a fallback. If this works, you can run `avahi-publish` in the background with the original hostname to force it to work. 
+4. Connect to the recovery port using a USB-C cable. You should be able to SSH into the device at `192.168.55.1` and use `ifconfig` to find the IP.
+	1. Then, you can use `avahi-resolve -a <ip>` to find the mDNS hostname. 
 
 ## Check EKF Tracking
 

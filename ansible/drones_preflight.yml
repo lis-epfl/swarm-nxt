@@ -7,6 +7,12 @@
     gcs_url: "adminlis-ThinkPad-T450s.local" # get this machine's url. 
 
   tasks:
+    - name: Remove all sources
+      ansible.builtin.replace: 
+        path: /etc/chrony/chrony.conf
+        regexp: "^((pool)|(sourcedir))" 
+        replace: "# \\1"
+        
     - name: Add host IPs
       ansible.builtin.blockinfile:
        path: /etc/chrony/chrony.conf
