@@ -1,0 +1,2 @@
+string name
+builtin_interfaces/Duration latency
