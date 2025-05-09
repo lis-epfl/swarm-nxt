@@ -3,25 +3,32 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include <chrono>
-#include <fstream> 
+#include <fstream>
 #include <filesystem>
 #include "latency_checker_ros2/msg/heartbeat.hpp"
 #include "latency_checker_ros2/msg/name_latency.hpp"
 
-namespace latency_checker {
-    class LatencyChecker : public ::rclcpp::Node {
-        public:
-            LatencyChecker();
+namespace latency_checker
+{
+    class LatencyChecker : public ::rclcpp::Node
+    {
+    public:
+        LatencyChecker();
 
-            void initialize(const std::string &config_file);
-            void HandleHeartbeatMessage();
+        void HandleHeartbeatMessage(const latency_checker_ros2::msg::Heartbeat &msg);
+        void PublishHeartbeat(); 
 
-        private:
-            std::unordered_map<std::string, rclcpp::Duration> heartbeat_map_;
-            std::unordered_map<std::string, rclcpp::Subscription<latency_checker_ros2::msg::Heartbeat>::SharedPtr> peer_subs_;
-            std::vector<std::string> peers_;
+    private:
+        std::string my_name_; 
 
-            std::string config_file_path_; 
+        std::unordered_map<std::string, rclcpp::Duration> heartbeat_map_;
+        std::unordered_map<std::string, rclcpp::Subscription<latency_checker_ros2::msg::Heartbeat>::SharedPtr> peer_subs_;
+        std::vector<std::string> peers_;
+
+        std::string config_file_path_;
+
+        rclcpp::Publisher<latency_checker_ros2::msg::Heartbeat>::SharedPtr heartbeat_publisher_;
+        rclcpp::TimerBase::SharedPtr heartbeat_timer_;
     };
 }
 

@@ -37,18 +37,23 @@ target_include_directories(latency_checker PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_features(latency_checker PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
+
 ament_export_dependencies(rosidl_default_runtime)
 
 set(MSG_FILES
-  "msg/Heartbeat.msg"
-  "msg/NameLatency.msg"
+"msg/Heartbeat.msg"
+"msg/NameLatency.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  ${MSG_FILES}
-  DEPENDENCIES builtin_interfaces
+${MSG_FILES}
+DEPENDENCIES builtin_interfaces
 )
 
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} rosidl_typesupport_cpp)
+
+target_link_libraries(latency_checker "${cpp_typesupport_target}")
 
 install(TARGETS latency_checker
   DESTINATION lib/${PROJECT_NAME})
