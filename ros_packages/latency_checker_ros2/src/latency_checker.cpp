@@ -52,8 +52,8 @@ namespace latency_checker
       auto subscription = this->create_subscription<latency_checker_ros2::msg::Heartbeat>(
           topic_name, 10, std::bind(&LatencyChecker::HandleHeartbeatMessage, this, std::placeholders::_1));
 
-      peer_subs_.insert({peer, subscription});
-      heartbeat_map_.insert({peer, rclcpp::Duration::from_seconds(0)});
+      peer_subs_.insert({ns, subscription});
+      heartbeat_map_.insert({ns, rclcpp::Duration::from_seconds(0)});
     }
 
     heartbeat_publisher_ = this->create_publisher<latency_checker_ros2::msg::Heartbeat>("~/heartbeat", 10);
