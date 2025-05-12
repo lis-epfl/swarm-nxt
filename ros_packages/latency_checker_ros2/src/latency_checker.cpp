@@ -39,15 +39,16 @@ namespace latency_checker
     }
     config_file.close();
 
-    my_name_ = rclcpp::Node::get_effective_namespace();
+    my_name_ = rclcpp::Node::get_fully_qualified_name();
+    RCLCPP_INFO(this->get_logger(), "My name: %s", my_name_.c_str());
     for (const auto &peer : peers_)
     {
-      std::string ns = "/" + peer;     
+      std::string ns = "/" + peer + "/"  + rclcpp::Node::get_name();     
       if (ns == my_name_) {
         continue;
       }
 
-      std::string topic_name = ns + "/latency/heartbeat";
+      std::string topic_name = ns + "/heartbeat";
       auto subscription = this->create_subscription<latency_checker_ros2::msg::Heartbeat>(
           topic_name, 10, std::bind(&LatencyChecker::HandleHeartbeatMessage, this, std::placeholders::_1));
 
@@ -55,7 +56,7 @@ namespace latency_checker
       heartbeat_map_.insert({peer, rclcpp::Duration::from_seconds(0)});
     }
 
-    heartbeat_publisher_ = this->create_publisher<latency_checker_ros2::msg::Heartbeat>("~/latency/heartbeat", 10);
+    heartbeat_publisher_ = this->create_publisher<latency_checker_ros2::msg::Heartbeat>("~/heartbeat", 10);
     heartbeat_timer_ = this->create_wall_timer(std::chrono::seconds(10), std::bind(&LatencyChecker::PublishHeartbeat, this));
   }
 
@@ -72,6 +73,8 @@ namespace latency_checker
 
 void LatencyChecker::PublishHeartbeat()
 {
+  auto logger = this->get_logger();
+  RCLCPP_INFO(logger, "Sending heartbeat...");
   auto msg = latency_checker_ros2::msg::Heartbeat();
   msg.node_name = my_name_; 
   msg.timestamp = this->get_clock()->now();
