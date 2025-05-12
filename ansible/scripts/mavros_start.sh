@@ -1,3 +1,4 @@
+#!/bin/bash
 set -x
 
 export ROS_DOMAIN_ID={{ ros_domain_id }}
