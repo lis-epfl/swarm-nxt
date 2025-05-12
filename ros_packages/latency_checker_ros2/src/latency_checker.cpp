@@ -39,16 +39,16 @@ namespace latency_checker
     }
     config_file.close();
 
-    my_name_ = rclcpp::Node::get_fully_qualified_name();
+    my_name_ = rclcpp::Node::get_namespace();
     RCLCPP_INFO(this->get_logger(), "My name: %s", my_name_.c_str());
     for (const auto &peer : peers_)
     {
-      std::string ns = "/" + peer + "/"  + rclcpp::Node::get_name();     
+      std::string ns = "/" + peer;     
       if (ns == my_name_) {
         continue;
       }
 
-      std::string topic_name = ns + "/heartbeat";
+      std::string topic_name = ns + "/" + rclcpp::Node::get_name() + "/heartbeat";
       auto subscription = this->create_subscription<latency_checker_ros2::msg::Heartbeat>(
           topic_name, 10, std::bind(&LatencyChecker::HandleHeartbeatMessage, this, std::placeholders::_1));
 
