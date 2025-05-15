@@ -30,7 +30,7 @@
   remote_user: lis
   become: yes # runs everything with sudo 
   vars: 
-    gcs_url: "adminlis-ThinkPad-T450s.local" # get this machine's url. 
+    gcs_url: "{{ host_hostname }}.local" 
 
   tasks:
     - name: Remove all sources
@@ -39,13 +39,6 @@
         regexp: "^((pool)|(sourcedir))" 
         replace: "# \\1"
     
-        
-    - name: Ensure ros2_ws exists
-      ansible.builtin.file:
-        path: "{{ drone_ros_path }}/src"
-        state: directory
-
-
     - name: OmniNXT Nodes
       block: 
         - name: Get repository 
@@ -71,26 +64,6 @@
         name: chronyd
         state: restarted
 
-    - name: Create mavros launch script 
-      become: false
-      ansible.builtin.template: 
-        src: scripts/mavros_start.sh
-        dest: "{{ drone_base_path }}/mavros_start.sh"
-        mode: "755"
-
-    - name: Install mavros service 
-      ansible.builtin.template: 
-        src: templates/mavros_service.j2
-        dest: /etc/systemd/system/mavros.service
-
-      
-    - name: Start and enable mavros service
-      ansible.builtin.systemd: 
-        name: mavros
-        state: restarted
-        enabled: false
-        daemon_reload: true
-
     - name: Set correct pose topic for mocap_to_vision_pose # TODO: Perhaps patch mocap_to_vision_pose_ros2
       ansible.builtin.replace: 
         path: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2/config/config.yaml"
@@ -102,8 +75,27 @@
       ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
       args:
         chdir: "{{ drone_ros_path }}"
+    
+    - name: Create config directory
+      ansible.builtin.file:
+        dest: "{{ drone_ros_path }}/config"
+        state: directory
+        mode: "755"
+    
+    - name: Send peer list
+      ansible.builtin.template: 
+        src: templates/peer_list.yaml.j2
+        dest: "{{ drone_ros_path }}/config/peer_list.yaml"
+        mode: "644"
+      vars:
+        peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
 
-    - name: Create ros_packages script
+    - name: Send launch file
+      ansible.builtin.template:
+        src: templates/drone_launch.yaml.j2
+        dest: "{{ drone_base_path }}/launch.yaml"
+
+    - name: Create ros_packages script # TODO: change this system to use a ROS launchfile instead.
       become: false
       ansible.builtin.template: 
         src: scripts/ros_packages_start.sh
@@ -115,10 +107,9 @@
         src: templates/ros_packages_service.j2
         dest: /etc/systemd/system/ros_packages.service
 
-      
     - name: Start ros_packages service
       ansible.builtin.systemd: 
-        name: packages
+        name: ros_packages
         state: restarted
         enabled: false
         daemon_reload: true
@@ -132,17 +123,11 @@
       
       - name: "Collect systemd stats"
         ansible.builtin.service_facts:
-      - name: Mocap running check
+      - name: ROS Packages Check # TODO: the new system does not fail the system if one of the nodes fail. might need python based one.
         when: "position_estimation == 'optitrack'"
         ansible.builtin.assert: 
           that: "services['ros_packages.service']['state'] == 'running' and services['ros_packages.service']['status'] != 'failed'"
           fail_msg: "ROS Packages are not running properly!"
-      
-    
-    - name: Mavros running check
-      ansible.builtin.assert: 
-        that: "services['mavros.service']['state'] == 'running' and services['mavros.service']['status'] != 'failed'"
-        fail_msg: "Mavros is not running properly!" 
     
     - name: Chrony Tracking Check
       block: 
@@ -156,9 +141,23 @@
           ansible.builtin.shell: /tmp/chronyc_check.py
           register: chronyc_check
           changed_when: false
-    
 
-
+- name: Local Actions
+  connection: local
+  hosts: localhost
+  tasks:
+    - name: Local Mocap
+      when: "position_estimation == 'optitrack'"
+      delegate_to: 127.0.0.1
+      connection: local
+      block:
+      - name: Create local launch file
+        ansible.builtin.template: 
+          src: templates/host_launch.yaml
+          dest: "{{ host_base_path }}/launch.yaml"
+      
+      
+        # modify the local config variables for the stuff to export
 
 
 

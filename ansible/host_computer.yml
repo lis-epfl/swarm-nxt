@@ -107,6 +107,7 @@
           ansible.builtin.git: 
             repo: https://github.com/lis-epfl/optitrack_packages_ros2/
             dest: "{{ host_ros_path }}/src"
+            force: yes
 
     
     - name: Latency Node
@@ -116,6 +117,7 @@
             repo: git@github.com:lis-epfl/omni-nxt
             dest: "{{ host_base_path }}/repos/omni-nxt"
             version: latency_checker # TODO: temp
+            force: yes
         - name: Link to ros_ws
           ansible.builtin.file: 
             src: "{{ host_base_path }}/repos/omni-nxt/ros_packages/latency_checker_ros2"

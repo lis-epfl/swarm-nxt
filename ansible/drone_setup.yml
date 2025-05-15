@@ -312,7 +312,12 @@
 
   - name: Mocap to Vision
     when: "position_estimation == 'optitrack'"
+    become: False
     block: 
+    - name: Ensure ros2 ws exists
+      ansible.builtin.file:
+        path: "{{ drone_ros_path }}/src"
+        state: directory
     - name: Get optitrack package
       ansible.builtin.git:
         repo: https://github.com/lis-epfl/optitrack_packages_ros2/
