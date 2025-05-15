@@ -95,7 +95,7 @@
         src: templates/drone_launch.yaml.j2
         dest: "{{ drone_base_path }}/launch.yaml"
 
-    - name: Create ros_packages script # TODO: change this system to use a ROS launchfile instead.
+    - name: Create ros_packages script 
       become: false
       ansible.builtin.template: 
         src: scripts/ros_packages_start.sh
