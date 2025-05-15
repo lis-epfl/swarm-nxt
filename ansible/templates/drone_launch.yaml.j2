@@ -6,10 +6,12 @@ launch:
           value: "udp://@{{ gcs_url }}:14550"
         - name: "namespace"
           value: "{{ ansible_hostname }}"
-    - node: 
-        pkg: "mocap_to_vision_pose_ros2"
-        exec: "check_and_launch.py"
-        name: "check_and_launch"
+    - include: 
+        file: "$(find-pkg-share mocap_to_vision_pose_ros2)/launch/mocap_to_vision_pose.launch.py"
+        arg:
+          - name: "mocap_topic"
+            value: "/optitrack_multiplexer_node/rigid_body/{{ ansible_hostname }}"
+      
     - node:
         pkg: "latency_checker_ros2"
         exec: "latency_checker"

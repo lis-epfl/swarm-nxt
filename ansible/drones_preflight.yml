@@ -63,12 +63,6 @@
       ansible.builtin.systemd:
         name: chronyd
         state: restarted
-
-    - name: Set correct pose topic for mocap_to_vision_pose # TODO: Perhaps patch mocap_to_vision_pose_ros2
-      ansible.builtin.replace: 
-        path: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2/config/config.yaml"
-        regexp: "/optitrack_multiplexer_node/rigid_body/[A-Za-z_0-9]+"
-        replace: "/optitrack_multiplexer_node/rigid_body/{{ ansible_facts['nodename'] }}" # this will be dynamic so can drop
     
     - name: Build ros packages
       become: false
