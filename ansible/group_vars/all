@@ -25,4 +25,4 @@ host_ros_path: "{{ host_base_path }}/ros2_omninxt_ws"
 host_fc_path: "{{ host_base_path }}/nxt_flight_controller"
 
 
-optitrack_server_address: "5.5.5.5"
+optitrack_server_address: "192.168.194.150"
