@@ -97,17 +97,6 @@
         daemon_reload: true
         scope: user
     
-    - name: "Mocap Checks"
-      when: "position_estimation == 'optitrack'" # TODO: now this is a bit strange...
-      block:
-      - name: Wait for one minute before checking... # this can be better if we can check ros
-        ansible.builtin.pause:
-          seconds: 60
-    
-    - name: Check if ROS Packages are running
-      ansible.builtin.command: "systemctl --user status ros_packages"
-      changed_when: false
-
     - name: Chrony Tracking Check
       block: 
         - name: Copy script
@@ -167,4 +156,7 @@
           enabled: false
           scope: user
           daemon_reload: true
+
+
+# TODO: Add something about waiting and checking all the packages after :)
 
