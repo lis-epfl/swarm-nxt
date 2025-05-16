@@ -15,7 +15,7 @@ namespace latency_checker
   LatencyChecker::LatencyChecker() : ::rclcpp::Node("latency_checker")
   {
 
-    this->declare_parameter<std::string>("config_file_path", "/tmp/config");
+    this->declare_parameter<std::string>("config_file_path", "config/peer_list.yaml");
     config_file_path_ = this->get_parameter("config_file_path").as_string();
 
     if (config_file_path_.empty() || !std::filesystem::exists(config_file_path_))
