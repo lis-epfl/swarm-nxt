@@ -1,43 +1,32 @@
 ---
 
-- name: Preflight Local Actions
-  connection: local
-  hosts: localhost
-  tasks:
-    - name: Local Mocap
-      when: "position_estimation == 'optitrack'"
-      delegate_to: 127.0.0.1
-      connection: local
-      block:
-      - name: Modify wrapper config file
-        ansible.builtin.lineinfile: 
-          path: "{{ host_ros_path }}/src/optitrack_wrapper_ros2/config/optitrack_wrapper_config.yaml"
-          regexp: "^(\\s+)server_address:\\s?.*"
-          backrefs: true
-          line: "\\1server_address: \"{{ optitrack_server_ip }}\""
-      - name: Modify multiplexer config file
-        ansible.builtin.lineinfile: 
-          path: "{{ host_ros_path }}/src/optitrack_multiplexer_ros2/config/optitrack_multiplexer_config.yaml"
-          regexp: "^(\\s+)rigid_body_names:\\s?.*"
-          backrefs: true
-          line: "\\1rigid_body_names: \"{{ groups['drones'] |  map('regex_replace', '\\.local$', '') | join(',') }}\""
-      
-        # modify the local config variables for the stuff to export
-
-
 - name: Preflight
   hosts: drones
   remote_user: lis
-  become: yes # runs everything with sudo 
   vars: 
     gcs_url: "{{ host_hostname }}.local" 
 
   tasks:
-    - name: Remove all sources
-      ansible.builtin.replace: 
-        path: /etc/chrony/chrony.conf
-        regexp: "^((pool)|(sourcedir))" 
-        replace: "# \\1"
+    - name: Chrony Stuff
+      become: yes
+      block:
+      - name: Remove all sources
+        become: yes
+        ansible.builtin.replace: 
+          path: /etc/chrony/chrony.conf
+          regexp: "^((pool)|(sourcedir))" 
+          replace: "# \\1"
+        
+      - name: Add host IPs
+        ansible.builtin.blockinfile:
+          path: /etc/chrony/chrony.conf
+          block: | # change the possible ips and chrony min/max poll in ansible/group_vars/all
+              server {{ gcs_url }}  iburst minpoll {{ chrony_minpoll }} maxpoll {{ chrony_maxpoll }}
+      - name: Restart chronyd
+        ansible.builtin.systemd:
+          name: chronyd
+          state: restarted
+      
     
     - name: OmniNXT Nodes
       block: 
@@ -54,18 +43,8 @@
             dest: "{{ drone_ros_path }}/src/latency_checker_ros2"
             state: link
         
-    - name: Add host IPs
-      ansible.builtin.blockinfile:
-       path: /etc/chrony/chrony.conf
-       block: | # change the possible ips and chrony min/max poll in ansible/group_vars/all
-           server {{ gcs_url }}  iburst minpoll {{ chrony_minpoll }} maxpoll {{ chrony_maxpoll }}
-    - name: Restart chronyd
-      ansible.builtin.systemd:
-        name: chronyd
-        state: restarted
     
     - name: Build ros packages
-      become: false
       ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
       args:
         chdir: "{{ drone_ros_path }}"
@@ -87,19 +66,28 @@
     - name: Send launch file
       ansible.builtin.template:
         src: templates/drone_launch.yaml.j2
-        dest: "{{ drone_base_path }}/launch.yaml"
+        dest: "{{ drone_base_path }}/launch.py"
 
     - name: Create ros_packages script 
-      become: false
+      vars: 
+        ros_path: "{{ drone_ros_path }}"
+        base_path: "{{ drone_base_path }}"
       ansible.builtin.template: 
         src: scripts/ros_packages_start.sh
         dest: "{{ drone_base_path }}/ros_packages_start.sh"
         mode: "755"
+      
+    - name: Create local services dir
+      ansible.builtin.file: 
+        dest: ~/.local/share/systemd/user
+        state: directory
     
     - name: Install ros_packages service 
+      vars:
+        base_path: "{{ drone_base_path }}"
       ansible.builtin.template: 
         src: templates/ros_packages_service.j2
-        dest: /etc/systemd/system/ros_packages.service
+        dest: ~/.local/share/systemd/user/ros_packages.service
 
     - name: Start ros_packages service
       ansible.builtin.systemd: 
@@ -107,6 +95,7 @@
         state: restarted
         enabled: false
         daemon_reload: true
+        scope: user
     
     - name: "Mocap Checks"
       when: "position_estimation == 'optitrack'" # TODO: now this is a bit strange...
@@ -114,15 +103,11 @@
       - name: Wait for one minute before checking... # this can be better if we can check ros
         ansible.builtin.pause:
           seconds: 60
-      
-      - name: "Collect systemd stats"
-        ansible.builtin.service_facts:
-      - name: ROS Packages Check # TODO: the new system does not fail the system if one of the nodes fail. might need python based one.
-        when: "position_estimation == 'optitrack'"
-        ansible.builtin.assert: 
-          that: "services['ros_packages.service']['state'] == 'running' and services['ros_packages.service']['status'] != 'failed'"
-          fail_msg: "ROS Packages are not running properly!"
     
+    - name: Check if ROS Packages are running
+      ansible.builtin.command: "systemctl --user status ros_packages"
+      changed_when: false
+
     - name: Chrony Tracking Check
       block: 
         - name: Copy script
@@ -140,21 +125,46 @@
   connection: local
   hosts: localhost
   tasks:
-    - name: Local Mocap
+    - name: Local ROS Packages
       when: "position_estimation == 'optitrack'"
       delegate_to: 127.0.0.1
       connection: local
       block:
+      - name: Build local packages
+        ansible.builtin.shell: ". /opt/ros/humble/setup.sh && colcon build --symlink-install"
+        args:
+          chdir: "{{ host_ros_path }}"
+
       - name: Create local launch file
         ansible.builtin.template: 
-          src: templates/host_launch.yaml
-          dest: "{{ host_base_path }}/launch.yaml"
+          src: templates/host_launch.py.j2
+          dest: "{{ host_base_path }}/launch.py"
+      - name: Create ros_packages script 
+        become: false
+        vars: 
+          ros_path: "{{ host_ros_path }}"
+          base_path: "{{ host_base_path }}"
+        ansible.builtin.template: 
+          src: scripts/ros_packages_start.sh
+          dest: "{{ host_base_path }}/ros_packages_start.sh"
+          mode: "755"
       
-      
-        # modify the local config variables for the stuff to export
-
-
-
-
-      
+      - name: Create local systemd folder
+        ansible.builtin.file:
+          dest: "~/.local/share/systemd/user"
+          state: directory
+          
+      - name: Copy ros_packages service 
+        vars:
+          base_path: "{{ host_base_path }}"
+        ansible.builtin.template: 
+          src: templates/ros_packages_service.j2
+          dest: ~/.local/share/systemd/user/ros_packages.service
+      - name: Start ros_packages service
+        ansible.builtin.systemd:
+          name: "ros_packages"
+          state: restarted
+          enabled: false
+          scope: user
+          daemon_reload: true
 

@@ -4,8 +4,7 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/bin/bash /home/lis/ros_packages_start.sh
-User=lis
+ExecStart=/bin/bash {{ base_path }}/ros_packages_start.sh
 
 [Install]
 WantedBy=multi-user.target

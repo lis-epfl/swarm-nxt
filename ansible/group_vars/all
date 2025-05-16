@@ -20,7 +20,7 @@ chrony_maxpoll: 3
 
 
 host_hostname: adminlis-ThinkPad-T450s
-host_base_path: "~/data"
+host_base_path: "/home/mistry/data"
 host_ros_path: "{{ host_base_path }}/ros2_omninxt_ws"
 host_fc_path: "{{ host_base_path }}/nxt_flight_controller"
 

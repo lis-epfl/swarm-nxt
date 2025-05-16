@@ -1,0 +1,61 @@
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.actions import RegisterEventHandler, Shutdown
+from launch.event_handlers import OnProcessExit
+from ament_index_python.packages import get_package_share_directory
+
+import importlib.util
+import sys
+import os
+
+
+def import_from_path(module_name, file_path):
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def generate_launch_description():
+    wrapper_multiplexer_path = os.path.join(
+        get_package_share_directory("optitrack_multiplexer_ros2"),
+        "launch",
+        "wrapper_and_multiplexer.launch.py",
+    )
+    wrapper_multiplexer_launch = import_from_path(
+        "wrapper_and_multiplexer", wrapper_multiplexer_path
+    )
+
+    
+    wrapper_node, multiplexer_node = wrapper_multiplexer_launch.get_nodes(
+        "{{ optitrack_server_address }}",
+        '{{ groups["drones"] | map("regex_replace", "\\.local$", "") | join(",") }}',
+    )
+
+    latency_checker_node = Node(
+        package="latency_checker_ros2",
+        executable="latency_checker",
+        namespace='{{ ansible_hostname | map("regex_replace", "-", "_") | join("") }}',
+        name="latency_checker",
+    )
+
+    # collect nodes
+    nodes = {
+        "latency_checker": latency_checker_node,
+        "optitrack_wrapper": wrapper_node,
+        "optitrack_multiplexer": multiplexer_node,
+    }
+
+    # Create exit handlers for each node so that we exit if of them exits
+    exit_handlers = []
+    for node_name, node in nodes.items():
+        exit_handlers.append(
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=node, on_exit=[Shutdown(reason=f"{node_name} exited")]
+                )
+            )
+        )
+
+    return LaunchDescription([*nodes.values(), *exit_handlers])
