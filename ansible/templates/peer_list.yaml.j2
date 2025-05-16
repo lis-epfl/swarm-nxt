@@ -1,0 +1,2 @@
+{{ host_hostname | map('regex_replace', '\\.local', '') | map('regex_replace', '-', '_') | join('') }}
+{{ peers }}

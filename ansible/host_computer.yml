@@ -2,11 +2,16 @@
 - name: Host Dependencies
   hosts: localhost
   connection: local 
-  become: yes
+  become: no
 
         
   tasks: 
+    - name: Setup base path 
+      ansible.builtin.file: 
+        path: "{{ host_base_path }}"
+        state: directory
     - name: Add WiFi
+      become: yes
       community.general.nmcli: 
         type: wifi
         conn_name: default_drones
@@ -19,6 +24,7 @@
         state: present
         
     - name: Setup ROS
+      become: yes
       block: 
         - name: Add ROS 2 apt
           block:
@@ -56,15 +62,17 @@
             - name: Install geoids
               ansible.builtin.shell: geographiclib-get-geoids all 
             
-            - name: Set domain id
-              ansible.builtin.blockinfile: 
-                path: ~/.bashrc
-                block: |
-                  export ROS_DOMAIN_ID={{ ros_domain_id }}
+    - name: Set domain id
+      ansible.builtin.blockinfile: 
+        path: ~/.bashrc
+        block: |
+          export ROS_DOMAIN_ID={{ ros_domain_id }}
     - name: VNC Viewer
+      become: yes
       ansible.builtin.apt:
         name: gvncviewer
     - name: Chrony Setup
+      become: yes
       block: 
         - name: Get Chrony
           ansible.builtin.apt: 
@@ -74,20 +82,20 @@
             path: /etc/chrony/chrony.conf
             regexp: "^((pool)|(sourcedir))"
             replace: "# \\1"
-        - name: Set allowed subnets
-          ansible.builtin.blockinfile:
-            path: /etc/chrony/chrony.conf
-            marker: "# {mark} ANSIBLE MANAGED BLOCK"
-            block: | # change the allowed subnets in ansible/group_vars/all
-              {% for subnet in chrony_allowed_subnets %}
-              allow {{ subnet }}
-              {% endfor %}
-          register: chrony_conf
-        - name: Restart the service
-          when: chrony_conf.changed
-          ansible.builtin.systemd_service:
-            name: chronyd
-            state: restarted
+        # - name: Set allowed subnets
+        #   ansible.builtin.blockinfile:
+        #     path: /etc/chrony/chrony.conf
+        #     marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        #     block: | # change the allowed subnets in ansible/group_vars/all
+        #       {% for subnet in chrony_allowed_subnets %}
+        #       allow {{ subnet }}
+        #       {% endfor %}
+        #   register: chrony_conf
+        # - name: Restart the service
+        #   when: chrony_conf.changed
+        #   ansible.builtin.systemd_service:
+        #     name: chronyd
+        #     state: restarted
     - name: Optitrack Packages
       become: false
       block: 
@@ -99,14 +107,32 @@
           ansible.builtin.git: 
             repo: https://github.com/lis-epfl/optitrack_packages_ros2/
             dest: "{{ host_ros_path }}/src"
+            force: yes
+
+    
+    - name: Latency Node
+      block: 
+        - name: Get repository 
+          ansible.builtin.git: 
+            repo: git@github.com:lis-epfl/omni-nxt
+            dest: "{{ host_base_path }}/repos/omni-nxt"
+            version: latency_checker # TODO: temp
+            force: yes
+        - name: Link to ros_ws
+          ansible.builtin.file: 
+            src: "{{ host_base_path }}/repos/omni-nxt/ros_packages/latency_checker_ros2"
+            dest: "{{ host_ros_path }}/src/latency_checker_ros2"
+            state: link
+    - name: Build ROS Packages
+      ansible.builtin.shell: "cd {{ host_ros_path }} && . /opt/ros/humble/setup.sh && colcon build"
 
     - name: Make path
-      become: false
       ansible.builtin.file: 
         path: "{{ host_fc_path }}"
         state: directory
         mode: "0755"
     - name: NXT APT Dependencies
+      become: yes
       ansible.builtin.apt:
         update_cache: true
         name: 
@@ -139,7 +165,7 @@
       - name: Clone Git Repository
         ansible.builtin.git: 
           repo: "https://github.com/PX4/PX4-Autopilot"
-          tag: v1.15.4
+          version: v1.15.4
           dest: "{{ host_fc_path }}/PX4-Autopilot"
           force: yes
       - name: Build bootloader

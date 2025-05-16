@@ -30,7 +30,7 @@
   remote_user: lis
   become: yes # runs everything with sudo 
   vars: 
-    gcs_url: "adminlis-ThinkPad-T450s.local" # get this machine's url. 
+    gcs_url: "{{ host_hostname }}.local" 
 
   tasks:
     - name: Remove all sources
@@ -38,6 +38,21 @@
         path: /etc/chrony/chrony.conf
         regexp: "^((pool)|(sourcedir))" 
         replace: "# \\1"
+    
+    - name: OmniNXT Nodes
+      block: 
+        - name: Get repository 
+          ansible.builtin.git: 
+            repo: git@github.com:lis-epfl/omni-nxt
+            dest: "{{ drone_base_path }}/repos/omni-nxt"
+            version: latency_checker # TODO: temp
+            key_file: /home/lis/.ssh/id_ed25519
+            accept_newhostkey: yes
+        - name: Link to ros_ws
+          ansible.builtin.file: 
+            src: "{{ drone_base_path }}/repos/omni-nxt/ros_packages/latency_checker_ros2"
+            dest: "{{ drone_ros_path }}/src/latency_checker_ros2"
+            state: link
         
     - name: Add host IPs
       ansible.builtin.blockinfile:
@@ -48,70 +63,53 @@
       ansible.builtin.systemd:
         name: chronyd
         state: restarted
-
-    - name: Create mavros launch script 
-      become: false
-      ansible.builtin.template: 
-        src: scripts/mavros_start.sh
-        dest: /home/lis/mavros_start.sh
-        mode: "755"
-
-    - name: Install mavros service 
-      ansible.builtin.template: 
-        src: templates/mavros_service.j2
-        dest: /etc/systemd/system/mavros.service
-
-      
-    - name: Start and enable mavros service
-      ansible.builtin.systemd: 
-        name: mavros
-        state: restarted
-        enabled: false
-        daemon_reload: true
     
-    - name: Ensure ros2_ws exists
-      ansible.builtin.file:
-        path: /home/lis/ros2_ws/src
-        state: directory
-
-
-
-    - name: Set correct pose topic for mocap_to_vision_pose # TODO: Perhaps patch mocap_to_vision_pose_ros2
-      ansible.builtin.replace: 
-        path: /home/lis/ros2_ws/src/mocap_to_vision_pose_ros2/config/config.yaml
-        regexp: "/optitrack_multiplexer_node/rigid_body/[A-Za-z_0-9]+"
-        replace: "/optitrack_multiplexer_node/rigid_body/{{ ansible_facts['nodename'] }}" # this will be dynamic so can drop
-    
-    - name: Build mocap_to_vision_pose
+    - name: Build ros packages
       become: false
       ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
       args:
-        chdir: /home/lis/ros2_ws
-
-    - name: Create mocap_to_vision script
-      become: false
-      ansible.builtin.template: 
-        src: scripts/mocap_start.sh
-        dest: /home/lis/mocap_start.sh
+        chdir: "{{ drone_ros_path }}"
+    
+    - name: Create config directory
+      ansible.builtin.file:
+        dest: "{{ drone_ros_path }}/config"
+        state: directory
         mode: "755"
     
-    - name: Install mocap service 
+    - name: Send peer list
       ansible.builtin.template: 
-        src: templates/mocap_service.j2
-        dest: /etc/systemd/system/mocap.service
+        src: templates/peer_list.yaml.j2
+        dest: "{{ drone_ros_path }}/config/peer_list.yaml"
+        mode: "644"
+      vars:
+        peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
 
-      
-    - name: Start mocap service
+    - name: Send launch file
+      ansible.builtin.template:
+        src: templates/drone_launch.yaml.j2
+        dest: "{{ drone_base_path }}/launch.yaml"
+
+    - name: Create ros_packages script 
+      become: false
+      ansible.builtin.template: 
+        src: scripts/ros_packages_start.sh
+        dest: "{{ drone_base_path }}/ros_packages_start.sh"
+        mode: "755"
+    
+    - name: Install ros_packages service 
+      ansible.builtin.template: 
+        src: templates/ros_packages_service.j2
+        dest: /etc/systemd/system/ros_packages.service
+
+    - name: Start ros_packages service
       ansible.builtin.systemd: 
-        name: mocap
+        name: ros_packages
         state: restarted
         enabled: false
         daemon_reload: true
-      
-
     
     - name: "Mocap Checks"
-      when: "position_estimation == 'optitrack'"
+      when: "position_estimation == 'optitrack'" # TODO: now this is a bit strange...
       block:
       - name: Wait for one minute before checking... # this can be better if we can check ros
         ansible.builtin.pause:
@@ -119,17 +117,11 @@
       
       - name: "Collect systemd stats"
         ansible.builtin.service_facts:
-      - name: Mocap running check
+      - name: ROS Packages Check # TODO: the new system does not fail the system if one of the nodes fail. might need python based one.
         when: "position_estimation == 'optitrack'"
         ansible.builtin.assert: 
-          that: "services['mocap.service']['state'] == 'running' and services['mocap.service']['status'] != 'failed'"
-          fail_msg: "Mocap is not running properly!"
-      
-    
-    - name: Mavros running check
-      ansible.builtin.assert: 
-        that: "services['mavros.service']['state'] == 'running' and services['mavros.service']['status'] != 'failed'"
-        fail_msg: "Mavros is not running properly!" 
+          that: "services['ros_packages.service']['state'] == 'running' and services['ros_packages.service']['status'] != 'failed'"
+          fail_msg: "ROS Packages are not running properly!"
     
     - name: Chrony Tracking Check
       block: 
@@ -143,9 +135,23 @@
           ansible.builtin.shell: /tmp/chronyc_check.py
           register: chronyc_check
           changed_when: false
-    
 
-
+- name: Local Actions
+  connection: local
+  hosts: localhost
+  tasks:
+    - name: Local Mocap
+      when: "position_estimation == 'optitrack'"
+      delegate_to: 127.0.0.1
+      connection: local
+      block:
+      - name: Create local launch file
+        ansible.builtin.template: 
+          src: templates/host_launch.yaml
+          dest: "{{ host_base_path }}/launch.yaml"
+      
+      
+        # modify the local config variables for the stuff to export
 
 
 

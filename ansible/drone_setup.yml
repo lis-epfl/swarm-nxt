@@ -312,27 +312,32 @@
 
   - name: Mocap to Vision
     when: "position_estimation == 'optitrack'"
+    become: False
     block: 
+    - name: Ensure ros2 ws exists
+      ansible.builtin.file:
+        path: "{{ drone_ros_path }}/src"
+        state: directory
     - name: Get optitrack package
       ansible.builtin.git:
         repo: https://github.com/lis-epfl/optitrack_packages_ros2/
-        dest: /home/lis/ros2_ws/src/optitrack_packages_ros2
+        dest: "{{ drone_ros_path }}/src/optitrack_packages_ros2"
         force: yes
 
     - name: Remove multiplexer
       ansible.builtin.file: 
-        path: /home/lis/ros2_ws/src/optitrack_packages_ros2/optitrack_multiplexer_ros2
+        path: "{{ drone_ros_path }}/src/optitrack_packages_ros2/optitrack_multiplexer_ros2"
         state: absent
 
     - name: Remove wrapper
       ansible.builtin.file:   
-        path: /home/lis/ros2_ws/src/optitrack_packages_ros2/optitrack_wrapper_ros2
+        path: "{{ drone_ros_path }}/src/optitrack_packages_ros2/optitrack_wrapper_ros2"
         state: absent
     
     - name: Get mocap to vision package
       ansible.builtin.git: 
         repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
-        dest: /home/lis/ros2_ws/src/mocap_to_vision_pose_ros2
+        dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
         force: yes 
 
   - name: Chrony Configuration 
