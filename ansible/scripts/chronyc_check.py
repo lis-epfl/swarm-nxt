@@ -22,7 +22,7 @@ if not rms_offset:
 
 rms_offset = float(rms_offset)
 print(f"RMS Offset: {rms_offset}")
-if rms_offset > 1.0: 
+if rms_offset > 0.005: 
     print("Too slow!")
     exit(1)
 
