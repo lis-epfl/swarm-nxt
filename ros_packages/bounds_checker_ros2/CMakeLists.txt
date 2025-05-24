@@ -12,11 +12,14 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(std_srvs REQUIRED)
+
 
 set(DEPENDENCIES
   rclcpp
   builtin_interfaces
   geometry_msgs
+  std_srvs
   rosidl_default_generators
   nlohmann_json
 )
@@ -49,7 +52,7 @@ set(MSG_FILES
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${MSG_FILES}
-  DEPENDENCIES builtin_interfaces geometry_msgs
+  DEPENDENCIES builtin_interfaces geometry_msgs 
 )
 
 
