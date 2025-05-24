@@ -8,6 +8,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
+#include "std_srvs/srv/trigger.hpp"
+
 
 
 namespace bounds_checker {
@@ -18,6 +20,8 @@ class BoundsChecker : public ::rclcpp::Node {
   void LoadHullFromFile(const std::filesystem::path& filepath);
   bool IsPointInHull(const geometry_msgs::msg::Point& point);
   void HandlePoseMessage(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+  void HandleTrajectoryMessage(const geometry_msgs::msg::PoseArray& msg);
+  geometry_msgs::msg::Point ProjectPointToClosestPlane(const geometry_msgs::msg::Point &point);
   void ClearPlanes();
 
   std::vector<bounds_checker_ros2::msg::Plane> GetPlanes();
@@ -42,7 +46,8 @@ class BoundsChecker : public ::rclcpp::Node {
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr safe_pose_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr safe_trajectory_pub_;
 
-
+  // clients
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr land_client_;
 
 };
 }  // namespace bounds_checker

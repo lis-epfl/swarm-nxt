@@ -5,9 +5,9 @@ namespace bounds_checker {
 
 BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   std::string filepath;
-  this->declare_parameter("plane_file", "/opt/omninxt/bounds.json");
+
+  this->declare_parameter("plane_file", "config/bounds.json");
   this->get_parameter("plane_file", filepath);
-  topic_prefix_ = std::getenv("HOSTNAME");
 
   DeclareRosParameters();
   InitializeRosParameters();
@@ -17,13 +17,15 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
       std::bind(&BoundsChecker::HandlePoseMessage, this, std::placeholders::_1));
 
   trajectory_sub_ = create_subscription<geometry_msgs::msg::PoseArray>(
-      "~/trajectory", 10,
-      std::bind(&BoundsChecker::HandleTrajectoryMessage, this, std::placeholders::_1)); // TODO: Find actual topic name
+      "~/trajectory_desired", 10,
+      std::bind(&BoundsChecker::HandleTrajectoryMessage, this, std::placeholders::_1));
 
-  trajectory_pub_ = create_publisher<geometry_msgs::msg::PoseArray>(
-      "~/trajectory_safe", 10); // TODO: find actual topic name 
+  safe_trajectory_pub_ = create_publisher<geometry_msgs::msg::PoseArray>(
+      "~/trajectory_safe", 10);
+  
+  safe_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("~/pose_safe", 10);
 
-  land_client_ = this->create_client<std_srvs::srv::Trigger>("~/controller/land");
+  land_client_ = create_client<std_srvs::srv::Trigger>("~/controller/land");
 
   // Wait for the service to be available
   while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
@@ -76,8 +78,10 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path& filepath) {
   }
 
   if (!valid_parse) {
-    throw std::runtime_error("The planes could not be parsed...")
+    throw std::runtime_error("The planes could not be parsed...");
   }
+
+  // TODO: emit a warning if the plane does not form a closed hull. or just throw an error, talk to charbel about this
 }
 
 bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point& point) {
@@ -135,7 +139,7 @@ void BoundsChecker::HandlePoseMessage(const geometry_msgs::msg::PoseStamped::Sha
 
   if (IsPointInHull(position)) {
     RCLCPP_INFO(logger, "Pose is within bounds.");
-    pose_pub_->publish(*msg);
+    safe_pose_pub_->publish(*msg);
   } else {
     RCLCPP_INFO(logger, "Pose is out of bounds, landing...");
     auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
@@ -155,6 +159,21 @@ void BoundsChecker::HandlePoseMessage(const geometry_msgs::msg::PoseStamped::Sha
   }
 }
 
+void BoundsChecker::HandleTrajectoryMessage(const geometry_msgs::msg::PoseArray &msg)
+{
+  // TODO: What if another drone in the swarm gets the same projected value? 
+  auto safe_traj = msg;
+  
+  // todo: make the trajectory hull an inset of the true hull. 
+  for (auto& pose : safe_traj.poses) {
+    if(!IsPointInHull(pose.position)) {
+      pose.position = ProjectPointToClosestPlane(pose.position);
+    }
+  }
+
+  safe_trajectory_pub_->publish(safe_traj); 
+}
+
 void BoundsChecker::ClearPlanes() {
   are_planes_valid_ = false;
   planes_.clear();
@@ -166,15 +185,11 @@ std::vector<bounds_checker_ros2::msg::Plane> BoundsChecker::GetPlanes() {
 
 void BoundsChecker::InitializeRosParameters() {
 
-  declare_parameter<::std::string>("position_topic_suffix", "/mavros/local_position/pose");
-  declare_parameter<::std::string>("trajectory_topic_suffix", "TODO"); // TODO!!
-  
   
 }
 
 void BoundsChecker::DeclareRosParameters() {
-  get_parameter<::std::string>("position_topic_suffix", position_topic_suffix_);
-  get_parameter<::std::string>("trajectory_topic_suffix", trajectory_topic_suffix_);
+
 }
 
 }  // namespace bounds_checker
