@@ -5,9 +5,9 @@ on:
         paths:
             - 'ros_packages/**'
     push:
-        paths:
-            - 'ros_packages/**'
-            - .github/**
+      branches:
+        - main
+
     workflow_dispatch:
 
 jobs:
