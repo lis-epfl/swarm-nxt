@@ -75,7 +75,9 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path& filepath) {
     planes_.push_back(plane);
   }
 
-  are_planes_valid_ = valid_parse;
+  if (!valid_parse) {
+    throw std::runtime_error("The planes could not be parsed...")
+  }
 }
 
 bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point& point) {
@@ -100,10 +102,6 @@ bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point& point) {
 }
 
 geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(const geometry_msgs::msg::Point& point) {
-  if (!are_planes_valid_) {
-    throw std::runtime_error("Planes are not valid. Cannot project point."); 
-  }
-
   double min_distance = std::numeric_limits<double>::max();
   geometry_msgs::msg::Point projected_point;
 
@@ -133,11 +131,6 @@ geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(const geomet
 
 void BoundsChecker::HandlePoseMessage(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
   auto logger = this->get_logger();
-  if (!are_planes_valid_) {
-    RCLCPP_WARN(logger, "Planes are not valid. Ignoring pose message.");
-    return;
-  }
-
   const auto& position = msg->pose.position;
 
   if (IsPointInHull(position)) {
