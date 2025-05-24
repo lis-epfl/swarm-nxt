@@ -17,13 +17,13 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
       std::bind(&BoundsChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 
-  trajectory_sub_ = create_subscription<geometry_msgs::msg::PoseArray>(
+  trajectory_sub_ = create_subscription<nav_msgs::msg::Path>(
       "~/trajectory_desired", 10,
       std::bind(&BoundsChecker::HandleTrajectoryMessage, this,
                 std::placeholders::_1));
 
   safe_trajectory_pub_ =
-      create_publisher<geometry_msgs::msg::PoseArray>("~/trajectory_safe", 10);
+      create_publisher<nav_msgs::msg::Path>("~/trajectory_safe", 10);
 
   safe_pose_pub_ =
       create_publisher<geometry_msgs::msg::PoseStamped>("~/pose_safe", 10);
@@ -168,14 +168,14 @@ void BoundsChecker::HandlePoseMessage(
 }
 
 void BoundsChecker::HandleTrajectoryMessage(
-    const geometry_msgs::msg::PoseArray &msg) {
+    const nav_msgs::msg::Path &msg) {
   // TODO: What if another drone in the swarm gets the same projected value?
   auto safe_traj = msg;
 
   // todo: make the trajectory hull an inset of the true hull.
   for (auto &pose : safe_traj.poses) {
-    if (!IsPointInHull(pose.position)) {
-      pose.position = ProjectPointToClosestPlane(pose.position);
+    if (!IsPointInHull(pose.pose.position)) {
+      pose.pose.position = ProjectPointToClosestPlane(pose.pose.position);
     }
   }
 

@@ -10,6 +10,7 @@ add_compile_options(-g)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -20,6 +21,7 @@ set(DEPENDENCIES
   builtin_interfaces
   geometry_msgs
   std_srvs
+  nav_msgs
   rosidl_default_generators
   nlohmann_json
 )
