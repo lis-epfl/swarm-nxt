@@ -5,7 +5,7 @@
 
 using namespace bounds_checker;
 
-std::filesystem::path GetTestFilePath(const std::string& filename) {
+std::filesystem::path GetTestFilePath(const std::string &filename) {
   std::filesystem::path src_file_path = __FILE__;
   auto parent_path = src_file_path.parent_path();
 
@@ -68,7 +68,7 @@ TEST(BoundsCheckerTest, PointOutsideTest) {
       << "Point [2, 0, 0] is outside the convex hull of 1x1x1m";
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   rclcpp::init(0, nullptr);
 

@@ -14,26 +14,30 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
 
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
       "~/mavros/local_position/pose", 10,
-      std::bind(&BoundsChecker::HandlePoseMessage, this, std::placeholders::_1));
+      std::bind(&BoundsChecker::HandlePoseMessage, this,
+                std::placeholders::_1));
 
   trajectory_sub_ = create_subscription<geometry_msgs::msg::PoseArray>(
       "~/trajectory_desired", 10,
-      std::bind(&BoundsChecker::HandleTrajectoryMessage, this, std::placeholders::_1));
+      std::bind(&BoundsChecker::HandleTrajectoryMessage, this,
+                std::placeholders::_1));
 
-  safe_trajectory_pub_ = create_publisher<geometry_msgs::msg::PoseArray>(
-      "~/trajectory_safe", 10);
-  
-  safe_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("~/pose_safe", 10);
+  safe_trajectory_pub_ =
+      create_publisher<geometry_msgs::msg::PoseArray>("~/trajectory_safe", 10);
+
+  safe_pose_pub_ =
+      create_publisher<geometry_msgs::msg::PoseStamped>("~/pose_safe", 10);
 
   land_client_ = create_client<std_srvs::srv::Trigger>("~/controller/land");
 
   // Wait for the service to be available
   while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
-    RCLCPP_WARN(this->get_logger(), "Waiting for ~/controller/land service to be available...");
+    RCLCPP_WARN(this->get_logger(),
+                "Waiting for ~/controller/land service to be available...");
   }
 }
 
-void BoundsChecker::LoadHullFromFile(const std::filesystem::path& filepath) {
+void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
   auto logger = this->get_logger();
   are_planes_valid_ = false;
   using json = nlohmann::json;
@@ -52,7 +56,7 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path& filepath) {
 
   bool valid_parse = true;
 
-  for (const auto& arr : json_parser) {
+  for (const auto &arr : json_parser) {
     if (!arr.is_array() || arr.size() != 4) {
       RCLCPP_ERROR(logger, "Invalid JSON Format...");
       valid_parse = false;
@@ -81,14 +85,15 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path& filepath) {
     throw std::runtime_error("The planes could not be parsed...");
   }
 
-  // TODO: emit a warning if the plane does not form a closed hull. or just throw an error, talk to charbel about this
+  // TODO: emit a warning if the plane does not form a closed hull. or just
+  // throw an error, talk to charbel about this
 }
 
-bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point& point) {
+bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   if (!are_planes_valid_) {
     return false;
   }
-  for (const auto& plane : planes_) {
+  for (const auto &plane : planes_) {
     double val = plane.normal.x * point.x + plane.normal.y * point.y +
                  plane.normal.z * point.z + plane.offset;
 
@@ -105,11 +110,12 @@ bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point& point) {
   return true;
 }
 
-geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(const geometry_msgs::msg::Point& point) {
+geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(
+    const geometry_msgs::msg::Point &point) {
   double min_distance = std::numeric_limits<double>::max();
   geometry_msgs::msg::Point projected_point;
 
-  for (const auto& plane : planes_) {
+  for (const auto &plane : planes_) {
     // Calculate the distance from the point to the plane
     double numerator = plane.normal.x * point.x + plane.normal.y * point.y +
                        plane.normal.z * point.z + plane.offset;
@@ -133,9 +139,10 @@ geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(const geomet
   return projected_point;
 }
 
-void BoundsChecker::HandlePoseMessage(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+void BoundsChecker::HandlePoseMessage(
+    const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
   auto logger = this->get_logger();
-  const auto& position = msg->pose.position;
+  const auto &position = msg->pose.position;
 
   if (IsPointInHull(position)) {
     RCLCPP_INFO(logger, "Pose is within bounds.");
@@ -148,30 +155,31 @@ void BoundsChecker::HandlePoseMessage(const geometry_msgs::msg::PoseStamped::Sha
     try {
       auto result = result_future.get();
       if (result->success) {
-      RCLCPP_INFO(logger, "Landing command sent successfully: %s", result->message.c_str());
+        RCLCPP_INFO(logger, "Landing command sent successfully: %s",
+                    result->message.c_str());
       } else {
-      RCLCPP_WARN(logger, "Landing command failed: %s", result->message.c_str());
+        RCLCPP_WARN(logger, "Landing command failed: %s",
+                    result->message.c_str());
       }
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
       RCLCPP_ERROR(logger, "Failed to call landing service: %s", e.what());
     }
-
   }
 }
 
-void BoundsChecker::HandleTrajectoryMessage(const geometry_msgs::msg::PoseArray &msg)
-{
-  // TODO: What if another drone in the swarm gets the same projected value? 
+void BoundsChecker::HandleTrajectoryMessage(
+    const geometry_msgs::msg::PoseArray &msg) {
+  // TODO: What if another drone in the swarm gets the same projected value?
   auto safe_traj = msg;
-  
-  // todo: make the trajectory hull an inset of the true hull. 
-  for (auto& pose : safe_traj.poses) {
-    if(!IsPointInHull(pose.position)) {
+
+  // todo: make the trajectory hull an inset of the true hull.
+  for (auto &pose : safe_traj.poses) {
+    if (!IsPointInHull(pose.position)) {
       pose.position = ProjectPointToClosestPlane(pose.position);
     }
   }
 
-  safe_trajectory_pub_->publish(safe_traj); 
+  safe_trajectory_pub_->publish(safe_traj);
 }
 
 void BoundsChecker::ClearPlanes() {
@@ -183,13 +191,8 @@ std::vector<bounds_checker_ros2::msg::Plane> BoundsChecker::GetPlanes() {
   return planes_;
 }
 
-void BoundsChecker::InitializeRosParameters() {
+void BoundsChecker::InitializeRosParameters() {}
 
-  
-}
+void BoundsChecker::DeclareRosParameters() {}
 
-void BoundsChecker::DeclareRosParameters() {
-
-}
-
-}  // namespace bounds_checker
+} // namespace bounds_checker

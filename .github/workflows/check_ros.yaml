@@ -1,0 +1,45 @@
+name: Lint and Build ROS Packages
+
+on:
+    pull_request:
+        paths:
+            - 'ros_packages/**'
+    push:
+        paths:
+            - 'ros_packages/**'
+            - .github/**
+    workflow_dispatch:
+
+jobs:
+    clang-format:
+        name: Check clang-format
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install clang-format
+              run: sudo apt-get update && sudo apt-get install -y clang-format
+
+            - name: Find and check formatting
+              run: |
+                find ros_packages -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format -style=file -output-replacements-xml | grep "<replacement " && exit 1 || exit 0
+
+    build:
+        name: Build ROS Packages
+        runs-on: ubuntu-latest
+        container:
+            image: osrf/ros:humble-desktop
+        steps:
+            - name: Checkout 
+              uses: actions/checkout@v4
+
+            - name: Install dependencies
+              run: |
+                sudo apt update
+                rosdep update
+                rosdep install --from-paths ros_packages --ignore-src -r -y
+
+            - name: Build workspace
+              run: |
+                . /opt/ros/humble/setup.sh
+                colcon build --base-paths ros_packages 
