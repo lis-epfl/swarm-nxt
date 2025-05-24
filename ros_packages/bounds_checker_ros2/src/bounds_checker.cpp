@@ -167,8 +167,7 @@ void BoundsChecker::HandlePoseMessage(
   }
 }
 
-void BoundsChecker::HandleTrajectoryMessage(
-    const nav_msgs::msg::Path &msg) {
+void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   // TODO: What if another drone in the swarm gets the same projected value?
   auto safe_traj = msg;
 

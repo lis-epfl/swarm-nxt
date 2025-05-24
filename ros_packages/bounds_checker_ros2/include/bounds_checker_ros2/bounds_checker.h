@@ -1,11 +1,9 @@
 #pragma once
 
-// #include "builtin_interfaces/msg/time.hpp"
-#include "geometry_msgs/msg/point.hpp"
-// #include "geometry_msgs/msg/vec3.hpp"
 #include "bounds_checker_ros2/msg/plane.hpp"
-#include "nav_msgs/msg/path.hpp"
+#include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "nav_msgs/msg/path.hpp"
 #include "nlohmann/json.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
@@ -39,13 +37,11 @@ private:
 
   // subscribers
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
-  rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr
-      trajectory_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr trajectory_sub_;
 
   // publishers
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr safe_pose_pub_;
-  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr
-      safe_trajectory_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr safe_trajectory_pub_;
 
   // clients
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr land_client_;
