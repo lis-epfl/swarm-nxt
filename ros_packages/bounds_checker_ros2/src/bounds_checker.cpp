@@ -194,4 +194,4 @@ void BoundsChecker::InitializeRosParameters() {}
 
 void BoundsChecker::DeclareRosParameters() {}
 
-} // namespace bounds_checker
+}  // namespace bounds_checker

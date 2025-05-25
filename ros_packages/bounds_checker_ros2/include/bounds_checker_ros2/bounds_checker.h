@@ -10,20 +10,20 @@
 
 namespace bounds_checker {
 class BoundsChecker : public ::rclcpp::Node {
-public:
+ public:
   BoundsChecker();
 
   void LoadHullFromFile(const std::filesystem::path &filepath);
   bool IsPointInHull(const geometry_msgs::msg::Point &point);
   void HandlePoseMessage(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg);
-  geometry_msgs::msg::Point
-  ProjectPointToClosestPlane(const geometry_msgs::msg::Point &point);
+  geometry_msgs::msg::Point ProjectPointToClosestPlane(
+      const geometry_msgs::msg::Point &point);
   void ClearPlanes();
 
   std::vector<bounds_checker_ros2::msg::Plane> GetPlanes();
 
-private:
+ private:
   void DeclareRosParameters();
   void InitializeRosParameters();
 
@@ -46,4 +46,4 @@ private:
   // clients
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr land_client_;
 };
-} // namespace bounds_checker
+}  // namespace bounds_checker
