@@ -18,8 +18,11 @@ class DronePlanner : public ::rclcpp::Node {
 
  private:
   geometry_msgs::msg::PoseStamped current_goal_;
+  bool new_goal_ = false;
   geometry_msgs::msg::PoseStamped cur_pos_;
-  // TODO: make these parameters? 
+
+  nav_msgs::msg::Path trajectory_;
+  // TODO: make these parameters?
   float drone_speed_m_s_ = 1;         // max linear speed
   float yaw_speed_rad_s_ = 0.175;     // max yaw speed
   float trajectory_density_hz_ = 10;  // the frequency to generate trajectory
@@ -44,7 +47,8 @@ class DronePlanner : public ::rclcpp::Node {
 
   // Callbacks
 
-  void PublishTrajectoryFromGoal();
+  nav_msgs::msg::Path GenerateTrajectory();
+  void PublishTrajectory();
   void MavrosPoseCallback(const geometry_msgs::msg::PoseStamped &msg);
 };
 }  // namespace drone_planner

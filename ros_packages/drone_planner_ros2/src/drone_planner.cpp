@@ -63,7 +63,7 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
   // Store the timer as a member variable to keep it alive
   traj_pub_timer_ = this->create_wall_timer(
       std::chrono::milliseconds(100),
-      std::bind(&DronePlanner::PublishTrajectoryFromGoal, this));
+      std::bind(&DronePlanner::PublishTrajectory, this));
 }
 
 void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg) {
@@ -71,7 +71,11 @@ void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg) {
   // Later, this can use the whole list so the drone can be more autonomous
   auto logger = this->get_logger();
   if (msg.goals.size() > 0) {
-    current_goal_ = msg.goals.at(0);
+    auto goal = msg.goals.at(0);
+    if (goal.pose != current_goal_.pose) {
+      current_goal_ = goal;
+      new_goal_ = true;
+    }
   } else {
     RCLCPP_WARN(logger, "Got zero goals");
   }
@@ -82,14 +86,10 @@ void DronePlanner::DepthImageCallback(
   // placeholder for future
 }
 
-void DronePlanner::PublishTrajectoryFromGoal() {
-  auto logger = this->get_logger();
-  RCLCPP_INFO(logger, "Publishing traj");
-  // todo: only do this if the goal has _changed_. otherwise we can take a
-  // shortcut and send the previous trajectory.
-
-  const float DISTANCE_TOL_M =
-      0.05;  // if within 5cm of goal, we are there and do not generate any more
+nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
+  new_goal_ = false;
+  const float DISTANCE_TOL_M = 0.05;  // if within 5cm of goal, we are there
+                                      // and do not generate any more
   const float ANGLE_TOL_RAD =
       1.0 * 2 * M_PI;  // if the angle is within 1 degree, we are there.
 
@@ -113,8 +113,7 @@ void DronePlanner::PublishTrajectoryFromGoal() {
 
     // todo: do we use the stamp field?
     trajectory.poses.push_back(cur_pos_);
-    desired_traj_pub_->publish(trajectory);
-    return;
+    return trajectory;
   }
 
   // otherwise, find the distance and make the trajectory.
@@ -157,7 +156,17 @@ void DronePlanner::PublishTrajectoryFromGoal() {
     trajectory.poses.push_back(pose);
   }
 
-  desired_traj_pub_->publish(trajectory);
+  return trajectory;
+}
+
+void DronePlanner::PublishTrajectory() {
+  auto logger = this->get_logger();
+  RCLCPP_INFO(logger, "Publishing traj");
+  if (new_goal_) {
+    trajectory_ = GenerateTrajectory();
+  }
+
+  desired_traj_pub_->publish(trajectory_);
 }
 
 void DronePlanner::MavrosPoseCallback(
