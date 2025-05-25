@@ -130,7 +130,6 @@ void DronePlanner::PublishTrajectoryFromGoal() {
   trajectory.poses.reserve(num_traj_points);
 
   auto translation_step_size = delta2 / traj_time;
-  float rotation_step_size = angle / traj_time;
 
   for (int i = 0; i < num_traj_points; i++) {
     // linearly interpolate both the linear pose and the quaternion
