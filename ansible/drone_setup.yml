@@ -339,6 +339,14 @@
         repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
         dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
         force: yes 
+      
+    - name: Install rosdeps
+      ansible.builtin.shell: |
+        cd {{ drone_ros_path }}
+        . /opt/ros/humble/setup.sh
+        rosdep init
+        rosdep update
+        rosdep install --from-paths {{ drone_ros_path }}/src -y --ignore-src -r
 
   - name: Chrony Configuration 
     block:

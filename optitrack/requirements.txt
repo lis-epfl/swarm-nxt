@@ -1,0 +1,8 @@
+pandas
+polars==1.26.0
+pyarrow
+numpy
+scipy
+more-itertools
+matplotlib
+ipykernel

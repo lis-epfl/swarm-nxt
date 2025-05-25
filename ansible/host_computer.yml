@@ -123,6 +123,16 @@
             src: "{{ host_base_path }}/repos/omni-nxt/ros_packages/latency_checker_ros2"
             dest: "{{ host_ros_path }}/src/latency_checker_ros2"
             state: link
+      
+    - name: Run rosdep
+      become: yes
+      ansible.builtin.shell: |
+        cd {{ host_ros_path }}
+        . /opt/ros/humble/setup.sh
+        rosdep init
+        rosdep update
+        rosdep install --from-paths src --ignore-src -r -y
+
     - name: Build ROS Packages
       ansible.builtin.shell: "cd {{ host_ros_path }} && . /opt/ros/humble/setup.sh && colcon build"
 
