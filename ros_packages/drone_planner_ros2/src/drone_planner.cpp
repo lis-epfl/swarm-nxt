@@ -11,21 +11,23 @@ geometry_msgs::msg::Pose operator-(geometry_msgs::msg::PoseStamped& pose1,
   tf2::fromMsg(pose1.pose.orientation, q1);
   tf2::fromMsg(pose2.pose.orientation, q2);
 
-  auto q1_inv = q1;
-  q1_inv[3] = -q1_inv[3];
-  auto qr = q2 * q1_inv;
+  auto q2_inv = q2;
+  q2_inv[3] = -q2_inv[3];
+  auto qr = q1 * q2_inv;
 
   result.orientation = tf2::toMsg(qr);
 
-  result.position.x = pose2.pose.position.x - pose1.pose.position.x;
-  result.position.y = pose2.pose.position.y - pose1.pose.position.y;
-  result.position.z = pose2.pose.position.z - pose1.pose.position.z;
+  result.position.x = pose1.pose.position.x - pose2.pose.position.x;
+  result.position.y = pose1.pose.position.y - pose2.pose.position.y;
+  result.position.z = pose1.pose.position.z - pose2.pose.position.z;
 
   return result;
 }
 
 DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
   std::string peer_file;
+  auto logger = this->get_logger();
+  RCLCPP_INFO(logger, "Starting the drone planner node...");
 
   this->declare_parameter("peer_file", "config/peers");
   this->get_parameter("peer_file", peer_file);
@@ -58,7 +60,8 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
   desired_traj_pub_ =
       this->create_publisher<nav_msgs::msg::Path>("~/trajectory_desired", 10);
 
-  auto timer_ = this->create_wall_timer(
+  // Store the timer as a member variable to keep it alive
+  traj_pub_timer_ = this->create_wall_timer(
       std::chrono::milliseconds(100),
       std::bind(&DronePlanner::PublishTrajectoryFromGoal, this));
 }
@@ -80,6 +83,8 @@ void DronePlanner::DepthImageCallback(
 }
 
 void DronePlanner::PublishTrajectoryFromGoal() {
+  auto logger = this->get_logger();
+  RCLCPP_INFO(logger, "Publishing traj");
   // todo: only do this if the goal has _changed_. otherwise we can take a
   // shortcut and send the previous trajectory.
 
@@ -119,7 +124,9 @@ void DronePlanner::PublishTrajectoryFromGoal() {
   float traj_time =
       std::max(time_to_target_rotation, time_to_target_translation);
   int num_traj_points =
-      static_cast<int>(std::ceil(traj_time / trajectory_density_hz_));
+      static_cast<int>(std::ceil(traj_time * trajectory_density_hz_));
+
+  RCLCPP_INFO(this->get_logger(), "Num points: %d", num_traj_points);
 
   tf2::Quaternion start_quaternion, goal_quaternion;
 
@@ -129,7 +136,7 @@ void DronePlanner::PublishTrajectoryFromGoal() {
   // so we don't have to keep growing the vec
   trajectory.poses.reserve(num_traj_points);
 
-  auto translation_step_size = delta2 / traj_time;
+  auto translation_step_size = delta2 / num_traj_points;
 
   for (int i = 0; i < num_traj_points; i++) {
     // linearly interpolate both the linear pose and the quaternion
@@ -155,6 +162,7 @@ void DronePlanner::PublishTrajectoryFromGoal() {
 
 void DronePlanner::MavrosPoseCallback(
     const geometry_msgs::msg::PoseStamped& msg) {
+  RCLCPP_INFO(this->get_logger(), "Got a new position");
   cur_pos_ = msg;
 }
 

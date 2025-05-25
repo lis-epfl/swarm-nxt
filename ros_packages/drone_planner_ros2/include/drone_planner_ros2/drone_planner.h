@@ -19,10 +19,11 @@ class DronePlanner : public ::rclcpp::Node {
  private:
   geometry_msgs::msg::PoseStamped current_goal_;
   geometry_msgs::msg::PoseStamped cur_pos_;
-  float drone_speed_m_s_;        // max linear speed
-  float yaw_speed_rad_s_;        // max yaw speed
-  float trajectory_density_hz_;  // the frequency to generate trajectory
-                                 // information for
+  // TODO: make these parameters? 
+  float drone_speed_m_s_ = 1;         // max linear speed
+  float yaw_speed_rad_s_ = 0.175;     // max yaw speed
+  float trajectory_density_hz_ = 10;  // the frequency to generate trajectory
+                                      // information for
 
   // subscribers
   rclcpp::Subscription<nav_msgs::msg::Goals>::SharedPtr goals_sub_;
@@ -37,6 +38,9 @@ class DronePlanner : public ::rclcpp::Node {
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr desired_traj_pub_;
 
   // clients
+
+  // timers
+  rclcpp::TimerBase::SharedPtr traj_pub_timer_;
 
   // Callbacks
 
