@@ -8,7 +8,7 @@ def generate_launch_description():
 
     ld = LaunchDescription()
 
-    optitrack_multiplexer = Node(
+    drone_planner = Node(
         package='drone_planner_ros2',
         executable='drone_planner_node',
         name='drone_planner_node',
@@ -18,5 +18,5 @@ def generate_launch_description():
         emulate_tty=True
     )
 
-    ld.add_action(optitrack_multiplexer)
+    ld.add_action(drone_planner)
     return ld
