@@ -1,22 +1,23 @@
 #ifndef LATENCY_CHECKER_H_
 #define LATENCY_CHECKER_H_
 
-#include "latency_checker_ros2/msg/heartbeat.hpp"
-#include "latency_checker_ros2/msg/name_latency.hpp"
-#include "rclcpp/rclcpp.hpp"
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 
+#include "latency_checker_ros2/msg/heartbeat.hpp"
+#include "latency_checker_ros2/msg/name_latency.hpp"
+#include "rclcpp/rclcpp.hpp"
+
 namespace latency_checker {
 class LatencyChecker : public ::rclcpp::Node {
-public:
+ public:
   LatencyChecker();
 
   void HandleHeartbeatMessage(const latency_checker_ros2::msg::Heartbeat &msg);
   void PublishHeartbeat();
 
-private:
+ private:
   std::string my_name_;
 
   std::unordered_map<std::string, rclcpp::Duration> heartbeat_map_;
@@ -32,6 +33,6 @@ private:
       heartbeat_publisher_;
   rclcpp::TimerBase::SharedPtr heartbeat_timer_;
 };
-} // namespace latency_checker
+}  // namespace latency_checker
 
-#endif // LATENCY_CHECKER_H_
+#endif  // LATENCY_CHECKER_H_

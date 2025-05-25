@@ -14,7 +14,6 @@
 namespace latency_checker {
 
 LatencyChecker::LatencyChecker() : ::rclcpp::Node("latency_checker") {
-
   this->declare_parameter<std::string>("config_file_path", "config/peer_list");
   config_file_path_ = this->get_parameter("config_file_path").as_string();
 
@@ -67,7 +66,6 @@ LatencyChecker::LatencyChecker() : ::rclcpp::Node("latency_checker") {
 
 void LatencyChecker::HandleHeartbeatMessage(
     const latency_checker_ros2::msg::Heartbeat &msg) {
-
   std::string name = msg.node_name;
   auto ts = msg.timestamp;
 
@@ -96,7 +94,7 @@ void LatencyChecker::PublishHeartbeat() {
   heartbeat_publisher_->publish(msg);
 }
 
-} // namespace latency_checker
+}  // namespace latency_checker
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);

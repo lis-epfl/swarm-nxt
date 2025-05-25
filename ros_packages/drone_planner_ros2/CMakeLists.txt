@@ -11,7 +11,9 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
-
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 set(DEPENDENCIES
   rclcpp
@@ -19,6 +21,8 @@ set(DEPENDENCIES
   geometry_msgs
   sensor_msgs
   nav_msgs  
+  Eigen3
+  tf2_geometry_msgs
 )
 
 include_directories(
@@ -36,7 +40,6 @@ ament_target_dependencies(drone_planner_class
 
 ament_target_dependencies(drone_planner_node
 ${DEPENDENCIES})
-
 
 install(DIRECTORY
   launch
@@ -63,5 +66,3 @@ if(BUILD_TESTING)
   # set(ament_cmake_cpplint_FOUND TRUE)
   # ament_lint_auto_find_test_dependencies()
 endif()
-
-ament_package()
