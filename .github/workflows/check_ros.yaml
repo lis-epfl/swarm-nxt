@@ -22,7 +22,7 @@ jobs:
 
             - name: Find and check formatting
               run: |
-                find ros_packages -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format -style=file -output-replacements-xml | grep "<replacement " && exit 1 || exit 0
+                find ros_packages -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format -style=google -output-replacements-xml | grep "<replacement " && exit 1 || exit 0
 
     build:
         name: Build ROS Packages
