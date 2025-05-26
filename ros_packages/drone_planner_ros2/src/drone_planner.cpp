@@ -32,18 +32,19 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
   this->declare_parameter("peer_file", "config/peers");
   this->get_parameter("peer_file", peer_file);
 
+  std::string ns = this->get_namespace();
+
   // DeclareRosParameters();
   // InitializeRosParameters();
 
   goals_sub_ = this->create_subscription<nav_msgs::msg::Goals>(
-      "~/goals", 10,
+      ns + "/goals", 10,
       std::bind(&DronePlanner::GoalsCallback, this, std::placeholders::_1));
 
   mavros_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-      "~/mavros/local_position/pose", 10,
+      ns + "/mavros/local_position/pose", 10,
       std::bind(&DronePlanner::MavrosPoseCallback, this,
                 std::placeholders::_1));
-
   // for the future: subscribe to all the peers' paths to avoid them.
   // for (const auto& peer_id : peer_ids_) {
   //   traj_sub_map_[peer_id] = this->create_subscription<nav_msgs::msg::Path>(
@@ -53,12 +54,12 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
   // }
 
   depth_image_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-      "~/depth_image", 10,
+      ns + "/depth_image", 10,
       std::bind(&DronePlanner::DepthImageCallback, this,
                 std::placeholders::_1));
 
-  desired_traj_pub_ =
-      this->create_publisher<nav_msgs::msg::Path>("~/trajectory_desired", 10);
+  desired_traj_pub_ = this->create_publisher<nav_msgs::msg::Path>(
+      ns + "/trajectory_desired", 10);
 
   // Store the timer as a member variable to keep it alive
   traj_pub_timer_ = this->create_wall_timer(
