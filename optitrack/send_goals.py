@@ -37,9 +37,11 @@ class MultiRobotGoalManager(Node):
         self.waypoints = {
             'nxt1': [
                 (0.0, 0.0, 0.0, 1.0),
-                (0.2, 0.0, 0.0, 1.0),
-                (0.2, 0.2, 0.0, 1.0),
-                (0.0, 0.2, 0.0, 1.0)
+                (0.0, 0.0, 1.0, 1.0),
+                (4.0, 0.0, 1.0, 1.0),
+                (0.0, 4.0, 1.0, 1.0),
+                (-4.0, 0.0, 1.0, 1.0),
+                (0.0, -4.0, 1.0, 1.0),
             ],
             'nxt2': [
                 (1.0, 1.0, 0.0, 1.0),
@@ -147,7 +149,7 @@ class MultiRobotGoalManager(Node):
         
         if state['current_goal_index'] >= len(waypoints):
             self.get_logger().info(f"{robot_name}: All goals completed! Cycling back to start.")
-            state['current_goal_index'] = 0  # Cycle back to first goal
+            state['current_goal_index'] = 2  # Cycle back to first square goal
         
         # Publish the new goal
         self.publish_goal(robot_name)
