@@ -5,30 +5,33 @@ namespace bounds_checker {
 
 BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   std::string filepath;
+  
+  std::string ns = this->get_namespace();
 
-  this->declare_parameter("plane_file", "config/bounds.json");
+  this->declare_parameter("plane_file", "/var/opt/config/bounds.json");
   this->get_parameter("plane_file", filepath);
 
+  LoadHullFromFile(filepath);
   DeclareRosParameters();
   InitializeRosParameters();
 
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-      "~/mavros/local_position/pose", 10,
+      ns + "/mavros/local_position/pose", 10,
       std::bind(&BoundsChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 
   trajectory_sub_ = create_subscription<nav_msgs::msg::Path>(
-      "~/trajectory_desired", 10,
+      ns + "/trajectory_desired", 10,
       std::bind(&BoundsChecker::HandleTrajectoryMessage, this,
                 std::placeholders::_1));
 
   safe_trajectory_pub_ =
-      create_publisher<nav_msgs::msg::Path>("~/trajectory_safe", 10);
+      create_publisher<nav_msgs::msg::Path>(ns + "/trajectory_safe", 10);
 
   safe_pose_pub_ =
-      create_publisher<geometry_msgs::msg::PoseStamped>("~/pose_safe", 10);
+      create_publisher<geometry_msgs::msg::PoseStamped>(ns + "/pose_safe", 10);
 
-  land_client_ = create_client<std_srvs::srv::Trigger>("~/controller/land");
+  land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
 
   // Wait for the service to be available
   while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
@@ -84,6 +87,8 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
   if (!valid_parse) {
     throw std::runtime_error("The planes could not be parsed...");
   }
+
+  are_planes_valid_ = true;
 
   // TODO: emit a warning if the plane does not form a closed hull. or just
   // throw an error, talk to charbel about this
@@ -170,12 +175,20 @@ void BoundsChecker::HandlePoseMessage(
 void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   // TODO: What if another drone in the swarm gets the same projected value?
   auto safe_traj = msg;
-
+  RCLCPP_INFO(this->get_logger(), "Checking trajectory");
+  bool safe = true;
   // todo: make the trajectory hull an inset of the true hull.
   for (auto &pose : safe_traj.poses) {
     if (!IsPointInHull(pose.pose.position)) {
+	    safe = false;
       pose.pose.position = ProjectPointToClosestPlane(pose.pose.position);
     }
+  }
+
+  if(!safe) {
+	  RCLCPP_WARN(this->get_logger(), "Trajectory was unsafe");
+  } else {
+	  RCLCPP_INFO(this->get_logger(), "Trajectory was safe");
   }
 
   safe_trajectory_pub_->publish(safe_traj);
