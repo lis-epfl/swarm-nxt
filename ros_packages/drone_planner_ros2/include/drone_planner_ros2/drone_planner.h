@@ -18,7 +18,7 @@ class DronePlanner : public ::rclcpp::Node {
 
  private:
   geometry_msgs::msg::PoseStamped current_goal_;
-  bool new_goal_ = false;
+  bool new_goal_ = true;
   geometry_msgs::msg::PoseStamped cur_pos_;
 
   nav_msgs::msg::Path trajectory_;

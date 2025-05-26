@@ -88,14 +88,14 @@ void DronePlanner::DepthImageCallback(
 }
 
 nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
-  new_goal_ = false;
+  //new_goal_ = false;
   const float DISTANCE_TOL_M = 0.05;  // if within 5cm of goal, we are there
                                       // and do not generate any more
   const float ANGLE_TOL_RAD =
       1.0 * 2 * M_PI;  // if the angle is within 1 degree, we are there.
 
   nav_msgs::msg::Path trajectory = nav_msgs::msg::Path();
-  trajectory.header.frame_id = "local_drone";
+  trajectory.header.frame_id = "base";
   trajectory.header.stamp = this->now();
 
   geometry_msgs::msg::Pose delta = current_goal_ - cur_pos_;
@@ -152,7 +152,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
     tf2::Quaternion interp_quat = start_quaternion.slerp(goal_quaternion, t);
 
     pose.pose.orientation = tf2::toMsg(interp_quat);
-    pose.header.frame_id = "local_drone";
+    pose.header.frame_id = "base";
     pose.header.stamp = this->now();
     trajectory.poses.push_back(pose);
   }
@@ -162,7 +162,6 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
 
 void DronePlanner::PublishTrajectory() {
   auto logger = this->get_logger();
-  RCLCPP_INFO(logger, "Publishing traj");
   if (new_goal_) {
     trajectory_ = GenerateTrajectory();
   }
