@@ -339,8 +339,36 @@
         repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
         dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
         force: yes 
-      
+        
+    - name: OmniNXT Nodes
+      become: false
+      block: 
+        - name: Get repository 
+          ansible.builtin.git: 
+            repo: git@github.com:lis-epfl/omni-nxt
+            dest: "{{ drone_base_path }}/repos/omni-nxt"
+            version: test/first_drone_integration # TODO: temp
+            key_file: /home/lis/.ssh/id_ed25519
+            accept_newhostkey: yes
+          
+        - name: List ros_packages directories
+          ansible.builtin.find:
+            paths: "{{ drone_base_path }}/repos/omni-nxt/ros_packages"
+            file_type: directory
+            recurse: false
+          register: ros_packages_reg
+        
+
+        - name: Link ros_packages directories to src
+          ansible.builtin.file:
+            src: "{{ item.path }}"
+            dest: "{{ drone_ros_path }}/src/{{ item.path | basename }}"
+            state: link
+            force: true
+          loop: "{{ ros_packages_reg.files }}"
+        
     - name: Install rosdeps
+      become: true
       ansible.builtin.shell: |
         cd {{ drone_ros_path }}
         . /opt/ros/humble/setup.sh
