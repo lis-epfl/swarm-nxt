@@ -41,8 +41,12 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
       ns + "/goals", 10,
       std::bind(&DronePlanner::GoalsCallback, this, std::placeholders::_1));
 
+  rclcpp::QoS best_effort_qos =
+      rclcpp::QoS(rclcpp::KeepLast(10))
+          .reliability(rclcpp::ReliabilityPolicy::BestEffort);
+
   mavros_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/local_position/pose", 10,
+      ns + "/local_position/pose", best_effort_qos,
       std::bind(&DronePlanner::MavrosPoseCallback, this,
                 std::placeholders::_1));
   // for the future: subscribe to all the peers' paths to avoid them.
@@ -88,7 +92,7 @@ void DronePlanner::DepthImageCallback(
 }
 
 nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
-  //new_goal_ = false;
+  // new_goal_ = false;
   const float DISTANCE_TOL_M = 0.05;  // if within 5cm of goal, we are there
                                       // and do not generate any more
   const float ANGLE_TOL_RAD =
