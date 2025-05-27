@@ -42,7 +42,7 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
       std::bind(&DronePlanner::GoalsCallback, this, std::placeholders::_1));
 
   mavros_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/mavros/local_position/pose", 10,
+      ns + "/local_position/pose", 10,
       std::bind(&DronePlanner::MavrosPoseCallback, this,
                 std::placeholders::_1));
   // for the future: subscribe to all the peers' paths to avoid them.
@@ -95,7 +95,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
       1.0 * 2 * M_PI;  // if the angle is within 1 degree, we are there.
 
   nav_msgs::msg::Path trajectory = nav_msgs::msg::Path();
-  trajectory.header.frame_id = "base";
+  trajectory.header.frame_id = "map";
   trajectory.header.stamp = this->now();
 
   geometry_msgs::msg::Pose delta = current_goal_ - cur_pos_;
@@ -152,7 +152,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
     tf2::Quaternion interp_quat = start_quaternion.slerp(goal_quaternion, t);
 
     pose.pose.orientation = tf2::toMsg(interp_quat);
-    pose.header.frame_id = "base";
+    pose.header.frame_id = "map";
     pose.header.stamp = this->now();
     trajectory.poses.push_back(pose);
   }

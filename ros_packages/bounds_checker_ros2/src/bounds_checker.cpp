@@ -16,7 +16,7 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   InitializeRosParameters();
 
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/mavros/local_position/pose", 10,
+      ns + "/local_position/pose", 10,
       std::bind(&BoundsChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 
