@@ -137,7 +137,7 @@ For each of the cameras, perform the following tasks:
 ### Flashing Firmware
 
 !!! important  
-	Ensure you have fully run the host computer setup in the [IT Infrastructure Setup Guide](it-infra-setup.md)
+	Ensure you have fully run the host computer setup in the [IT Infrastructure Setup Guide](infra-setup.md)
 
 #### Bootloader
 

@@ -1,4 +1,4 @@
-# IT Infrastructure Setup 
+# Infrastructure Setup 
 
 These instructions need to be followed once to setup the infrastructure to setup and operate the drones. 
 
@@ -55,3 +55,8 @@ This procedure will install required packages on the host computer and configure
 If using Optitrack as the odometry source, you must setup and configure an instance of Motive that is connected to the Optitrack system. This computer must also connect to the network described in the [networking](#networking) section via ethernet. 
 
 This setup is out of scope for this guide. 
+
+## Safety Bounds
+
+!!! danger
+	Take care in defining the bounds in this step to avoid drones flying where they should not fly

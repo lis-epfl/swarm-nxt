@@ -1,7 +1,7 @@
 site_name: Omni NXT
 nav: 
   - Home: index.md
-  - IT Infrastructure Setup: it-infra-setup.md
+  - Infrastructure Setup: infra-setup.md
   - Drone Build Instructions: drone-setup.md
   - Flying: flying.md
   - Common Software Tasks: software-common-tasks.md

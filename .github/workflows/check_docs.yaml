@@ -1,0 +1,31 @@
+name: Build Docs
+
+on:
+    push:
+        paths:
+            - 'docs/**'
+            - 'mkdocs.yml'
+            - '.github/workflows/check_docs.yaml'
+    pull_request:
+        paths:
+            - 'docs/**'
+            - 'mkdocs.yml'
+
+jobs:
+    build-docs:
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Set up Python
+          uses: actions/setup-python@v5
+          with:
+              python-version: '3.x'
+
+        - name: Install dependencies
+          run: |
+              pip install mkdocs
+
+        - name: Build documentation
+          run: mkdocs build -s
