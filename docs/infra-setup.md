@@ -60,3 +60,31 @@ This setup is out of scope for this guide.
 
 !!! danger
 	Take care in defining the bounds in this step to avoid drones flying where they should not fly
+
+This package has a safety module `bounds_checker_ros2` that ensures two things: 
+
+1. Generated trajectories stay within a polyhedron
+2. If the drone exits the polyhedron, executes a land command
+
+These bounds are defined by a `bounds.json` file that is in `ansible/templates`. Since this file is dependent on your particular environment, this file is NOT provided by default. An example file exists called `bounds.json.example` in `ansible/templates`, and is repeated here for demonstration: 
+
+
+```json
+[
+	[ 0.0838,  -0.9965,  0.0,  3.0029],  
+	[ 0.9990,  -0.0439,  0.0,  2.4217],  
+	[-0.0164,   0.9999,  0.0,  3.9568],  
+	[-0.9999,  -0.0138,  0.0,  4.0459],  
+	[ 0.0,      0.0,     1.0,  3.6   ],  
+	[ 0.0,      0.0,     1.0,  0.0   ]   
+]
+```
+
+
+The format is an array of four dimensional arrays, with the first three elements defining the array normal vector, and the last element defining the offset from the origin: 
+
+$$
+\begin{bmatrix} \begin{bmatrix} \vec{n_1} & c_1 \end{bmatrix} \\ \vdots \\ \begin{bmatrix} \vec{n_N} & c_N \end{bmatrix} \end{bmatrix}
+$$
+
+Points are safe when the system of inequalities $\vec{p} \cdot \vec{n}_i + c_i \geq 0$ holds for all $i \in \{1, \dots, N\}$.
