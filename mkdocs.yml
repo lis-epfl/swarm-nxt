@@ -6,6 +6,7 @@ nav:
   - Flying: flying.md
   - Common Software Tasks: software-common-tasks.md
   - Manual Setup Instructions: manual-setup.md
+  - Appendix: appendix.md
 theme: readthedocs
 markdown_extensions:
   - admonition

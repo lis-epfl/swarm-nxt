@@ -139,58 +139,6 @@ param set CA_ROTOR3_PY 0.0535
 
 These positions are relative to the center of gravity of the drone, so ensure that the battery is placed such that the CoG is truly at the middle of the drone. Then, go back to the Vehicle Setup menu and open the Actuators tab. __DO NOT TOUCH THE POSITION TEXTBOXES__ since the values will truncate to two decimal places. 
 
-### Telemetry
-
-You can choose to use either the TELEM1 or TELEM2 port for providing telemetry to the Orin. 
-
-__TELEM2 Port (Preferred)__:
-
-In the parameters tab, set the following settings: 
-
-- `MAV_0_CONFIG`: TELEM 2
-- `SER_TEL2_BAUD`: 921600 8N1
-
-!!! note 
-	If another port was selected for `MAV_0_CONFIG`, you may have to restart the flight controller by pressing Tools > Reboot Vehicle before the `SER_TEL2_BAUD` is visible. 
-	
-Go back to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
-
-In the console, run the following commands: 
-```
-cd fs/microsd
-mkdir etc/
-cd etc
-echo "mavlink stream -d /dev/ttyS3 -s HIGHRES_IMU -r 1000" > extras.txt
-```
-
-If you run `cat extras.txt`, the mavlink stream line should be present. 
-
-
-
-__TELEM1 Port__:
-
-If the TELEM2 port is broken, you can use the TELEM1 port instead. On the parameter screen, change `MAV_0_CONFIG` to TELEM 1.
-
-
-Then, open the MAVLink console under "Analyze Tools", and run the following commands: 
-
-``` 
-param set SER_TEL1_BAUD 921600
-cd fs/microsd
-mkdir etc/
-cd etc
-echo "mavlink stream -d /dev/ttyS1 -s HIGHRES_IMU -r 1000" > extras.txt
-```
-
-!!! note
-	The HKUST GitHub suggests that the correct port is /dev/ttyS2 for TELEM1, but /dev/ttyS1 is tested and works. An [issue](https://github.com/HKUST-Aerial-Robotics/Nxt-FC/issues/22) has been filed 
-
-If you run `cat extras.txt`, the mavlink stream line should be present. 
-
-
-
-You can reboot the flight controller with `reboot` in the console. Connect the appropriate port to the THS1 port on the Onix, and SSH in. To test if the telemetry is streaming, run `python3 docs/examples/mavsdk_imu.py`. The rate should be roughly 250Hz. 
-
 ### Safety Setup
 
 On the Safety tab: 

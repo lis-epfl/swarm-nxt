@@ -179,6 +179,32 @@ Then, apply the saved parameter file (**TODO: LINK**) by following the steps bel
 3. Select the parameter file that can be found on the Google Drive. 
 
 ### NXT Configuration and Calibration
+
+#### Telemetry Streaming
+
+The flight controller needs to be configured to output data on a serial port so that the NVIDIA Orin can read and write commands. Here, we will set up telemetry on the TELEM2 port. 
+
+!!! note 
+	You can optionally chose to use another port to do this telemetry streaming. See [Appendix > Flight Controller > Alternate Telemetry Port](appendix.md#alternate-telemetry-port) for further instructions
+
+In the parameters tab, set the following settings: 
+
+- `MAV_0_CONFIG`: TELEM 2
+- `SER_TEL2_BAUD`: 921600 8N1
+
+Go back to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
+
+In the console, run the following commands: 
+```
+cd fs/microsd
+mkdir etc/
+cd etc
+echo "mavlink stream -d /dev/ttyS3 -s HIGHRES_IMU -r 1000" > extras.txt
+```
+
+If you run `cat extras.txt`, the mavlink stream line should be present. 
+
+
 #### Propeller Numbering and Spin Direction
 
 Ensure that the photo under "Actuator Testing" looks correct: 
