@@ -89,7 +89,7 @@ safe_height_range = [0, 3.6]
 safe_volume_lower_corners = np.append(safe_vertices, safe_height_range[0]*np.zeros((4, 1)), 1)
 safe_volume_upper_corners = np.append(safe_vertices, safe_height_range[1]*np.ones((4, 1)), 1)
 
-safe_volume = np.concat([safe_volume_lower_corners, safe_volume_upper_corners], 0)
+safe_volume = np.concatenate([safe_volume_lower_corners, safe_volume_upper_corners], 0)
 
 # Shrink each vertex 10% towards the origin
 shrink_factor = 0.9
@@ -130,6 +130,7 @@ ax.set_ylabel("y [m]")
 ax.set_zlabel("z [m]")
 
 plt.tight_layout()
+plt.savefig("plot.png")
 plt.show()
 
 # %% Export Safe Volume to a csv
