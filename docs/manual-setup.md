@@ -53,7 +53,7 @@ You must set this up before running the playbook below. See [Password-Free Acces
 
 We use [Ansible](https://www.redhat.com/en/ansible-collaborative) to facilitate idempotent configuration. 
 
-Make sure Ansible is installed following the [setup instructions](software-common-tasks.md#ansible-installation)
+Make sure Ansible is installed following the [setup instructions](infra-setup.md#ansible-installation)
 
 Then, clone the [repo](https://github.com/lis-epfl/onix-nxt), and open a terminal in the ansible directory. To make the following process faster, download the patched-kernel tarball from the [Google Drive](https://drive.google.com/drive/u/1/folders/1XL-hTVf6IsB96XvfQLSesLO4FHOVjW6y). Place this file in a folder called `ansible/patched-kernel` inside the repo. 
 

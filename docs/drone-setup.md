@@ -164,7 +164,7 @@ For each of the cameras, perform the following tasks:
 ### Apply Parameter File
 
 !!! info
-	If you do not have a parameter file or want to create a new one, you can follow the steps in the [NXT Setup](nxt-setup.md) document instead of applying the parameter file as described below. 
+	If you do not have a parameter file or want to create a new one, you can follow the steps in the [Manual Setup > NXT Flight Controller Setup](manual-setup.md#nxt-flight-controller-setup) document instead of applying the parameter file as described below. 
 
 First, ensure that the units in QGroundControl are set to SI Units: 
 
@@ -223,8 +223,6 @@ Set the spin direction for each motor so that it matches the image. Enable the s
 
 !!! important
 	Manually verify the spin direction individually for each motor, since the spin direction may not match QGroundControl
-
-You can install the propellers by following the steps in [Hardware Setup > Propeller Installation](hardware-setup.md#propeller-setup) at any time after this. 
 
 #### Propeller Installation 
 
