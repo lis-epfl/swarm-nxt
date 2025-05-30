@@ -1,4 +1,4 @@
-- name: Preflight
+- name: Drones Update
   hosts: drones
   remote_user: lis
   become: false
