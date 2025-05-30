@@ -5,7 +5,7 @@ namespace bounds_checker {
 
 BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   std::string filepath;
-  
+
   std::string ns = this->get_namespace();
 
   this->declare_parameter("plane_file", "/var/opt/config/bounds.json");
@@ -15,8 +15,12 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   DeclareRosParameters();
   InitializeRosParameters();
 
+  rclcpp::QoS best_effort_qos =
+      rclcpp::QoS(rclcpp::KeepLast(10))
+          .reliability(rclcpp::ReliabilityPolicy::BestEffort);
+
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/mavros/local_position/pose", 10,
+      ns + "/local_position/pose", best_effort_qos,
       std::bind(&BoundsChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 
@@ -180,15 +184,15 @@ void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   // todo: make the trajectory hull an inset of the true hull.
   for (auto &pose : safe_traj.poses) {
     if (!IsPointInHull(pose.pose.position)) {
-	    safe = false;
+      safe = false;
       pose.pose.position = ProjectPointToClosestPlane(pose.pose.position);
     }
   }
 
-  if(!safe) {
-	  RCLCPP_WARN(this->get_logger(), "Trajectory was unsafe");
+  if (!safe) {
+    RCLCPP_WARN(this->get_logger(), "Trajectory was unsafe");
   } else {
-	  RCLCPP_INFO(this->get_logger(), "Trajectory was safe");
+    RCLCPP_INFO(this->get_logger(), "Trajectory was safe");
   }
 
   safe_trajectory_pub_->publish(safe_traj);
