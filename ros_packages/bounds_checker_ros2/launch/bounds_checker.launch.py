@@ -8,7 +8,7 @@ def generate_launch_description():
 
     ld = LaunchDescription()
 
-    optitrack_multiplexer = Node(
+    bounds_checker = Node(
         package='bounds_checker_ros2',
         executable='bounds_checker_node',
         name='bounds_checker_node',
@@ -18,5 +18,5 @@ def generate_launch_description():
         emulate_tty=True
     )
 
-    ld.add_action(optitrack_multiplexer)
+    ld.add_action(bounds_checker)
     return ld
