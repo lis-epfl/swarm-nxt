@@ -13,3 +13,20 @@
 5. Check the ping between each drone and the ground station, both ways (TODO: Automate)
 6. Check the batteries are charged (TODO: Automate)
 7. Check that the rotors are not obstructed by any cables, and all cables are well-connected
+
+
+## Optional: Run an Update
+
+You can run an update by going to the `ansible/` directory and running the following command: 
+
+```bash
+ansible-playbook -i inventory.ini drones_update.yml -K 
+```
+
+This will update apt repositories, pull the latest version of ros packages, and build them. 
+
+```asciinema-player
+{
+    "file": "demos/drones_update.cast"
+}
+```

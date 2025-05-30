@@ -12,7 +12,12 @@ markdown_extensions:
   - admonition
   - pymdownx.arithmatex:
       generic: true
-
+plugins:
+  - asciinema-player
+  - mkdocs-simple-hooks:
+      hooks:
+        on_post_build: "docs.hooks:copy_demos"
+      
 extra_javascript:
   - js/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js

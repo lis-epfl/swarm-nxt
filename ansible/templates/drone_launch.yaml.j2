@@ -15,5 +15,19 @@ launch:
     - node:
         pkg: "latency_checker_ros2"
         exec: "latency_checker"
-        namespace: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}"
+        namespace: "{{ ns }}" # populated by calling playbook.
     
+    - node: 
+        pkg: "bounds_checker_ros2"
+        exec: "bounds_checker_node"
+        namespace: "{{ ns }}"
+        param: 
+        -
+          name: "plane_file"
+          value: "{{ drone_ros_path }}/config/bounds.json"
+    
+    - node: 
+        pkg: "drone_planner_ros2"
+        exec: "drone_planner_node"
+        namespace: "{{ ns }}"
+        

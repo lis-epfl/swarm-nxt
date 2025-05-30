@@ -26,29 +26,7 @@
         ansible.builtin.systemd:
           name: chronyd
           state: restarted
-      
-    
-    - name: OmniNXT Nodes
-      block: 
-        - name: Get repository 
-          ansible.builtin.git: 
-            repo: git@github.com:lis-epfl/omni-nxt
-            dest: "{{ drone_base_path }}/repos/omni-nxt"
-            version: latency_checker # TODO: temp
-            key_file: /home/lis/.ssh/id_ed25519
-            accept_newhostkey: yes
-        - name: Link to ros_ws
-          ansible.builtin.file: 
-            src: "{{ drone_base_path }}/repos/omni-nxt/ros_packages/latency_checker_ros2"
-            dest: "{{ drone_ros_path }}/src/latency_checker_ros2"
-            state: link
-        
-    
-    - name: Build ros packages
-      ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
-      args:
-        chdir: "{{ drone_ros_path }}"
-    
+
     - name: Create config directory
       ansible.builtin.file:
         dest: "{{ drone_ros_path }}/config"
@@ -67,6 +45,14 @@
       ansible.builtin.template:
         src: templates/drone_launch.yaml.j2
         dest: "{{ drone_base_path }}/launch.py"
+      vars: 
+        ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}"
+
+    - name: Send 3D Bounds file
+      ansible.builtin.copy:
+        src: templates/bounds.json
+        dest: "{{ drone_ros_path }}/config/bounds.json"
+      
 
     - name: Create ros_packages script 
       vars: 

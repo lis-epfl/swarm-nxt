@@ -1,0 +1,84 @@
+- name: Preflight
+  hosts: drones
+  remote_user: lis
+  become: false
+  
+  tasks: 
+  - name: Perform a safe upgrade # installs new packages if needed
+    become: yes
+    ansible.builtin.apt:
+      update_cache: yes
+      upgrade: "safe"
+  
+  - name: Ensure ros2 ws exists
+    ansible.builtin.file:
+      path: "{{ drone_ros_path }}/src"
+      state: directory
+
+  - name: Optitrack
+    when: "position_estimation == 'optitrack'"
+    block: 
+    
+    - name: Get optitrack package
+      ansible.builtin.git:
+        repo: https://github.com/lis-epfl/optitrack_packages_ros2/
+        dest: "{{ drone_ros_path }}/src/optitrack_packages_ros2"
+        force: yes
+
+    - name: Remove multiplexer
+      ansible.builtin.file: 
+        path: "{{ drone_ros_path }}/src/optitrack_packages_ros2/optitrack_multiplexer_ros2"
+        state: absent
+
+    - name: Remove wrapper
+      ansible.builtin.file:   
+        path: "{{ drone_ros_path }}/src/optitrack_packages_ros2/optitrack_wrapper_ros2"
+        state: absent
+    
+    - name: Get mocap to vision package
+      ansible.builtin.git: 
+        repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
+        dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
+        force: yes 
+        
+    - name: OmniNXT Nodes
+      block: 
+        - name: Get repository 
+          ansible.builtin.git: 
+            repo: git@github.com:lis-epfl/omni-nxt
+            dest: "{{ drone_base_path }}/repos/omni-nxt"
+            version: test/first_drone_integration # TODO: temp
+            key_file: /home/lis/.ssh/id_ed25519
+            accept_newhostkey: yes
+            force: yes
+          
+        - name: List ros_packages directories
+          ansible.builtin.find:
+            paths: "{{ drone_base_path }}/repos/omni-nxt/ros_packages"
+            file_type: directory
+            recurse: false
+          register: ros_packages_reg
+        
+
+        - name: Link ros_packages directories to src
+          ansible.builtin.file:
+            src: "{{ item.path }}"
+            dest: "{{ drone_ros_path }}/src/{{ item.path | basename }}"
+            state: link
+            force: true
+          loop: "{{ ros_packages_reg.files }}"
+        
+    - name: Install rosdeps
+      become: true
+      ansible.builtin.shell: |
+        cd {{ drone_ros_path }}
+        . /opt/ros/humble/setup.sh
+        rosdep init
+        rosdep update
+        rosdep install --from-paths {{ drone_ros_path }}/src -y --ignore-src -r
+             
+    - name: Build ros packages
+      ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
+      args:
+        chdir: "{{ drone_ros_path }}"
+    
