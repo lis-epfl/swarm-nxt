@@ -4,8 +4,10 @@ launch:
         arg: # TODO: design decision -- should we define the fcu url here or in the px4.launch file?
         - name: "gcs_url"
           value: "udp://@{{ gcs_url }}:14550"
+        - name: "fcu_url"
+          value: "{{ drone_fcu_url }}"
         - name: "namespace"
-          value: "{{ ansible_hostname }}"
+          value: "{{ ns }}"
     - include: 
         file: "$(find-pkg-share mocap_to_vision_pose_ros2)/launch/mocap_to_vision_pose.launch.py"
         arg:
