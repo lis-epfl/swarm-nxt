@@ -38,6 +38,8 @@ def generate_launch_description():
         executable="latency_checker",
         namespace='{{ ansible_hostname | map("regex_replace", "-", "_") | join("") }}',
         name="latency_checker",
+        output="screen",
+        parameters=[{"peer_file_path": "{{ host_ros_path }}/config/peer_list.yaml"}]
     )
 
     # collect nodes

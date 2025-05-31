@@ -18,6 +18,10 @@ launch:
         pkg: "latency_checker_ros2"
         exec: "latency_checker"
         namespace: "{{ ns }}" # populated by calling playbook.
+        param:
+        -
+          name: "peer_file_path"
+          value: "{{ drone_ros_path }}/config/peer_list.yaml"
     
     - node: 
         pkg: "bounds_checker_ros2"
