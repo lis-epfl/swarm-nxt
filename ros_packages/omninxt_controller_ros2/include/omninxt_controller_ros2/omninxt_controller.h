@@ -21,6 +21,7 @@ class Controller : public rclcpp::Node {
   Controller();
 
  private:
+  const float DISTANCE_TOL = 0.5f;
   // State
   ControllerState state_{ControllerState::Idle};
 
@@ -61,7 +62,7 @@ class Controller : public rclcpp::Node {
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
       drone_pos_sub_;
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr safe_traj_sub_;
-
+  rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   // Publisher
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr setpoint_pub_;
 
@@ -74,6 +75,7 @@ class Controller : public rclcpp::Node {
   // Callbacks
   void Loop();
   void MavrosPoseCallback(const geometry_msgs::msg::PoseStamped& msg);
+  void MavrosStateCallback(const mavros_msgs::msg::State& msg);
   void TrajectoryCallback(const nav_msgs::msg::Path& msg);
   bool change_px4_state(const std::string& mode);
 };

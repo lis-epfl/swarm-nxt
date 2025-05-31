@@ -31,8 +31,9 @@ Controller::Controller() : ::rclcpp::Node("omninxt_controller") {
       ns + "/trajectory_safe", 10,
       std::bind(&Controller::TrajectoryCallback, this, std::placeholders::_1));
 
-  // DeclareRosParameters();
-  // InitializeRosParameters();
+  state_sub_ = this->create_subscription<mavros_msgs::msg::State>(
+      ns + "/state", 10,
+      std::bind(&Controller::MavrosStateCallback, this, std::placeholders::_1));
 
   setpoint_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
       ns + "/setpoint_position/local", 10);
@@ -63,10 +64,15 @@ void Controller::SendTrajectoryMessage() {
   }
 
   float distance = tf2::tf2Distance(cur_pos_, cur_target_);
-  const int num_traj_points = traj_.poses.size();
+  const unsigned int num_traj_points = traj_.poses.size();
+
+  if (num_traj_points == 0) {
+    RCLCPP_WARN(this->get_logger(), "no trajectory!");
+    return;
+  }
   while (distance < DISTANCE_TOL) {
     if (++cur_traj_index_ < num_traj_points) {
-      tf2::fromMsg(traj_.poses.at(cur_traj_index_), cur_target_);
+      tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
       distance = tf2::tf2Distance(cur_pos_, cur_target_);
     } else {
       reached_dest_ = true;
@@ -74,6 +80,7 @@ void Controller::SendTrajectoryMessage() {
   }
   tf2::toMsg(cur_target_, msg.pose.position);
   setpoint_pub_->publish(msg);
+  num_traj_messages_sent_ += 1;
 }
 
 bool Controller::change_px4_state(const std::string& mode) {
@@ -107,33 +114,6 @@ bool Controller::change_px4_state(const std::string& mode) {
     return false;
   }
 
-  if (arm) {
-    mavros_msgs::srv::CommandBool::Request arm_request;
-    arm_request.value = true;
-
-    if (arming_client_->wait_for_service(std::chrono::seconds(1))) {
-      auto arm_future = arming_client_->async_send_request(
-          std::make_shared<mavros_msgs::srv::CommandBool::Request>(
-              arm_request));
-      if (arm_future.wait_for(std::chrono::seconds(1)) ==
-          std::future_status::ready) {
-        auto response = arm_future.get();
-        if (response->success) {
-          RCLCPP_INFO(logger, "Armed successfully");
-        } else {
-          RCLCPP_ERROR(logger, "Failed to arm");
-          return false;
-        }
-      } else {
-        RCLCPP_ERROR(logger, "Arming service call timed out");
-        return false;
-      }
-    } else {
-      RCLCPP_ERROR(logger, "Arming service not available");
-      return false;
-    }
-  }
-
   return true;
 }
 
@@ -141,6 +121,7 @@ void Controller::TakeoffService(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   if (state_ == ControllerState::Idle) {
+    state_ = ControllerState::TakingOff;
     response->success = true;
     response->message = "Taking off!";
   } else {
@@ -194,29 +175,49 @@ void Controller::StartTrajectoryService(
 
 void Controller::Loop() {
   auto logger = this->get_logger();
+
   switch (state_) {
     case ControllerState::Idle:
-      // do nothing
+      RCLCPP_INFO(logger, "state: idle");
       break;
     case ControllerState::TakingOff:
+      RCLCPP_INFO(logger, "state: taking off");
+      SendTrajectoryMessage();
+      if (num_traj_messages_sent_ > 100 &&
+          mavros_state_.mode == "AUTO.LOITER") {
+        // we are done with taking off, move to follow traj
+        change_px4_state("OFFBOARD");
+      }
       // start sending trajectory messages
       break;
     case ControllerState::FollowingTrajectory:
-      // send trajectory message
-      // change mode once critical number have been sent
+      RCLCPP_INFO(logger, "state: following trajectory");
+      SendTrajectoryMessage();
       break;
     case ControllerState::Landing:
+      RCLCPP_INFO(logger, "state: following trajectory");
       // stop sending messages
       // switch mode
+      if (mavros_state_.mode == "AUTO.LOITER" && !mavros_state_.armed) {
+        // landing done
+        RCLCPP_INFO(this->get_logger(),
+                    "Landing finished, changing internal state to idle");
+        state_ = ControllerState::Idle;
+        num_traj_messages_sent_ = 0;
+      }
 
       break;
+  }
+
+  if (state_ != ControllerState::Idle && !mavros_state_.armed) {
+    RCLCPP_WARN(logger, "Controller not armed!");
   }
 }
 
 void Controller::MavrosPoseCallback(
     const geometry_msgs::msg::PoseStamped& msg) {
   RCLCPP_INFO(this->get_logger(), "Got a new position");
-  tf2::fromMsg(msg, cur_pos_);
+  tf2::fromMsg(msg.pose.position, cur_pos_);  // todo: yaw
 }
 
 void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
@@ -228,8 +229,11 @@ void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
   traj_ = msg;
   cur_traj_index_ = 0;
   tf2::Vector3 destination;
-  tf2::fromMsg(traj_.poses.back(), destination);
+  tf2::fromMsg(traj_.poses.back().pose.position, destination);
   reached_dest_ = (tf2::tf2Distance(cur_pos_, destination) < DISTANCE_TOL);
 }
 
+void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
+  mavros_state_ = msg;
+}
 }  // namespace omninxt_controller
