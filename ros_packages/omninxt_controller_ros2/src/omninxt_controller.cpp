@@ -26,7 +26,7 @@ Controller::Controller() : ::rclcpp::Node("omninxt_controller") {
           .reliability(rclcpp::ReliabilityPolicy::BestEffort);
 
   drone_pos_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/local_position/pose", best_effort_qos,
+      ns + "/mavros/local_position/pose", best_effort_qos,
       std::bind(&Controller::MavrosPoseCallback, this, std::placeholders::_1));
 
   safe_traj_sub_ = this->create_subscription<nav_msgs::msg::Path>(
@@ -34,23 +34,23 @@ Controller::Controller() : ::rclcpp::Node("omninxt_controller") {
       std::bind(&Controller::TrajectoryCallback, this, std::placeholders::_1));
 
   state_sub_ = this->create_subscription<mavros_msgs::msg::State>(
-      ns + "/state", 10,
+      ns + "/mavros/state", 10,
       std::bind(&Controller::MavrosStateCallback, this, std::placeholders::_1));
 
   setpoint_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
-      ns + "/setpoint_position/local", 10);
+      ns + "/mavros/setpoint_position/local", 10);
 
   loop_timer_ = this->create_wall_timer(std::chrono::milliseconds(30),
                                         std::bind(&Controller::Loop, this));
 
   set_mode_client_ =
-      this->create_client<mavros_msgs::srv::SetMode>(ns + "/set_mode");
+      this->create_client<mavros_msgs::srv::SetMode>(ns + "/mavros/set_mode");
   arming_client_ =
-      this->create_client<mavros_msgs::srv::CommandBool>(ns + "/cmd/arming");
+      this->create_client<mavros_msgs::srv::CommandBool>(ns + "/mavros/cmd/arming");
   takeoff_client_ =
-      this->create_client<mavros_msgs::srv::CommandTOL>(ns + "/cmd/takeoff");
+      this->create_client<mavros_msgs::srv::CommandTOL>(ns + "/mavros/cmd/takeoff");
   land_client_ =
-      this->create_client<mavros_msgs::srv::CommandTOL>(ns + "/cmd/land");
+      this->create_client<mavros_msgs::srv::CommandTOL>(ns + "/mavros/cmd/land");
 }
 
 void Controller::SendTrajectoryMessage() {

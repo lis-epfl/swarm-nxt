@@ -20,7 +20,7 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
           .reliability(rclcpp::ReliabilityPolicy::BestEffort);
 
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/local_position/pose", best_effort_qos,
+      ns + "/mavros/local_position/pose", best_effort_qos,
       std::bind(&BoundsChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 

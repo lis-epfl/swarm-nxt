@@ -46,7 +46,7 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
           .reliability(rclcpp::ReliabilityPolicy::BestEffort);
 
   mavros_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/local_position/pose", best_effort_qos,
+      ns + "/mavros/local_position/pose", best_effort_qos,
       std::bind(&DronePlanner::MavrosPoseCallback, this,
                 std::placeholders::_1));
   // for the future: subscribe to all the peers' paths to avoid them.

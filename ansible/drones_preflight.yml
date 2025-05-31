@@ -46,7 +46,7 @@
         src: templates/drone_launch.yaml.j2
         dest: "{{ drone_base_path }}/launch.py"
       vars: 
-        ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}"
+        ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}" # todo: this should just be in the all ?
 
     - name: Send 3D Bounds file
       ansible.builtin.copy:
