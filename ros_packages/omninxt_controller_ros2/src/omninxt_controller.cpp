@@ -9,11 +9,13 @@ Controller::Controller() : ::rclcpp::Node("omninxt_controller") {
   std::string ns = this->get_namespace();
 
   takeoff_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      "controller/takeoff", std::bind(&Controller::TakeoffService, this,
-                           std::placeholders::_1, std::placeholders::_2));
+      "controller/takeoff",
+      std::bind(&Controller::TakeoffService, this, std::placeholders::_1,
+                std::placeholders::_2));
   land_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      "controller/land", std::bind(&Controller::LandService, this, std::placeholders::_1,
-                        std::placeholders::_2));
+      "controller/land",
+      std::bind(&Controller::LandService, this, std::placeholders::_1,
+                std::placeholders::_2));
   start_traj_srv_ = this->create_service<std_srvs::srv::Trigger>(
       "controller/start_trajectory",
       std::bind(&Controller::StartTrajectoryService, this,
@@ -121,7 +123,7 @@ void Controller::TakeoffService(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   if (state_ == ControllerState::Idle) {
-    state_ = ControllerState::TakingOff;
+    change_px4_state("AUTO.TAKEOFF");
     response->success = true;
     response->message = "Taking off!";
   } else {
@@ -134,24 +136,7 @@ void Controller::LandService(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   if (state_ == ControllerState::FollowingTrajectory) {
-    mavros_msgs::srv::CommandTOL::Request land_request;
-    land_request.altitude = 0.0f;
-    land_request.latitude = 0.0f;
-    land_request.longitude = 0.0f;
-    land_request.yaw = 0.0f;
-
-    land_client_->async_send_request(
-        std::make_shared<mavros_msgs::srv::CommandTOL::Request>(land_request),
-        [this](
-            rclcpp::Client<mavros_msgs::srv::CommandTOL>::SharedFuture future) {
-          auto response = future.get();
-          if (response->success) {
-            RCLCPP_INFO(this->get_logger(), "Land command sent successfully.");
-            state_ = ControllerState::Landing;
-          } else {
-            RCLCPP_ERROR(this->get_logger(), "Failed to send land command.");
-          }
-        });
+    change_px4_state("AUTO.LAND");
     response->success = true;
     response->message = "Landing!";
   } else {
@@ -234,6 +219,7 @@ void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
 }
 
 void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
+  RCLCPP_INFO(this->get_logger(), "Got mavros state");
   mavros_state_ = msg;
 }
 }  // namespace omninxt_controller
