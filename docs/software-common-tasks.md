@@ -25,7 +25,8 @@ To connect to a network with simple auth (open or WPA2/WPA3 password): `sudo nmt
 sudo nmcli connection add type wifi \ 
 con-name "NetworkName" \
 ssid "SSID" \
-password "password"
+wifi-sec.psk "password" \
+wifi-sec.key-mgmt "wpa-psk"
 ```
 
 To connect to a more complicated network (eduroam/epfl): 
