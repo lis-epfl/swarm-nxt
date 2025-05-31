@@ -32,4 +32,8 @@ launch:
         pkg: "drone_planner_ros2"
         exec: "drone_planner_node"
         namespace: "{{ ns }}"
+    - node:
+        pkg: "omninxt_controller_ros2"
+        exec: "omninxt_controller_node"
+        namespace: "{{ ns }}"
         
