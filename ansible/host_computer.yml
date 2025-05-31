@@ -106,7 +106,8 @@
         - name: Get optitrack packages
           ansible.builtin.git: 
             repo: https://github.com/lis-epfl/optitrack_packages_ros2/
-            dest: "{{ host_ros_path }}/src"
+            dest: "{{ host_ros_path }}/src/optitrack_packages_ros2"
+            version: niel/seperate_nodes # TODO: temp
             force: yes
 
     
@@ -116,7 +117,7 @@
           ansible.builtin.git: 
             repo: git@github.com:lis-epfl/omni-nxt
             dest: "{{ host_base_path }}/repos/omni-nxt"
-            version: latency_checker # TODO: temp
+            version: dummy-controller # TODO: temp
             force: yes
         - name: Link to ros_ws
           ansible.builtin.file: 

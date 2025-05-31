@@ -138,7 +138,6 @@
         vars:
           peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
 
-    -  
       - name: Create local systemd folder
         ansible.builtin.file:
           dest: "~/.local/share/systemd/user"
