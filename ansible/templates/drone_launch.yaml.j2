@@ -10,10 +10,11 @@ launch:
           value: "{{ ns }}/mavros"
     - include: 
         file: "$(find-pkg-share mocap_to_vision_pose_ros2)/launch/mocap_to_vision_pose.launch.py"
-        namespace: "{{ ns }}"
         arg:
           - name: "mocap_topic"
             value: "/optitrack_multiplexer_node/rigid_body/{{ ansible_hostname }}"
+          - name: "namespace"
+            value: "{{ ns }}"
       
     - node:
         pkg: "latency_checker_ros2"
