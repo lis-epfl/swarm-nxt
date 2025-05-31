@@ -1,8 +1,8 @@
 ros_domain_id: "1"
 position_estimation: "optitrack"
 
-wifi_ssid: "omniNXT-WiFi"
-wifi_password: "dronesarecool"
+wifi_ssid: "WiFli"
+wifi_password: "crazyflie"
 
 host_wifi_interface: wlp1s0 
 # if you don't know, run this: nmcli --get-values GENERAL.DEVICE,GENERAL.TYPE device show | sed '/^wifi$/!{h;d;};x'
