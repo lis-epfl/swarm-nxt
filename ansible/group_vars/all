@@ -24,5 +24,6 @@ host_base_path: "/home/mistry/data"
 host_ros_path: "{{ host_base_path }}/ros2_omninxt_ws"
 host_fc_path: "{{ host_base_path }}/nxt_flight_controller"
 
+ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}" 
 
 optitrack_server_address: "192.168.194.150"

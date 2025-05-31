@@ -45,8 +45,6 @@
       ansible.builtin.template:
         src: templates/drone_launch.yaml.j2
         dest: "{{ drone_base_path }}/launch.py"
-      vars: 
-        ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}" # todo: this should just be in the all ?
 
     - name: Send 3D Bounds file
       ansible.builtin.copy:
@@ -58,7 +56,6 @@
       vars: 
         ros_path: "{{ drone_ros_path }}"
         base_path: "{{ drone_base_path }}"
-        ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}"
       ansible.builtin.template: 
         src: scripts/ros_packages_start.sh
         dest: "{{ drone_base_path }}/ros_packages_start.sh"
