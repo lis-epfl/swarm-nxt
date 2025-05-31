@@ -187,6 +187,13 @@ void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
       safe = false;
       pose.pose.position = ProjectPointToClosestPlane(pose.pose.position);
     }
+
+    // todo: make this a paramter
+    // enforce a min z height
+    if (pose.pose.position.z < 0.7f) {
+      safe = false;
+      pose.pose.position.z = 0.7f;
+    }
   }
 
   if (!safe) {
