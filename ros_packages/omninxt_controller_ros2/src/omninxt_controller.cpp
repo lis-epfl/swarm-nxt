@@ -9,13 +9,13 @@ Controller::Controller() : ::rclcpp::Node("omninxt_controller") {
   std::string ns = this->get_namespace();
 
   takeoff_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      "takeoff", std::bind(&Controller::TakeoffService, this,
+      "controller/takeoff", std::bind(&Controller::TakeoffService, this,
                            std::placeholders::_1, std::placeholders::_2));
   land_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      "land", std::bind(&Controller::LandService, this, std::placeholders::_1,
+      "controller/land", std::bind(&Controller::LandService, this, std::placeholders::_1,
                         std::placeholders::_2));
   start_traj_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      "start_trajectory",
+      "controller/start_trajectory",
       std::bind(&Controller::StartTrajectoryService, this,
                 std::placeholders::_1, std::placeholders::_2));
 
