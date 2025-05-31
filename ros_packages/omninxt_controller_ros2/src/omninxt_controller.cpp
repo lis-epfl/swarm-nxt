@@ -88,6 +88,8 @@ void Controller::SendTrajectoryMessage() {
 bool Controller::change_px4_state(const std::string& mode) {
   auto logger = this->get_logger();
   const std::map<std::string, ControllerState> mode_map = {
+      {"AUTO.LOITER",
+       ControllerState::Idle},  // todo: this needs to be more complicated
       {"AUTO.LAND", ControllerState::Landing},
       {"AUTO.TAKEOFF", ControllerState::TakingOff},
       {"OFFBOARD", ControllerState::FollowingTrajectory}};
@@ -196,6 +198,10 @@ void Controller::Loop() {
 
   if (state_ != ControllerState::Idle && !mavros_state_.armed) {
     RCLCPP_WARN(logger, "Controller not armed!");
+    if (mavros_state_.mode == "OFFBOARD") {
+      // get the system back to idle
+      change_px4_state("AUTO.LOITER");
+    }
   }
 }
 
