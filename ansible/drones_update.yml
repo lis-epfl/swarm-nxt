@@ -39,6 +39,7 @@
       ansible.builtin.git: 
         repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
         dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
+        version: "niel/fix-check-launch" # TODO: temp
         force: yes 
         
     - name: OmniNXT Nodes
@@ -47,7 +48,7 @@
           ansible.builtin.git: 
             repo: git@github.com:lis-epfl/omni-nxt
             dest: "{{ drone_base_path }}/repos/omni-nxt"
-            version: test/first_drone_integration # TODO: temp
+            version: dummy-controller  # TODO: temp
             key_file: /home/lis/.ssh/id_ed25519
             accept_newhostkey: yes
             force: yes

@@ -58,6 +58,7 @@
       vars: 
         ros_path: "{{ drone_ros_path }}"
         base_path: "{{ drone_base_path }}"
+        ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}"
       ansible.builtin.template: 
         src: scripts/ros_packages_start.sh
         dest: "{{ drone_base_path }}/ros_packages_start.sh"
