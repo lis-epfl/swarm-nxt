@@ -189,7 +189,7 @@ void Controller::Loop() {
       RCLCPP_INFO(logger, "state: following trajectory");
       // stop sending messages
       // switch mode
-      if (mavros_state_.mode == "AUTO.LOITER" && !mavros_state_.armed) {
+      if (!mavros_state_.armed) {
         // landing done
         RCLCPP_INFO(this->get_logger(),
                     "Landing finished, changing internal state to idle");
