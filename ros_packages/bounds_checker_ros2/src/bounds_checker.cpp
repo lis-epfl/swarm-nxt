@@ -35,13 +35,13 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   safe_pose_pub_ =
       create_publisher<geometry_msgs::msg::PoseStamped>(ns + "/pose_safe", 10);
 
-  #land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
+ //land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
 
-  #// Wait for the service to be available
-  #while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
-  #  RCLCPP_WARN(this->get_logger(),
-  #              "Waiting for ~/controller/land service to be available...");
-  #}
+ //// Wait for the service to be available
+ //while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
+ //  RCLCPP_WARN(this->get_logger(),
+ //              "Waiting for ~/controller/land service to be available...");
+ //}
 }
 
 void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
