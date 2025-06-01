@@ -156,16 +156,25 @@ void BoundsChecker::HandlePoseMessage(
     auto result_future = land_client_->async_send_request(request);
 
     try {
-     auto result = result_future.get();
-     if (result->success) {
-       RCLCPP_INFO(logger, "Landing command sent successfully: %s",
-                   result->message.c_str());
-     } else {
-       RCLCPP_WARN(logger, "Landing command failed: %s",
-                   result->message.c_str());
-     }
+      // Wait for the result with a timeout, spinning to process callbacks
+      auto start = std::chrono::steady_clock::now();
+      auto timeout = std::chrono::seconds(2); // adjust as needed
+      while (rclcpp::ok() && result_future.wait_for(std::chrono::milliseconds(100)) != std::future_status::ready) {
+        rclcpp::spin_some(this->get_node_base_interface());
+        if (std::chrono::steady_clock::now() - start > timeout) {
+          throw std::runtime_error("Timeout waiting for landing service response");
+        }
+      }
+      auto result = result_future.get();
+      if (result->success) {
+        RCLCPP_INFO(logger, "Landing command sent successfully: %s",
+                    result->message.c_str());
+      } else {
+        RCLCPP_WARN(logger, "Landing command failed: %s",
+                    result->message.c_str());
+      }
     } catch (const std::exception &e) {
-     RCLCPP_ERROR(logger, "Failed to call landing service: %s", e.what());
+      RCLCPP_ERROR(logger, "Failed to call landing service: %s", e.what());
     }
   }
 }
