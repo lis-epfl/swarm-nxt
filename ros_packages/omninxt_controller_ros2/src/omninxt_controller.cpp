@@ -45,12 +45,12 @@ Controller::Controller() : ::rclcpp::Node("omninxt_controller") {
 
   set_mode_client_ =
       this->create_client<mavros_msgs::srv::SetMode>(ns + "/mavros/set_mode");
-  arming_client_ =
-      this->create_client<mavros_msgs::srv::CommandBool>(ns + "/mavros/cmd/arming");
-  takeoff_client_ =
-      this->create_client<mavros_msgs::srv::CommandTOL>(ns + "/mavros/cmd/takeoff");
-  land_client_ =
-      this->create_client<mavros_msgs::srv::CommandTOL>(ns + "/mavros/cmd/land");
+  arming_client_ = this->create_client<mavros_msgs::srv::CommandBool>(
+      ns + "/mavros/cmd/arming");
+  takeoff_client_ = this->create_client<mavros_msgs::srv::CommandTOL>(
+      ns + "/mavros/cmd/takeoff");
+  land_client_ = this->create_client<mavros_msgs::srv::CommandTOL>(
+      ns + "/mavros/cmd/land");
 }
 
 void Controller::SendTrajectoryMessage() {
@@ -173,7 +173,8 @@ void Controller::Loop() {
       if (num_traj_messages_sent_ > 100 &&
           mavros_state_.mode == "AUTO.LOITER") {
         // we are done with taking off, move to follow traj
-        change_px4_state("OFFBOARD");
+        // dont do this yet!
+        // change_px4_state("OFFBOARD");
       }
       // start sending trajectory messages
       break;
