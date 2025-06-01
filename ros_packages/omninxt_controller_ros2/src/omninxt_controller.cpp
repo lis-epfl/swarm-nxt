@@ -186,7 +186,7 @@ void Controller::Loop() {
       SendTrajectoryMessage();
       break;
     case ControllerState::Landing:
-      RCLCPP_INFO(logger, "state: following trajectory");
+      RCLCPP_INFO(logger, "state: landing");
       // stop sending messages
       // switch mode
       if (!mavros_state_.armed) {
