@@ -152,6 +152,7 @@ void Controller::LandService(
 void Controller::StartTrajectoryService(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+  RCLCPP_ERROR(this->get_logger, "Following trajectory state?");
   if (state_ == ControllerState::TakingOff) {
     state_ = ControllerState::FollowingTrajectory;
     response->success = true;
