@@ -1,4 +1,4 @@
-site_name: Omni NXT
+site_name: SwarmNXT
 nav: 
   - Home: index.md
   - Infrastructure Setup: infra-setup.md
