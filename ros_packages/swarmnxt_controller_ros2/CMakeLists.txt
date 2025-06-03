@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(omninxt_controller_ros2)
+project(swarmnxt_controller_ros2)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -29,18 +29,18 @@ set(DEPENDENCIES
 )
 
 include_directories(
-  include/omninxt_controller_ros2
+  include/swarmnxt_controller_ros2
 )
 
-add_library(omninxt_controller_class src/omninxt_controller.cpp)
-add_executable(omninxt_controller_node src/omninxt_controller_node.cpp)
-target_link_libraries(omninxt_controller_node omninxt_controller_class)
+add_library(swarmnxt_controller_class src/swarmnxt_controller.cpp)
+add_executable(swarmnxt_controller_node src/swarmnxt_controller_node.cpp)
+target_link_libraries(swarmnxt_controller_node swarmnxt_controller_class)
 
-ament_target_dependencies(omninxt_controller_class
+ament_target_dependencies(swarmnxt_controller_class
   ${DEPENDENCIES}
 )
 
-ament_target_dependencies(omninxt_controller_node
+ament_target_dependencies(swarmnxt_controller_node
 ${DEPENDENCIES})
 
 install(DIRECTORY
@@ -48,12 +48,12 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 install(TARGETS
-  omninxt_controller_class
+  swarmnxt_controller_class
   LIBRARY DESTINATION lib
 )
 
 install(TARGETS
-omninxt_controller_node
+swarmnxt_controller_node
 DESTINATION lib/${PROJECT_NAME}
 )
 

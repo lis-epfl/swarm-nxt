@@ -42,12 +42,12 @@
         version: "niel/fix-check-launch" # TODO: temp
         force: yes 
         
-    - name: OmniNXT Nodes
+    - name: SwarmNXT Nodes
       block: 
         - name: Get repository 
           ansible.builtin.git: 
-            repo: git@github.com:lis-epfl/omni-nxt
-            dest: "{{ drone_base_path }}/repos/omni-nxt"
+            repo: git@github.com:lis-epfl/swarm-nxt
+            dest: "{{ drone_base_path }}/repos/swarm-nxt"
             version: dummy-controller  # TODO: temp
             key_file: /home/lis/.ssh/id_ed25519
             accept_newhostkey: yes
@@ -55,7 +55,7 @@
           
         - name: List ros_packages directories
           ansible.builtin.find:
-            paths: "{{ drone_base_path }}/repos/omni-nxt/ros_packages"
+            paths: "{{ drone_base_path }}/repos/swarm-nxt/ros_packages"
             file_type: directory
             recurse: false
           register: ros_packages_reg

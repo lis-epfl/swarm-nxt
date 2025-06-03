@@ -1,8 +1,8 @@
-#include "omninxt_controller.h"
+#include "swarmnxt_controller.h"
 
-namespace omninxt_controller {
+namespace swarmnxt_controller {
 
-Controller::Controller() : ::rclcpp::Node("omninxt_controller") {
+Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   auto logger = this->get_logger();
   RCLCPP_INFO(logger, "Starting the controller node...");
 
@@ -232,4 +232,4 @@ void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
   RCLCPP_INFO(this->get_logger(), "Got mavros state");
   mavros_state_ = msg;
 }
-}  // namespace omninxt_controller
+}  // namespace swarmnxt_controller

@@ -11,7 +11,7 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-namespace omninxt_controller {
+namespace swarmnxt_controller {
 
 // Enum for controller states
 enum class ControllerState { Idle, TakingOff, FollowingTrajectory, Landing };
@@ -80,4 +80,4 @@ class Controller : public rclcpp::Node {
   bool change_px4_state(const std::string& mode);
 };
 
-}  // namespace omninxt_controller
+}  // namespace swarmnxt_controller

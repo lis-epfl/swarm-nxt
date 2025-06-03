@@ -10,7 +10,7 @@ host_wifi_interface: wlp1s0
 
 drone_wifi_interface: wlP1p1s0
 drone_base_path: "/home/lis"
-drone_ros_path: "{{ drone_base_path }}/ros2_omninxt_ws"
+drone_ros_path: "{{ drone_base_path }}/ros2_swarmnxt_ws"
 
 drone_fcu_url: /dev/ttyTHS1:921600
 
@@ -21,7 +21,7 @@ chrony_maxpoll: 3
 
 host_hostname: adminlis-ThinkPad-T450s
 host_base_path: "/home/mistry/data"
-host_ros_path: "{{ host_base_path }}/ros2_omninxt_ws"
+host_ros_path: "{{ host_base_path }}/ros2_swarmnxt_ws"
 host_fc_path: "{{ host_base_path }}/nxt_flight_controller"
 
 ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}" 
