@@ -84,11 +84,13 @@ void Controller::SendTrajectoryMessage() {
 
   
   while (distance < DISTANCE_TOL) {
-    if (++cur_traj_index_ < num_traj_points) {
+    if (cur_traj_index_ < num_traj_points) {
+      cur_traj_index++;
       tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
       distance = tf2::tf2Distance(cur_pos_, cur_target_);
     } else {
       reached_dest_ = true;
+      break; 
     }
   }
   tf2::toMsg(cur_target_, msg.pose.position);
