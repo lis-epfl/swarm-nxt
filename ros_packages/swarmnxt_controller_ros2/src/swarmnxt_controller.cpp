@@ -61,6 +61,17 @@ void Controller::SendTrajectoryMessage() {
   geometry_msgs::msg::PoseStamped msg;
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
+  
+  
+  float distance = tf2::tf2Distance(cur_pos_, cur_target_);
+  const unsigned int num_traj_points = traj_.poses.size();
+
+  if (num_traj_points == 0) {
+    RCLCPP_WARN(this->get_logger(), "no trajectory!");
+    return;
+  }
+  num_traj_messages_sent_ += 1;
+  
   // get distance from current target
   if (reached_dest_) {
     RCLCPP_INFO(this->get_logger(), "Reached destination, so not advancing");
@@ -71,13 +82,7 @@ void Controller::SendTrajectoryMessage() {
     return;
   }
 
-  float distance = tf2::tf2Distance(cur_pos_, cur_target_);
-  const unsigned int num_traj_points = traj_.poses.size();
-
-  if (num_traj_points == 0) {
-    RCLCPP_WARN(this->get_logger(), "no trajectory!");
-    return;
-  }
+  
   while (distance < DISTANCE_TOL) {
     if (++cur_traj_index_ < num_traj_points) {
       tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
@@ -89,7 +94,6 @@ void Controller::SendTrajectoryMessage() {
   tf2::toMsg(cur_target_, msg.pose.position);
   done_pub_->publish(done_msg);
   setpoint_pub_->publish(msg);
-  num_traj_messages_sent_ += 1;
 }
 
 bool Controller::change_px4_state(const std::string& mode) {
