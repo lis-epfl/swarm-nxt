@@ -5,6 +5,7 @@
 #include <mavros_msgs/srv/command_bool.hpp>
 #include <mavros_msgs/srv/command_tol.hpp>
 #include <mavros_msgs/srv/set_mode.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <mutex>
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -65,6 +66,7 @@ class Controller : public rclcpp::Node {
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   // Publisher
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr setpoint_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr done_pub_;
 
   // helpers
   void SendTrajectoryMessage();
