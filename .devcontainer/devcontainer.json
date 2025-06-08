@@ -8,8 +8,6 @@
             "USERNAME": "niel"
         }
     },
-    "workspaceFolder": "/home/ws",
-    "workspaceMount": "source=${localWorkspaceFolder},target=/home/ws,type=bind",
     "customizations": {
         "vscode": {
             "extensions":[
