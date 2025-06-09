@@ -39,8 +39,9 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
 
   setpoint_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
       ns + "/mavros/setpoint_position/local", 10);
-    
-  done_pub_ = this->create_publisher<std_msgs::msg::Bool>(ns + "/controller/reached_destination", 10);
+
+  done_pub_ = this->create_publisher<std_msgs::msg::Bool>(
+      ns + "/controller/reached_destination", 10);
 
   loop_timer_ = this->create_wall_timer(std::chrono::milliseconds(30),
                                         std::bind(&Controller::Loop, this));
@@ -61,8 +62,7 @@ void Controller::SendTrajectoryMessage() {
   geometry_msgs::msg::PoseStamped msg;
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
-  
-  
+
   float distance = tf2::tf2Distance(cur_pos_, cur_target_);
   const unsigned int num_traj_points = traj_.poses.size();
 
@@ -71,7 +71,7 @@ void Controller::SendTrajectoryMessage() {
     return;
   }
   num_traj_messages_sent_ += 1;
-  
+
   // get distance from current target
   if (reached_dest_) {
     RCLCPP_INFO(this->get_logger(), "Reached destination, so not advancing");
@@ -82,7 +82,6 @@ void Controller::SendTrajectoryMessage() {
     return;
   }
 
-  
   while (distance < DISTANCE_TOL) {
     if (cur_traj_index_ < num_traj_points) {
       tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
@@ -90,7 +89,7 @@ void Controller::SendTrajectoryMessage() {
       cur_traj_index_++;
     } else {
       reached_dest_ = true;
-      break; 
+      break;
     }
   }
   tf2::toMsg(cur_target_, msg.pose.position);
@@ -214,9 +213,10 @@ void Controller::Loop() {
   if (state_ != ControllerState::Idle && !mavros_state_.armed) {
     if (mavros_state_.mode == "OFFBOARD") {
       // get the system back to idle
-      
-	    RCLCPP_INFO(logger, "Transitioning to non-offboad since controller was disarmed");
-	    change_px4_state("AUTO.LOITER");
+
+      RCLCPP_INFO(logger,
+                  "Transitioning to non-offboad since controller was disarmed");
+      change_px4_state("AUTO.LOITER");
     }
   }
 }
