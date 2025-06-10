@@ -8,6 +8,8 @@ launch:
           value: "{{ drone_fcu_url }}"
         - name: "namespace"
           value: "{{ ns }}/mavros"
+        - name: "tgt_system"
+          value: "{{ ns | regex_search("[0-9]+$") }}" # This assumes that hostnames end in numbers and they map to the system id. 
 
       
     - node:

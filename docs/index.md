@@ -9,5 +9,3 @@ Then, for each drone, go through the steps in [Drone Setup](drone-setup.md)
 When you're ready to fly, follow the steps in [Flying](flying.md). 
 
 
-## Other Information 
-

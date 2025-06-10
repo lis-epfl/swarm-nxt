@@ -9,15 +9,15 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   std::string ns = this->get_namespace();
 
   takeoff_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      "controller/takeoff",
+      ns + "/controller/takeoff",
       std::bind(&Controller::TakeoffService, this, std::placeholders::_1,
                 std::placeholders::_2));
   land_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      "controller/land",
+      ns + "/controller/land",
       std::bind(&Controller::LandService, this, std::placeholders::_1,
                 std::placeholders::_2));
   start_traj_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      "controller/start_trajectory",
+      ns + "/controller/start_trajectory",
       std::bind(&Controller::StartTrajectoryService, this,
                 std::placeholders::_1, std::placeholders::_2));
 
@@ -40,6 +40,9 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   setpoint_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
       ns + "/mavros/setpoint_position/local", 10);
 
+  done_pub_ = this->create_publisher<std_msgs::msg::Bool>(
+      ns + "/controller/reached_destination", 10);
+
   loop_timer_ = this->create_wall_timer(std::chrono::milliseconds(30),
                                         std::bind(&Controller::Loop, this));
 
@@ -57,13 +60,8 @@ void Controller::SendTrajectoryMessage() {
   const float DISTANCE_TOL = 0.5f;  // 50 cm
   std::lock_guard<std::mutex> lock(traj_mutex_);
   geometry_msgs::msg::PoseStamped msg;
-  // get distance from current target
-  if (reached_dest_) {
-    RCLCPP_INFO(this->get_logger(), "Reached destination, so not advancing");
-    tf2::toMsg(cur_pos_, msg.pose.position);
-    setpoint_pub_->publish(msg);
-    return;
-  }
+  std_msgs::msg::Bool done_msg;
+  done_msg.data = false;
 
   float distance = tf2::tf2Distance(cur_pos_, cur_target_);
   const unsigned int num_traj_points = traj_.poses.size();
@@ -72,17 +70,31 @@ void Controller::SendTrajectoryMessage() {
     RCLCPP_WARN(this->get_logger(), "no trajectory!");
     return;
   }
+  num_traj_messages_sent_ += 1;
+
+  // get distance from current target
+  if (reached_dest_) {
+    RCLCPP_INFO(this->get_logger(), "Reached destination, so not advancing");
+    tf2::toMsg(cur_pos_, msg.pose.position);
+    setpoint_pub_->publish(msg);
+    done_msg.data = true;
+    done_pub_->publish(done_msg);
+    return;
+  }
+
   while (distance < DISTANCE_TOL) {
-    if (++cur_traj_index_ < num_traj_points) {
+    if (cur_traj_index_ < num_traj_points) {
       tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
       distance = tf2::tf2Distance(cur_pos_, cur_target_);
+      cur_traj_index_++;
     } else {
       reached_dest_ = true;
+      break;
     }
   }
   tf2::toMsg(cur_target_, msg.pose.position);
+  done_pub_->publish(done_msg);
   setpoint_pub_->publish(msg);
-  num_traj_messages_sent_ += 1;
 }
 
 bool Controller::change_px4_state(const std::string& mode) {
@@ -173,13 +185,11 @@ void Controller::Loop() {
     case ControllerState::TakingOff:
       RCLCPP_INFO(logger, "state: taking off");
       SendTrajectoryMessage();
-      if (num_traj_messages_sent_ > 100 &&
-          mavros_state_.mode == "AUTO.LOITER") {
+      if (num_traj_messages_sent_ > 100 /* && altitude correct */) {
         // we are done with taking off, move to follow traj
         // dont do this yet!
-        // change_px4_state("OFFBOARD");
+        change_px4_state("OFFBOARD");
       }
-      // start sending trajectory messages
       break;
     case ControllerState::FollowingTrajectory:
       RCLCPP_INFO(logger, "state: following trajectory");
@@ -201,9 +211,11 @@ void Controller::Loop() {
   }
 
   if (state_ != ControllerState::Idle && !mavros_state_.armed) {
-    RCLCPP_WARN(logger, "Controller not armed!");
     if (mavros_state_.mode == "OFFBOARD") {
       // get the system back to idle
+
+      RCLCPP_INFO(logger,
+                  "Transitioning to non-offboad since controller was disarmed");
       change_px4_state("AUTO.LOITER");
     }
   }

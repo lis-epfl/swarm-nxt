@@ -8,6 +8,7 @@
 #include <mutex>
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -65,6 +66,7 @@ class Controller : public rclcpp::Node {
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   // Publisher
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr setpoint_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr done_pub_;
 
   // helpers
   void SendTrajectoryMessage();

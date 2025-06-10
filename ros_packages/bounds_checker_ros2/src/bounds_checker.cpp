@@ -35,13 +35,13 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   safe_pose_pub_ =
       create_publisher<geometry_msgs::msg::PoseStamped>(ns + "/pose_safe", 10);
 
- land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
+  land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
 
- // Wait for the service to be available
- while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
-  RCLCPP_WARN(this->get_logger(),
-              "Waiting for ~/controller/land service to be available...");
- }
+  // Wait for the service to be available
+  while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
+    RCLCPP_WARN(this->get_logger(),
+                "Waiting for ~/controller/land service to be available...");
+  }
 }
 
 void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
@@ -115,27 +115,24 @@ bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
 
 geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(
     const geometry_msgs::msg::Point &point) {
-  double min_distance = std::numeric_limits<double>::max();
-  geometry_msgs::msg::Point projected_point;
+  geometry_msgs::msg::Point projected_point = point;
 
   for (const auto &plane : planes_) {
+    // which plane are we violating?
     // Calculate the distance from the point to the plane
-    double numerator = plane.normal.x * point.x + plane.normal.y * point.y +
-                       plane.normal.z * point.z + plane.offset;
+    double numerator = plane.normal.x * projected_point.x +
+                       plane.normal.y * projected_point.y +
+                       plane.normal.z * projected_point.z + plane.offset;
     double denominator = std::sqrt(plane.normal.x * plane.normal.x +
                                    plane.normal.y * plane.normal.y +
                                    plane.normal.z * plane.normal.z);
 
-    double distance = std::abs(numerator) / denominator;
-
-    // If this plane is closer, calculate the projection
-    if (distance < min_distance) {
-      min_distance = distance;
-
+    if (numerator < 0) {
+      // we are violating this plane, so project onto this plane
       double scale = numerator / (denominator * denominator);
-      projected_point.x = point.x - scale * plane.normal.x;
-      projected_point.y = point.y - scale * plane.normal.y;
-      projected_point.z = point.z - scale * plane.normal.z;
+      projected_point.x = projected_point.x - scale * plane.normal.x;
+      projected_point.y = projected_point.y - scale * plane.normal.y;
+      projected_point.z = projected_point.z - scale * plane.normal.z;
     }
   }
 
@@ -158,11 +155,13 @@ void BoundsChecker::HandlePoseMessage(
     try {
       // Wait for the result with a timeout, spinning to process callbacks
       auto start = std::chrono::steady_clock::now();
-      auto timeout = std::chrono::seconds(2); // adjust as needed
-      while (rclcpp::ok() && result_future.wait_for(std::chrono::milliseconds(100)) != std::future_status::ready) {
+      auto timeout = std::chrono::seconds(2);  // adjust as needed
+      while (rclcpp::ok() && result_future.wait_for(std::chrono::milliseconds(
+                                 100)) != std::future_status::ready) {
         rclcpp::spin_some(this->get_node_base_interface());
         if (std::chrono::steady_clock::now() - start > timeout) {
-          throw std::runtime_error("Timeout waiting for landing service response");
+          throw std::runtime_error(
+              "Timeout waiting for landing service response");
         }
       }
       auto result = result_future.get();
