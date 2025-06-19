@@ -2,3 +2,8 @@ downloads/
 site/
 docs/.obsidian
 *.xmp
+
+# ignore vim temp files
+*.swp
+*.swo
+*.swn
