@@ -14,6 +14,7 @@ markdown_extensions:
       generic: true
 plugins:
   - asciinema-player
+  - search
       
 extra_javascript:
   - js/mathjax.js
