@@ -27,6 +27,6 @@ This will update apt repositories, pull the latest version of ros packages, and 
 
 ```asciinema-player
 {
-    "file": "demos/drones_update.cast"
+    "file": "/swarm-nxt/demos/drones_update.cast"
 }
 ```
