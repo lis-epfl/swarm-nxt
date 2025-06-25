@@ -48,7 +48,6 @@
           ansible.builtin.git: 
             repo: git@github.com:lis-epfl/swarm-nxt
             dest: "{{ drone_base_path }}/repos/swarm-nxt"
-            version: dummy-controller  # TODO: temp
             key_file: /home/lis/.ssh/id_ed25519
             accept_newhostkey: yes
             force: yes
