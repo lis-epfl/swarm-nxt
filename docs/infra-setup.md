@@ -23,11 +23,12 @@ We recommend having a consistent and dedicated host computer that is used to run
 
 ### Ansible Installation 
 
-On the computer, run the host computer ansible by running the following commands:
+On the computer, run the host computer ansible by running the following commands (if $HOME/.local/bin is already in PATH (`echo $PATH`), no need for last command):
 
 ```
 sudo apt update && sudo apt install python3 python3-pip 
 python3 -m pip install --user ansible
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 ```
 
 For troubleshooting or more information, see the [Ansible Documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip). 
@@ -38,15 +39,18 @@ For troubleshooting or more information, see the [Ansible Documentation](https:/
 This procedure will install required packages on the host computer and configure some networking. 
 
 1. Clone the swarm nxt [repository](https://github.com/lis-epfl/omni-nxt) in an easy to access place on the host computer, and install the requirements. 
-```
-sudo apt install git
-git clone https://github.com/lis-epfl/swarm-nxt
-python3 -m pip install -r requirements.txt
-```
+    ```
+    sudo apt install git
+    git clone https://github.com/lis-epfl/swarm-nxt
+    cd swarm-nxt
+    python3 -m pip install -r requirements.txt
+    ```
 2. Navigate to the `ansible/` folder inside the repository
 3. Edit the variables in the `ansible/group_vars/all` file
 	1. `wifi_ssid`: Enter the name of the Unifi SSID
 	2. `wifi_password`: Enter the name of the Unifi password
+  3. `host_hostname`: Enter the string you get when you type `hostname` in the terminal
+  4. `host_base_path`: Enter the base path to where all the downloaded packages/files will be added.
 4. Run the host computer ansible: `ansible-playbook -i inventory.ini host_computer.yml -K`. 
 5. Enter the sudo password of the host computer when prompted. 
 6. Download [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software) if you do not have it. 
