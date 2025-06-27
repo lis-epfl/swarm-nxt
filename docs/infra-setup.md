@@ -26,7 +26,7 @@ We recommend having a consistent and dedicated host computer that is used to run
 On the computer, run the host computer ansible by running the following commands:
 
 ```
-sudo apt update && sudo apt install python3 
+sudo apt update && sudo apt install python3 python3-pip 
 python3 -m pip install --user ansible
 ```
 
@@ -37,7 +37,12 @@ For troubleshooting or more information, see the [Ansible Documentation](https:/
 
 This procedure will install required packages on the host computer and configure some networking. 
 
-1. Clone the swarm nxt [repository](https://github.com/lis-epfl/omni-nxt) in an easy to access place on the host computer. 
+1. Clone the swarm nxt [repository](https://github.com/lis-epfl/omni-nxt) in an easy to access place on the host computer, and install the requirements. 
+```
+sudo apt install git
+git clone https://github.com/lis-epfl/swarm-nxt
+python3 -m pip install -r requirements.txt
+```
 2. Navigate to the `ansible/` folder inside the repository
 3. Edit the variables in the `ansible/group_vars/all` file
 	1. `wifi_ssid`: Enter the name of the Unifi SSID
