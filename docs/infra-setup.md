@@ -47,10 +47,10 @@ python3 -m pip install -r requirements.txt
 ```
 1. Navigate to the `ansible/` folder inside the repository 
 2. Edit the variables in the `ansible/group_vars/all` file
-	1. `wifi_ssid`: Enter the name of the Unifi SSID
-	2. `wifi_password`: Enter the name of the Unifi password
-  3. `host_hostname`: Enter the string you get when you type `hostname` in the terminal
-  4. `host_base_path`: Enter the base path to where all the downloaded packages/files will be added.
+    1. `wifi_ssid`: Enter the name of the Unifi SSID
+    2. `wifi_password`: Enter the name of the Unifi password
+    3. `host_hostname`: Enter the string you get when you type `hostname` in the terminal
+    4. `host_base_path`: Enter the base path to where all the downloaded packages/files will be added.
 3. Run the host computer ansible: `ansible-playbook -i inventory.ini host_computer.yml -K`. 
 4. Enter the sudo password of the host computer when prompted. 
 5. Download [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software) if you do not have it. 
