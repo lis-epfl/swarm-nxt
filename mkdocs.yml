@@ -18,4 +18,8 @@ plugins:
       
 extra_javascript:
   - js/mathjax.js
+  - js/copy-button.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - css/custom.css

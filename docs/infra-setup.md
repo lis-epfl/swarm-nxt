@@ -38,25 +38,25 @@ For troubleshooting or more information, see the [Ansible Documentation](https:/
 
 This procedure will install required packages on the host computer and configure some networking. 
 
-1. Clone the swarm nxt [repository](https://github.com/lis-epfl/omni-nxt) in an easy to access place on the host computer, and install the requirements. 
-    ```
-    sudo apt install git
-    git clone https://github.com/lis-epfl/swarm-nxt
-    cd swarm-nxt
-    python3 -m pip install -r requirements.txt
-    ```
-2. Navigate to the `ansible/` folder inside the repository
-3. Edit the variables in the `ansible/group_vars/all` file
+First, clone the swarm nxt [repository](https://github.com/lis-epfl/omni-nxt) in an easy to access place on the host computer, and install the requirements. 
+```
+sudo apt install git
+git clone https://github.com/lis-epfl/swarm-nxt
+cd swarm-nxt
+python3 -m pip install -r requirements.txt
+```
+1. Navigate to the `ansible/` folder inside the repository 
+2. Edit the variables in the `ansible/group_vars/all` file
 	1. `wifi_ssid`: Enter the name of the Unifi SSID
 	2. `wifi_password`: Enter the name of the Unifi password
   3. `host_hostname`: Enter the string you get when you type `hostname` in the terminal
   4. `host_base_path`: Enter the base path to where all the downloaded packages/files will be added.
-4. Run the host computer ansible: `ansible-playbook -i inventory.ini host_computer.yml -K`. 
-5. Enter the sudo password of the host computer when prompted. 
-6. Download [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software) if you do not have it. 
-7. Extract the folder, open it in terminal, and run `sudo ./SetupSTM32CubeProgrammer-<version>.linux` (replace `<version>` with the version you've downloaded)
-8. Walk through the wizard and install the program. 
-9. Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/sdk-manager). Install it by running `sudo dpkg -i /path/to/sdkmanager.deb`. If required, install any missing dependencies with `sudo apt --fix-broken install`
+3. Run the host computer ansible: `ansible-playbook -i inventory.ini host_computer.yml -K`. 
+4. Enter the sudo password of the host computer when prompted. 
+5. Download [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software) if you do not have it. 
+6. Extract the folder, open it in terminal, and run `sudo ./SetupSTM32CubeProgrammer-<version>.linux` (replace `<version>` with the version you've downloaded)
+7. Walk through the wizard and install the program. 
+8. Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/sdk-manager). Install it by running `sudo dpkg -i /path/to/sdkmanager.deb`. If required, install any missing dependencies with `sudo apt --fix-broken install`
 
 
 ## Visual Odometry (Optitrack)
