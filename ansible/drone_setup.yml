@@ -194,7 +194,7 @@
           name: "lis"
           groups: dialout
           append: true
-      - name: Remove modemmanager
+      - name: Remove modemmanager # maybe not necessary to be tested TODO
         ansible.builtin.apt:
           name: modemmanager
           state: absent
