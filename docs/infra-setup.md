@@ -42,8 +42,6 @@ First, clone the swarm nxt [repository](https://github.com/lis-epfl/omni-nxt) in
 ```
 sudo apt install git
 git clone https://github.com/lis-epfl/swarm-nxt
-cd swarm-nxt
-python3 -m pip install -r requirements.txt
 ```
 1. Navigate to the `ansible/` folder inside the repository 
 2. Edit the variables in the `ansible/group_vars/all` file
