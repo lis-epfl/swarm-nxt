@@ -51,10 +51,11 @@ git clone https://github.com/lis-epfl/swarm-nxt
     4. `host_base_path`: Enter the base path to where all the downloaded packages/files will be added.
 3. Run the host computer ansible: `ansible-playbook -i inventory.ini host_computer.yml -K`. 
 4. Enter the sudo password of the host computer when prompted. 
-5. Download [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software) if you do not have it. 
-6. Extract the folder, open it in terminal, and run `sudo ./SetupSTM32CubeProgrammer-<version>.linux` (replace `<version>` with the version you've downloaded)
-7. Walk through the wizard and install the program. 
-8. Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/sdk-manager). Install it by running `sudo dpkg -i /path/to/sdkmanager.deb`. If required, install any missing dependencies with `sudo apt --fix-broken install`
+5. Restart the PC, then check that `dialout` is there when you type `groups` in the terminal.
+6. Download [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software) if you do not have it. 
+7. Extract the folder, open it in terminal, and run `sudo ./SetupSTM32CubeProgrammer-<version>.linux` (replace `<version>` with the version you've downloaded)
+8. Walk through the wizard and install the program. 
+9. Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/sdk-manager). Install it by running `sudo dpkg -i /path/to/sdkmanager.deb`. If required, install any missing dependencies with `sudo apt --fix-broken install`
 
 
 ## Visual Odometry (Optitrack)

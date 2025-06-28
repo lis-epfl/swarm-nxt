@@ -142,18 +142,19 @@ For each of the cameras, perform the following tasks:
 #### Bootloader
 
 1. Ensure the flight controller is powered off, unplug any power from the drone. 
-2. While pressing the BOOT button beside the MicroSD card, connect the USB-C cable to the PC and release the boot butto.n. 
+2. While pressing the BOOT button beside the MicroSD card, connect the USB-C cable to the PC and release the boot button. 
 3. Open the STM32CubeProgrammer by navigating to where it was installed in a terminal (`/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin` by default), and running `sudo ./STM32CubeProgrammer`
 4. On the blue dropdown next to the green connect button, select USB. 
 5. Click the refresh button until a port is automatically selected under port. If it doesn't show up, ensure the board is in DFU mode by unplugging the USB-C cable, and holding the BOOT button while plugging it in again. 
-6. Open the menu on the left side and select "Erasing & Programming"
-7. Under file path, click browse and find the bootloader bin file. It was built in the automatable dependencies playbook. It will be in `/path/to/assets/PX4-Autopilot/build/hkust_nxt-dual_bootloader/hkust_nxt-dual_bootloader.bin`
-8. Check Verify programming, and Run after programming. Ensure the start address is `0x08000000`.
-9. Click on start Start Programming. 
+6. Click Connect.
+7. Open the menu on the left side and select "Erasing & Programming"
+8. Under file path, click browse and find the bootloader bin file. It was built in the automatable dependencies playbook. It will be in `{host_fc_path}/PX4-Autopilot/build/hkust_nxt-dual_bootloader/hkust_nxt-dual_bootloader.bin` where `{host_fc_path}` is specified in the `ansible/group_vars/all`.
+9. Check Verify programming, and Run after programming. Ensure the start address is `0x08000000`.
+10. Click on Start Programming. 
 
 #### Main Program
 
-1. Navigate to `/path/to/assets` in a terminal 
+1. Navigate to `{host_fc_path}` in a terminal 
 2. Open QGroundControl: `./QGroundControl.AppImage`. 
 3. Click on the Q symbol on the top left, and click on vehicle setup. 
 4. Click on the firmware tab, and unplug and replug the USB cable to the flight controller. 
