@@ -159,6 +159,10 @@
         name: "{{ ansible_user_id }}"
         groups: dialout
         append: true
+    - name: Remove modemmanagerAdd commentMore actions
+      ansible.builtin.apt:
+        name: modemmanager
+        state: absent
     - name: Download necessary items
       become: false
       block: 
@@ -167,7 +171,13 @@
           url: https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage
           dest: "{{ host_fc_path }}/QGroundControl.AppImage"
           mode: '0755' # executable for us
-      - name: Clone Git Repository
+      - name: Install required python packages for PX4
+        ansible.builtin.pip:
+          name:
+            - kconfiglib
+            - pyros-genmsg
+            - jsonschema
+      - name: Clone px4 repository
         ansible.builtin.git: 
           repo: "https://github.com/PX4/PX4-Autopilot"
           version: v1.15.4
