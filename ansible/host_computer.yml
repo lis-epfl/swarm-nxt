@@ -112,9 +112,9 @@
     
     - name: Latency Node
       block: 
-        - name: Get repository 
+        - name: Get latency package 
           ansible.builtin.git: 
-            repo: git@github.com:lis-epfl/swarm-nxt
+            repo: https://github.com/lis-epfl/swarm-nxt
             dest: "{{ host_base_path }}/repos/swarm-nxt"
             force: yes
         - name: Link to ros_ws
