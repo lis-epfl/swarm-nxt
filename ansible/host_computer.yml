@@ -154,12 +154,12 @@
           - libxcb-xinerama0 
           - libxkbcommon-x11-0 
           - libxcb-cursor-dev
-    - name: Allow rootless access to flight controller
-      ansible.builtin.user: # Add the current user to the dialout group, for flashing the fc
+    - name: Allow rootless access to flight controller (needed for QGroundControl)
+      ansible.builtin.user: 
         name: "{{ ansible_user_id }}"
         groups: dialout
         append: true
-    - name: Remove modemmanagerAdd commentMore actions
+    - name: Remove modemmanager (needed for QGroundControl)
       ansible.builtin.apt:
         name: modemmanager
         state: absent
