@@ -159,7 +159,7 @@ For each of the cameras, perform the following tasks:
 3. Click on the Q symbol on the top left, and click on vehicle setup. 
 4. Click on the firmware tab, and unplug and replug the USB cable to the flight controller. 
 5. A pop-up should come up named "Firmware Setup". Select PX4 Pro, and check advanced settings. Select "Custom firmware file..." and click Ok
-6. In the file picker, navigate to `/path/to/assets/PX4-Autopilot/build/hkust_nxt-dual_default` and select the `hkust_nxt-dual_default.px4` file. 
+6. In the file picker, navigate to `{host_fc_path}/PX4-Autopilot/build/hkust_nxt-dual_default` and select the `hkust_nxt-dual_default.px4` file. 
 7. You should see tabs such as "Airframe" and "Sensors" once the flash is complete. 
 
 ### Apply Parameter File
