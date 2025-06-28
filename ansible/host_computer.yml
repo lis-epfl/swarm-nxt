@@ -155,11 +155,13 @@
           - libxkbcommon-x11-0 
           - libxcb-cursor-dev
     - name: Allow rootless access to flight controller (needed for QGroundControl)
+      become: true
       ansible.builtin.user: 
         name: "{{ ansible_user_id }}"
         groups: dialout
         append: true
     - name: Remove modemmanager (needed for QGroundControl)
+      become: true
       ansible.builtin.apt:
         name: modemmanager
         state: absent
