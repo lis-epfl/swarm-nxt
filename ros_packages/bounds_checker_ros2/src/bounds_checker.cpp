@@ -104,9 +104,9 @@ bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   }
   for (const auto &plane : planes_) {
     double val = plane.normal.x * point.x + plane.normal.y * point.y +
-                 plane.normal.z * point.z + plane.offset;
+                 plane.normal.z * point.z - plane.offset;
 
-    if (val < 0) {
+    if (val > 0) {
       return false;
     }
   }
@@ -122,12 +122,12 @@ geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(
     // Calculate the distance from the point to the plane
     double numerator = plane.normal.x * projected_point.x +
                        plane.normal.y * projected_point.y +
-                       plane.normal.z * projected_point.z + plane.offset;
+                       plane.normal.z * projected_point.z - plane.offset;
     double denominator = std::sqrt(plane.normal.x * plane.normal.x +
                                    plane.normal.y * plane.normal.y +
                                    plane.normal.z * plane.normal.z);
 
-    if (numerator < 0) {
+    if (numerator > 0) {
       // we are violating this plane, so project onto this plane
       double scale = numerator / (denominator * denominator);
       projected_point.x = projected_point.x - scale * plane.normal.x;
