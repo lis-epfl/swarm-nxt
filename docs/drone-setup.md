@@ -173,13 +173,23 @@ First, ensure that the units in QGroundControl are set to SI Units:
 2. Click on application settings
 3. In the general tab under units, ensure that they are Meters, Meters, SquareMeters, Meters/second, Celsius. 
 
-Then, apply the saved parameter file (**TODO: LINK**) by following the steps below: 
+Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epfl/swarm-nxt/refs/heads/main/docs/params/nxt_params.params) by following the steps below: 
 
 1. Click on the Q button on the top left, click on Vehicle Setup, and parameters. 
 2. Click the tools button and select "Load from file". 
 3. Select the parameter file that can be found on the Google Drive. 
 
 ### NXT Configuration and Calibration
+
+#### MAV System ID
+
+The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. If the recommended naming convention is followed, your drone should end with a unique number. Use this number as your system ID. To set it: 
+
+1. Search for `MAV_SYS_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
+2. Set it to the unique number of your drone. 
+
+!!! important   
+    If this number is the same for two drones, things will **not** work and it will be very hard to debug. 
 
 #### Telemetry Streaming
 
