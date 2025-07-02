@@ -183,7 +183,7 @@ Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epf
 
 #### MAV System ID
 
-The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. If the recommended naming convention is followed, your drone should end with a unique number. Use this number as your system ID. To set it: 
+The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. It allows QGroundControl to differentiate between the drones. If the recommended naming convention is followed, your drone should end with a unique number. Use this number as your system ID. To set it: 
 
 1. Search for `MAV_SYS_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
 2. Set it to the unique number of your drone. 
