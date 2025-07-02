@@ -183,7 +183,7 @@ Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epf
 
 #### MAV System ID
 
-The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. It allows QGroundControl to differentiate between the drones. If the recommended naming convention is followed, your drone should end with a unique number. Use this number as your system ID. To set it: 
+The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. It allows QGroundControl to differentiate between the drones. **When you set the hostname in the [Post-Flash Setup](#post-flash-setup), your drone should end with the same number that you set your `MAV_SYS_ID` to**. Use this number as your system ID. To set it: 
 
 1. Search for `MAV_SYS_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
 2. Set it to the unique number of your drone. 
@@ -328,10 +328,10 @@ On the host computer, navigate to the `ansible/` directory of the omni-nxt repo 
 
 ``ansible-playbook -i inventory.ini drone_setup.yml -K``
 
-Enter the sudo password of the orin when prompted. 
+Enter the sudo password of the orin when prompted, as well as the hostname which should end with the same number that you set `MAV_SYS_ID` to in [NXT Configuration and Calibration](#nxt-configuration-and-calibration). 
 
 !!! important
-    It is very important that you set a unique hostname. We recommend following a structured naming pattern, and recording the assigned names somewhere to avoid duplicate naming. Label your drone with this hostname.
+    It is very important that you set a unique hostname. We recommend following a structured naming pattern for the hostname (nxt1, nxt2 ...), and recording the assigned names somewhere to avoid duplicate naming. Label your drone with this hostname.
 
 
 ## Flight Preparation 
