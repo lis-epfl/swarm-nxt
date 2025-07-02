@@ -173,7 +173,7 @@ First, ensure that the units in QGroundControl are set to SI Units:
 2. Click on application settings
 3. In the general tab under units, ensure that they are Meters, Meters, SquareMeters, Meters/second, Celsius. 
 
-Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epfl/swarm-nxt/refs/heads/main/docs/params/nxt_params.params) by following the steps below: 
+Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epfl/swarm-nxt/refs/heads/main/docs/params/nxt_params.params) (right-click on the previous link, then select "Save as") by following the steps below: 
 
 1. Click on the Q button on the top left, click on Vehicle Setup, and parameters. 
 2. Click the tools button and select "Load from file". 
