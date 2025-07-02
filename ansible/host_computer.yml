@@ -146,7 +146,7 @@
         update_cache: true
         name: 
           - gcc-arm-none-eabi=15:10.3-2021.07-4
-          - fuse=2.9.9-3
+          - fuse=2.9.9-5ubuntu3
           - gstreamer1.0-plugins-bad=1.20.3-0ubuntu1.1
           - gstreamer1.0-libav=1.20.3-0ubuntu1
           - gstreamer1.0-gl=1.20.1-1ubuntu0.4
