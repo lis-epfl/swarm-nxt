@@ -145,15 +145,15 @@
       ansible.builtin.apt:
         update_cache: true
         name: 
-          - gcc-arm-none-eabi
-          - fuse
-          - gstreamer1.0-plugins-bad
-          - gstreamer1.0-libav
-          - gstreamer1.0-gl
-          - libfuse2
-          - libxcb-xinerama0 
-          - libxkbcommon-x11-0 
-          - libxcb-cursor-dev
+          - gcc-arm-none-eabi=15:10.3-2021.07-4
+          - fuse=2.9.9-3
+          - gstreamer1.0-plugins-bad=1.20.3-0ubuntu1.1
+          - gstreamer1.0-libav=1.20.3-0ubuntu1
+          - gstreamer1.0-gl=1.20.1-1ubuntu0.4
+          - libfuse2=2.9.9-5ubuntu3
+          - libxcb-xinerama0=1.14-3ubuntu3 
+          - libxkbcommon-x11-0=1.4.0-1 
+          - libxcb-cursor-dev=0.1.1-4ubuntu1
     - name: Allow rootless access to flight controller (needed for QGroundControl)
       become: true
       ansible.builtin.user: 
@@ -176,9 +176,9 @@
       - name: Install required python packages for PX4
         ansible.builtin.pip:
           name:
-            - kconfiglib
-            - pyros-genmsg
-            - jsonschema
+            - kconfiglib==14.1.0
+            - pyros-genmsg==0.5.8
+            - jsonschema==4.24.0
       - name: Clone px4 repository
         ansible.builtin.git: 
           repo: "https://github.com/PX4/PX4-Autopilot"
