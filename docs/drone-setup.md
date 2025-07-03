@@ -2,7 +2,7 @@
 
 ## Hardware Setup 
 
-This section takes you through the hardware setup process for the OmniNXT Drone. The bill of materials can be found [here](https://docs.google.com/spreadsheets/d/1R3wPALCepJXdboiaurltGrkgvVYNo0OVzrUW1RJAQ7c/edit?gid=0#gid=0). 
+This section takes you through the hardware setup process for the OmniNXT Drone. The bill of materials can be found [here](https://docs.google.com/spreadsheets/d/1Fz7-T5uy2s32OVq4LXnWk0O-DXqRzYW_szNTOHq70fw/edit). 
 
 3D print all of the necessary items that are labelled with the manufacturer "Self". 
 
