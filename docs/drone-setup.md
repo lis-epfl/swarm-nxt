@@ -293,7 +293,7 @@ Calibrate the accelometer by clicking on the accelerometer sub-tab and completin
 After the host components of the SDK are installed, run the following steps: 
 
 1. Open the `~/nvidia/nvidia_sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra` folder. Open a terminal in this folder. 
-2. Download the post-install image from the [Google Drive](https://drive.google.com/drive/folders/1IpKJmJZyAb2P-46V7JcgBnGyn-WECAMc). Run the following command: `tar -xvf /path/to/tarball -C /home/nvidia/nvidia-sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra/tools/backup_restore`. This will take a while.
+2. Download the post-install image from the [Google Drive](https://drive.google.com/drive/folders/1IpKJmJZyAb2P-46V7JcgBnGyn-WECAMc). Run the following command: `tar -xvf /path/to/post-install_image.tar.gz -C ~nvidia/nvidia-sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra/tools/backup_restore`. This will take a while.
 3. Once this is done, run this command to flash the Jetson: `sudo ./tools/backup_restore/l4t_backup_restore.sh -e nvme0n1 -r jetson-orin-nano-devkit-nvme`. This will also take a while.
 4. Press the button labelled RES on the Jetson once the command has completed. 
 
