@@ -213,7 +213,7 @@ If you run `cat extras.txt`, the mavlink stream line should be present.
 
 #### Propeller Numbering and Spin Direction
 
-Ensure that the photo under "Actuator Testing" looks correct: 
+First make sure the power is connected to the ESC and the ESC is connected to the FC. No need to power the Orin at this point, so you can unplug the power cable from the orin before powering the ESC. Ensure that the photo under "Actuator Testing" looks correct: 
 
 ![](images/actuator_setting.png)
 
@@ -233,7 +233,7 @@ Set the spin direction for each motor so that it matches the image. Enable the s
 #### Propeller Installation 
 
 1. Observe the rotation direction in the propeller setup image. The Orin is on the back (near propeller \#2 and \#4). 
-2. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type.   
+2. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type. Make sure that the blade orientation is in such a manner that as it turns in the rotor direction, it pushes the air down instead of up i.e. the air slides off of it downwards. 
 
    ![](images/actuator_setting.png)
    
