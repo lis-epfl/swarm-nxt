@@ -282,11 +282,15 @@ Calibrate the accelometer by clicking on the accelerometer sub-tab and completin
 13. Select both additional SDKs
 14. Do not customize install settings
 15. Reply N to flashing the Jetson Orin NX Module
+16. Accept the license, then press enter twice for the installation to start. 
+17. Enter your password for administrative tasks.
+18. It will install host components (on the PC) and target components. It will ask you whether to install or skip the installation on the Orin, choose skip.
+19. Press enter to Exit.
 
 
 ### Flashing Process 
 
-Wait until the SDK is installed, then run the following steps: 
+After the host components of the SDK are installed, run the following steps: 
 
 1. Open the `~/nvidia/nvidia_sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra` folder. Open a terminal in this folder. 
 2. Download the post-install image from the [Google Drive](https://drive.google.com/drive/folders/1IpKJmJZyAb2P-46V7JcgBnGyn-WECAMc). Run the following command: `tar -xvf /path/to/tarball -C /home/nvidia/nvidia-sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra/tools/backup_restore`. This will take a while.
