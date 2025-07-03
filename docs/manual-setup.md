@@ -107,6 +107,13 @@ Under airframe, select Quadcopter X, Generic Quadcopter. Click on apply and rest
 - `MAV_0_MODE`: External Vision
 - `MAV_0_RATE`: 92160 B/s
 
+### Telemetry 
+
+Set the following settings:
+
+- `MAV_0_CONFIG`: TELEM 2
+- `SER_TEL2_BAUD`: 921600 8N1
+
 ### Power
 
 Navigate to the power tab and fill in these settings: 
