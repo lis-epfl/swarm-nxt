@@ -13,18 +13,22 @@ This section takes you through the hardware setup process for the OmniNXT Drone.
 1. Insert the antivibration rubber pieces into the four holes of both the ESC and the flight controller. On the ESC, the shorter side should be on the side with the eight pin connection port.  On the flight controller, the shorter side of the rubber piece should be on the SD card side. 
 2. Cut each of the motor wires to 55mm. Measure from the foot of the heatshrink.
 3. Cut a orin power cable from the base of the female side: 
-    1. 10cm on the red wire
-    2. 9.5cm on the black wire
+    1. 9.0cm on the red wire
+    2. 8.5cm on the black wire
 4. Take the XT60 Cable (CAB-004) and cut it to the following lengths: 
-	1. Red: 11cm from the edge of the connector
-	2. Black: 10cm from the edge of the connector 
+	1. Red: 8.5cm from the edge of the connector
+	2. Black: 9.0cm from the edge of the connector 
 5. Strip around 5mm from each wire of CAB-004 and add solder to each wire
 6. Strip around 5mm from each wire of the orin power cable and add solder to each wire
 7. Solder the red wires of CAB-004 and the orin power cable together on the positive pad of the ESC
-8. Solder the black wires of CAB-004 and the orin power cable together on the negative pad of the ESC
+8. Solder the black wires of CAB-004 and the orin power cable together on the negative pad of the ESC.
+9. Visually inspect the solder joints to ensure no stray wires could cause a short between the pads. Use a digital multimeter in ohmmeter mode to measure the resistance between the + and - port of the ESC. The value should be >100kΩ.
 9. Solder each of the motors to one triad of pins on the ESC. 
+10. Use CAB-001 to connect the eight pin connectors on the flight controller and ESC.
 
 !!! warning
+    Be very careful to avoid shorts between pads, especially on the big + and - pads for the power. Even a single wire strand connecting is dangerous! Visually inspect the solder connections after soldering to be confident, as well as perform a multimeter check betwen the +/- pads. 
+!!! note
     Ensure that each motor's wires are connected to three consecutive pads on the ESC, with one of them in the corner. It does not matter which motor wire goes on which pin other than this. 
 
 
@@ -36,28 +40,55 @@ This section takes you through the hardware setup process for the OmniNXT Drone.
 #### Fastening Assembly to Frame
 
 1. Stack the ESC and flight controller such that the big side of the rubber stoppers are touching. The MicroSD Card slot should be above the ESC power connection. 
-2. Prepare the assembly: <!--TODOx2 -->
-	1. With the flight controller on the bottom, insert two M2X? bolts on the side with the USB-C port. The head of the bolt should be on the same side as the flight controller
-	2. Insert two M2x? bolts on the opposite side of the USB-C port. 
+2. Prepare the assembly: 
+	1. With the flight controller on the bottom, insert two M2X25 bolts on the side with the USB-C port. The head of the bolt should be on the same side as the flight controller
+	2. Insert two M2x20 bolts on the opposite side of the USB-C port. 
 	3. Place the 6mm nylon spacers over all of the bolts. 
 3. Orient the center of the frame over the assembly. The USB-C port should be facing towards the side if the frame with the cutout. The side with the divets for the nuts should be on the top. 
 4. Loosely thread the M2 nuts onto each of the bolts 
 5. For each of the bolts, hold the nut with your finger in the divet, and use a screwdriver to tighten the bolt. It should be snug, and equally tight across the four bolts. Do not overtighten, the ESC can contact the flight controller!
 6. Fasten the motors to the frame with the shorter bolts that were included in the packaging. Ensure that the cables are close to the frame, you can twist them together to ensure this. 
-7. Connect the RC receiver to the appropriate port on the flight controller, and tape it down to the frame as shown
+
+### RC Receiver
+
+1. Unpack the receiver and extract the following items: 
+    - NanoRX PCB
+    - Clear Heatshrink
+    - Open ended antenna
+2. Retrieve a 4 Pin JST Cable from the flight controller box
+3. Cut the JST cable to a length of 5.5cm, from the base of the connector. 
+4. Solder the four pin cable. Looking from the side with the antenna U.Fl Port towards you, and at the bottom. In order from the left pad to the right pad: 
+    - GND (Black Wire\*)
+    - 5V (Red Wire\*) 
+    - FC TX (Green Wire\*)
+    - FC RCIn (Yellow Wire\*)
+5. Attach the antenna wire to the U.Fl Connector 
+6. Cut 2cm of the clear heatshrink off and dispose of this length 
+6. Put the rest of the clear heatshrink around the assembly and use a heatgun at 165℃ to protect the connections
+7. Connect the RC receiver to the appropriate port on the flight controller. Use zipties to fasten the radio module and data cable to the frame. Take care not to ziptie over the binding button the RC Module. Tape the antenna down to the frame as shown.
    <!-- TODO: Insert picture -->
+![](images/radio-wires.jpg)
+!!! note
+    \*: The wire colours may not be reliable. Look at the silkscreen on the FC PCB to ensure the correct connection
 
 
 ### Orin Connection 
 
-1. Insert the NVME SSD to the corresponding port, and bolt it down with an M2x6 bolt. 
+1. Remove the protective film over the screw holes for the NVME SSD and the WiFi Adapters
+1. Insert the NVME SSD to the corresponding port, and bolt it down with an M2x4 bolt. 
 2. Attach the Wi-Fi antenna to the adapter. It does not matter which port goes into which antenna. [YouTube Video](https://youtu.be/8tzWKIt1v1E?t=40)
 3. Insert the Wi-Fi adapter to the corresponding port, and bolt it down using an M2x4 bolt. 
-
-4. Attach the carrier board and Orin to the other side of the frame as the flight controller. Use 5mm nylon spacers between the carrier board and the frame, and M3x12 bolts on the top. 
+5. Insert the CR1025 coin cell battery in the slot on the carrier board. The positive side faces away from the board.
+4. Attach the carrier board and Orin to the other side of the frame as the flight controller.  Use 5mm nylon spacers between the carrier board and the frame, and M3x12 bolts from the side with the board. Before putting the nut on, put some Loctite 243 Threadlocker on the bolt so the assembly does not become unattached with vibrations 
 5. Remove the orange covers off of the bolt holes on the carrier board.
-6. Bolt the orin down to the carrier board with 2 M2x6 Nylon bolts 
-7. Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front of the drone. 
+6. Assemble the heatsink/fan onto the orin:
+    1. Remove the fan from its protective casing, place it fan up to not smear the thermal paste
+    2. align the orin over the fan, using the bolt holes on the fan as a guide. If the edge connector is facing you, the holes on the fan to accomodate the inductors should be near you, and the fan wire should be on the left side.
+    3. Bolt the frame down with the metal back. Use the provided bolts and screw them in with an X pattern using a T6 screwdriver bit 
+6. Bolt the orin down to the carrier board with 2 M2x6 Nylon bolts.
+7. Attach the fan cable to the orin carrier board 
+7. Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front of the drone.
+8. Connect CAB-002 to the orin. It should go in the connector closest to the power connector on the long side of the carrier board. Route it between the orin and the frame and connect the other end to the flight controller port underneath the MicroSD card. 
 
 ### Frame Preparation 
 
