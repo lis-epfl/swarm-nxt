@@ -67,6 +67,10 @@ If you do not know the IP address of a drone, you can try these steps to find it
 4. Connect to the recovery port using a USB-C cable. You should be able to SSH into the device at `192.168.55.1` and use `ifconfig` to find the IP.
 	1. Then, you can use `avahi-resolve -a <ip>` to find the mDNS hostname. 
 
+## VNC/Remote Desktop setup
+
+On the host computer, go to terminal and type `gvncviewer lis@nxt1.local` where nxt1 is the hostname of the Orin on which is on the same network as the host computer. This will allow you do remote desktop into the Orin. You can also replace `nxt1.local` with the full IP address of the orin e.g. `gvncviewer lis@192.168.55.1`.
+
 ## Check EKF Tracking
 
 To check EKF tracking, perform the following steps:
