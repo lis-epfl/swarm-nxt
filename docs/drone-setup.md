@@ -6,6 +6,16 @@ This section takes you through the hardware setup process for the OmniNXT Drone.
 
 3D print all of the necessary items that are labelled with the manufacturer "Self". 
 
+Drone Naming: Establish a consistent naming scheme with the following requirements: 
+
+- starts with a letter (requirement for hostnames)
+- ends with a non-negative integer
+- less than 32 characters in length (requirement for hostnames)
+- only ascii lowercase alphanumeric characters
+- no other numbers in the name except for the last characters
+
+We use `nxt#` for our drones, where `#` is replaced with an integer
+
 ### Flight Controller and ESC
 
 #### Soldering 
@@ -83,22 +93,24 @@ This section takes you through the hardware setup process for the OmniNXT Drone.
 5. Remove the orange covers off of the bolt holes on the carrier board.
 6. Assemble the heatsink/fan onto the orin:
     1. Remove the fan from its protective casing, place it fan up to not smear the thermal paste
-    2. align the orin over the fan, using the bolt holes on the fan as a guide. If the edge connector is facing you, the holes on the fan to accomodate the inductors should be near you, and the fan wire should be on the left side.
+    2. Align the orin over the fan, using the bolt holes on the fan as a guide. If the edge connector is facing you, the holes on the fan to accomodate the inductors should be near you, and the fan wire should be on the left side.
     3. Bolt the frame down with the metal back. Use the provided bolts and screw them in with an X pattern using a T6 screwdriver bit 
 6. Bolt the orin down to the carrier board with 2 M2x6 Nylon bolts.
 7. Attach the fan cable to the orin carrier board 
-7. Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front of the drone.
+7. Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front (other side of the orin) of the drone. Take care not to cover the hole at the front of the frame. It will be over the motor bolts.  
 8. Connect CAB-002 to the orin. It should go in the connector closest to the power connector on the long side of the carrier board. Route it between the orin and the frame and connect the other end to the flight controller port underneath the MicroSD card. 
 
 ### Frame Preparation 
 
-1. Bolt (M3x8) the five oddity RC standoffs at the marked locations in the image below. They should be protruding on the side with the flight controller. 
-   <!--TODO: Insert image-->
-2. Bolt four M3 40mm standoffs with M3x10 bolts. These should be on the Orin side.
-   <!--TODO: Insert image-->
-3. Bolt the prop guard onto the Oddity RC standoffs with M3x8 bolts. 
-
-!!! warning
+1. Bolt (M3x8 Nylon) the five oddity RC standoffs at the marked locations in the image below. They should be protruding on the side with the flight controller. 
+![](images/oddity-holes.png)
+2. Put an M2x4 metal bolt in the marked slot below, protruding towards the orin. Use an M2 bolt to secure it. 
+![](images/m2-slot.png)
+2. Bolt four M3 40mm standoffs with M3x10 nylon bolts. These should be on the Orin side.
+![](images/camera-frame-holes.png)
+3. Bolt the prop guard onto the Oddity RC standoffs with M3x12 metal bolts. 
+5. Use a labelmaker to print the drone name on a label. Place it somewhere on the drone that is visible, such as one of the camera frame mounting posts (the aluminum M3 40mm standoffs)
+!!! attention
 	Do not install the propellers yet! They will be installed during the software setup section.  
 ### Optitrack Markers
 
@@ -214,7 +226,7 @@ Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epf
 
 #### MAV System ID
 
-The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. If the recommended naming convention is followed, your drone should end with a unique number. Use this number as your system ID. To set it: 
+The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. Follow a consistent naming scheme as described at the [top](#hardware-setup) of this document. Use the number that this drone ends with as your system ID. To set it: 
 
 1. Search for `MAV_SYS_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
 2. Set it to the unique number of your drone. 
@@ -362,7 +374,7 @@ On the host computer, navigate to the `ansible/` directory of the omni-nxt repo 
 Enter the sudo password of the orin when prompted. 
 
 !!! important
-    It is very important that you set a unique hostname. We recommend following a structured naming pattern, and recording the assigned names somewhere to avoid duplicate naming. Label your drone with this hostname.
+    It is very important that you set a unique hostname. You must follow the structured naming pattern described at the top of this document. The software depends on this assumption.
 
 
 ## Flight Preparation 
