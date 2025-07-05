@@ -138,7 +138,8 @@ For each of the cameras, perform the following tasks:
 4. Apply some solder to both sides of the microwire
 5. Solder one side of the microwire to the port labelled `F` on the camera board. The wire should come out on the opposite side of the camera.
 6. Solder the other side to the pad lablled `FSIN` on the cable. 
-7. Use the Kapton tape to secure the microwire, ensuring that the tape is providing strain relief for the solder connection
+7. Check the connection using the continuity mode between the `FSIN` and `F` pads.
+8. Use the Kapton tape to secure the microwire, ensuring that the tape is providing strain relief for the solder connection
 
 ##### Lens Switch
 
@@ -164,7 +165,7 @@ For each of the cameras, perform the following tasks:
 	Be careful not to tug on the cables too much. They can tear.
 
 1. Use a soldering iron at 215℃ to insert the M2 threaded inserts into the six holes of each camera mount
-2. Bolt each camera to a mount by using four M2x? bolts. The cables should be exiting towards the flange on the mount. <!--TODO-->
+2. Bolt each camera to a mount by using four M2x8 bolts. The cables should be exiting towards the flange on the mount. 
 3. Bolt the camera mounts to the camera holder frame. 
 
 #### OAK Board
