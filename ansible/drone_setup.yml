@@ -232,3 +232,8 @@
         psk: "{{ wifi_password }}"
       autoconnect: true
       state: present
+
+  - name: Reboot system and wait for it to come back
+    ansible.builtin.reboot:
+      reboot_timeout: 600        
+      test_command: whoami
