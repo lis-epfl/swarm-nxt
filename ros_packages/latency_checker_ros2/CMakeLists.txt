@@ -10,33 +10,35 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
-
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
-
-add_executable(latency_checker src/latency_checker.cpp)
-
 set(DEPENDENCIES
   rclcpp
   builtin_interfaces
   rosidl_default_generators
 )
 
-ament_target_dependencies(latency_checker
-  ${DEPENDENCIES}
-)
+# uncomment the following section in order to fill in
+# further dependencies manually.
+# find_package(<dependency> REQUIRED)
 
 include_directories(
-  include/bounds_checker_ros2
+  include/latency_checker_ros2
   ${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp
 )
 
-target_include_directories(latency_checker PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_compile_features(latency_checker PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+add_library(latency_checker_class src/latency_checker.cpp)
+add_executable(latency_checker_node src/latency_checker_node.cpp)
+target_link_libraries(latency_checker_node latency_checker_class)
 
+ament_target_dependencies(latency_checker_class
+  ${DEPENDENCIES}
+)
+
+ament_target_dependencies(latency_checker_node
+${DEPENDENCIES})
+
+target_link_libraries(latency_checker_class
+  ${PROJECT_NAME}__rosidl_typesupport_cpp
+)
 
 ament_export_dependencies(rosidl_default_runtime)
 
@@ -50,13 +52,13 @@ ${MSG_FILES}
 DEPENDENCIES builtin_interfaces
 )
 
-rosidl_get_typesupport_target(cpp_typesupport_target
-  ${PROJECT_NAME} rosidl_typesupport_cpp)
-
-target_link_libraries(latency_checker "${cpp_typesupport_target}")
-
-install(TARGETS latency_checker
+install(TARGETS latency_checker_class
   DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS
+latency_checker_node
+DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
