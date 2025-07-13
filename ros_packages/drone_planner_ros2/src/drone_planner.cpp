@@ -34,9 +34,6 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
 
   std::string ns = this->get_namespace();
 
-  // DeclareRosParameters();
-  // InitializeRosParameters();
-
   goals_sub_ = this->create_subscription<nav_msgs::msg::Goals>(
       ns + "/goals", 10,
       std::bind(&DronePlanner::GoalsCallback, this, std::placeholders::_1));

@@ -12,8 +12,6 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   this->get_parameter("plane_file", filepath);
 
   LoadHullFromFile(filepath);
-  DeclareRosParameters();
-  InitializeRosParameters();
 
   rclcpp::QoS best_effort_qos =
       rclcpp::QoS(rclcpp::KeepLast(10))
@@ -215,9 +213,4 @@ void BoundsChecker::ClearPlanes() {
 std::vector<bounds_checker_ros2::msg::Plane> BoundsChecker::GetPlanes() {
   return planes_;
 }
-
-void BoundsChecker::InitializeRosParameters() {}
-
-void BoundsChecker::DeclareRosParameters() {}
-
 }  // namespace bounds_checker

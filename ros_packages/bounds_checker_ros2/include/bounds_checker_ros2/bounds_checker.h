@@ -24,9 +24,6 @@ class BoundsChecker : public ::rclcpp::Node {
   std::vector<bounds_checker_ros2::msg::Plane> GetPlanes();
 
  private:
-  void DeclareRosParameters();
-  void InitializeRosParameters();
-
   std::vector<bounds_checker_ros2::msg::Plane> planes_;
   bool are_planes_valid_ = false;
   std::string topic_prefix_ = "";
