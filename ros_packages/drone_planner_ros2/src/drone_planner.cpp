@@ -68,7 +68,8 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
       std::bind(&DronePlanner::PublishTrajectory, this));
 }
 
-void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg) {
+void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg)
+{
   // right now this just sets the current goal to the first goal in the vec.
   // Later, this can use the whole list so the drone can be more autonomous
   auto logger = this->get_logger();
@@ -103,7 +104,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   geometry_msgs::msg::Pose current_position_unstamped;
 
   current_goal_unstamped = current_goal_.pose;
-  current_position_unstamped = cur_pos_.pose;
+  current_position_unstamped = current_position_.pose;
 
   geometry_msgs::msg::Pose delta = current_goal_unstamped - current_position_unstamped;
 
@@ -120,7 +121,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
     // we are within our tolerance, so don't plan anything.
 
     // todo: do we use the stamp field?
-    trajectory.poses.push_back(cur_pos_);
+    trajectory.poses.push_back(current_position_);
     return trajectory;
   }
 
@@ -137,7 +138,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
 
   tf2::Quaternion start_quaternion, goal_quaternion;
 
-  tf2::fromMsg(cur_pos_.pose.orientation, start_quaternion);
+  tf2::fromMsg(current_position_.pose.orientation, start_quaternion);
   tf2::fromMsg(current_goal_.pose.orientation, goal_quaternion);
 
   // so we don't have to keep growing the vec
@@ -149,11 +150,11 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
     // linearly interpolate both the linear pose and the quaternion
     auto pose = geometry_msgs::msg::PoseStamped();
     pose.pose.position.x =
-        cur_pos_.pose.position.x + translation_step_size.x() * i;
+        current_position_.pose.position.x + translation_step_size.x() * i;
     pose.pose.position.y =
-        cur_pos_.pose.position.y + translation_step_size.y() * i;
+        current_position_.pose.position.y + translation_step_size.y() * i;
     pose.pose.position.z =
-        cur_pos_.pose.position.z + translation_step_size.z() * i;
+        current_position_.pose.position.z + translation_step_size.z() * i;
 
     double t = static_cast<double>(i) / static_cast<double>(num_traj_points);
     tf2::Quaternion interp_quat = start_quaternion.slerp(goal_quaternion, t);
@@ -179,7 +180,7 @@ void DronePlanner::PublishTrajectory() {
 void DronePlanner::MavrosPoseCallback(
     const geometry_msgs::msg::PoseStamped& msg) {
   RCLCPP_INFO(this->get_logger(), "Got a new position");
-  cur_pos_ = msg;
+  current_position_ = msg;
 }
 
 }  // namespace drone_planner
