@@ -59,14 +59,25 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
       ns + "/mavros/cmd/land");
 }
 
-void Controller::SendTrajectoryMessage() {
+nav_msgs::msg::Path Controller::GetTrajectoryCopy() {
+  std::lock_guard<std::mutex> lock(traj_mutex_); 
+  nav_msgs::msg::Path path = traj_; 
+  return path; 
+}
+
+void Controller::UpdateTrajectory(nav_msgs::msg::Path new_traj) { 
   std::lock_guard<std::mutex> lock(traj_mutex_);
+  traj_ = new_traj;
+}
+
+void Controller::SendTrajectoryMessage() {
+  auto cur_traj = GetTrajectoryCopy(); 
   geometry_msgs::msg::PoseStamped msg;
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
 
   float distance = tf2::tf2Distance(cur_pos_, cur_target_);
-  const unsigned int num_traj_points = traj_.poses.size();
+  const unsigned int num_traj_points = cur_traj.poses.size();
 
   if (num_traj_points == 0) {
     RCLCPP_WARN(this->get_logger(), "no trajectory!");
@@ -86,7 +97,7 @@ void Controller::SendTrajectoryMessage() {
 
   while (distance < waypoint_acceptance_radius_) {
     if (cur_traj_index_ < num_traj_points) {
-      tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
+      tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position, cur_target_);
       distance = tf2::tf2Distance(cur_pos_, cur_target_);
       cur_traj_index_++;
     } else {
@@ -234,11 +245,11 @@ void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
   // assumes that all trajectories are planned from the current position
   // does not support trajectories that start behind the drone and continue past
   // it
-  std::lock_guard<std::mutex> lock(traj_mutex_);
-  traj_ = msg;
+  
+  UpdateTrajectory(msg); 
   cur_traj_index_ = 0;
   tf2::Vector3 destination;
-  tf2::fromMsg(traj_.poses.back().pose.position, destination);
+  tf2::fromMsg(msg.poses.back().pose.position, destination);
   reached_dest_ = (tf2::tf2Distance(cur_pos_, destination) < waypoint_acceptance_radius_);
 }
 

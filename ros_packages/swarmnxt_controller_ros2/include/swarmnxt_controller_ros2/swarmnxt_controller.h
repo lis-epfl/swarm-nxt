@@ -70,6 +70,8 @@ class Controller : public rclcpp::Node {
 
   // helpers
   void SendTrajectoryMessage();
+  nav_msgs::msg::Path GetTrajectoryCopy();
+  void UpdateTrajectory(nav_msgs::msg::Path new_traj);
 
   // Timer
   rclcpp::TimerBase::SharedPtr loop_timer_;
@@ -82,4 +84,5 @@ class Controller : public rclcpp::Node {
   bool change_px4_state(const std::string& mode);
 };
 
-}  // namespace swarmnxt_controller
+
+} // namespace swarmnxt_controller
