@@ -11,6 +11,14 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   this->declare_parameter("plane_file", "/var/opt/config/bounds.json");
   this->get_parameter("plane_file", filepath);
 
+  this->declare_parameter("plane_offset", 0.5f); // meters
+  this->get_parameter("plane_offset", plane_offset_);
+
+  if (plane_offset_ < 0) {
+    RCLCPP_WARN(this->get_logger(), "Parameter plane_offset set to: %.5f, must be positive. Setting to zero.", plane_offset_);
+    plane_offset_ = 0.0f;
+  }
+
   LoadHullFromFile(filepath);
 
   rclcpp::QoS best_effort_qos =
@@ -23,15 +31,13 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
                 std::placeholders::_1));
 
   trajectory_sub_ = create_subscription<nav_msgs::msg::Path>(
-      ns + "/trajectory_desired", 10,
+      ns + "/trajectory", 10,
       std::bind(&BoundsChecker::HandleTrajectoryMessage, this,
                 std::placeholders::_1));
 
+  // deprecated
   safe_trajectory_pub_ =
       create_publisher<nav_msgs::msg::Path>(ns + "/trajectory_safe", 10);
-
-  safe_pose_pub_ =
-      create_publisher<geometry_msgs::msg::PoseStamped>(ns + "/pose_safe", 10);
 
   land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
 
@@ -44,6 +50,7 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
 
 void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
   auto logger = this->get_logger();
+
   are_planes_valid_ = false;
   using json = nlohmann::json;
 
@@ -76,6 +83,13 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
 
     RCLCPP_INFO(logger, "Plane elements: %5.2f, %5.2f, %5.2f, %5.2f", a, b, c,
                 d);
+    if (plane_offset_ < std::abs(d)) { 
+      d = std::signbit(d) * (std::abs(d) - plane_offset_);
+    } else {
+      RCLCPP_WARN(logger, "Plane offset was too high, this facet did not get scaled!");
+    }
+
+
     normal.set__x(a);
     normal.set__y(b);
     normal.set__z(c);
@@ -92,8 +106,6 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
 
   are_planes_valid_ = true;
 
-  // TODO: emit a warning if the plane does not form a closed hull. or just
-  // throw an error, talk to charbel about this
 }
 
 bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
@@ -144,7 +156,6 @@ void BoundsChecker::HandlePoseMessage(
 
   if (IsPointInHull(position)) {
     RCLCPP_INFO(logger, "Pose is within bounds.");
-    safe_pose_pub_->publish(*msg);
   } else {
     RCLCPP_INFO(logger, "Pose is out of bounds, landing...");
     auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
@@ -176,10 +187,12 @@ void BoundsChecker::HandlePoseMessage(
   }
 }
 
+// DEPRECATED: We do not project trajectory messages on the safe plane anymore. We simply land if the pose ends up outside of
+// of the (shrunk) bounds.
 void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   // TODO: What if another drone in the swarm gets the same projected value?
+  RCLCPP_WARN(this->get_logger(), "Checking trajectory messages are deprecated!");
   auto safe_traj = msg;
-  RCLCPP_INFO(this->get_logger(), "Checking trajectory");
   bool safe = true;
   // todo: make the trajectory hull an inset of the true hull.
   for (auto &pose : safe_traj.poses) {

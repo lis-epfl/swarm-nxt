@@ -27,6 +27,7 @@ class BoundsChecker : public ::rclcpp::Node {
   std::vector<bounds_checker_ros2::msg::Plane> planes_;
   bool are_planes_valid_ = false;
   std::string topic_prefix_ = "";
+  float plane_offset_; // meters, positive
 
   // parameters
   std::string position_topic_suffix_;
@@ -37,7 +38,6 @@ class BoundsChecker : public ::rclcpp::Node {
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr trajectory_sub_;
 
   // publishers
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr safe_pose_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr safe_trajectory_pub_;
 
   // clients
