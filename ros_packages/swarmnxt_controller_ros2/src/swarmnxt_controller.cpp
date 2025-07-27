@@ -5,9 +5,10 @@ namespace swarmnxt_controller {
 Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   auto logger = this->get_logger();
   RCLCPP_INFO(logger, "Starting the controller node...");
-  
-  this->declare_parameter("waypoint_acceptance_radius", 0.5f); // meters
-  this->get_parameter("waypoint_acceptance_radius", waypoint_acceptance_radius_);
+
+  this->declare_parameter("waypoint_acceptance_radius", 0.5f);  // meters
+  this->get_parameter("waypoint_acceptance_radius",
+                      waypoint_acceptance_radius_);
 
   std::string ns = this->get_namespace();
 
@@ -60,18 +61,18 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
 }
 
 nav_msgs::msg::Path Controller::GetTrajectoryCopy() {
-  std::lock_guard<std::mutex> lock(traj_mutex_); 
-  nav_msgs::msg::Path path = traj_; 
-  return path; 
+  std::lock_guard<std::mutex> lock(traj_mutex_);
+  nav_msgs::msg::Path path = traj_;
+  return path;
 }
 
-void Controller::UpdateTrajectory(nav_msgs::msg::Path new_traj) { 
+void Controller::UpdateTrajectory(nav_msgs::msg::Path new_traj) {
   std::lock_guard<std::mutex> lock(traj_mutex_);
   traj_ = new_traj;
 }
 
 void Controller::SendTrajectoryMessage() {
-  auto cur_traj = GetTrajectoryCopy(); 
+  auto cur_traj = GetTrajectoryCopy();
   geometry_msgs::msg::PoseStamped msg;
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
@@ -97,7 +98,8 @@ void Controller::SendTrajectoryMessage() {
 
   while (distance < waypoint_acceptance_radius_) {
     if (cur_traj_index_ < num_traj_points) {
-      tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position, cur_target_);
+      tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position,
+                   cur_target_);
       distance = tf2::tf2Distance(cur_pos_, cur_target_);
       cur_traj_index_++;
     } else {
@@ -245,12 +247,13 @@ void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
   // assumes that all trajectories are planned from the current position
   // does not support trajectories that start behind the drone and continue past
   // it
-  
-  UpdateTrajectory(msg); 
+
+  UpdateTrajectory(msg);
   cur_traj_index_ = 0;
   tf2::Vector3 destination;
   tf2::fromMsg(msg.poses.back().pose.position, destination);
-  reached_dest_ = (tf2::tf2Distance(cur_pos_, destination) < waypoint_acceptance_radius_);
+  reached_dest_ =
+      (tf2::tf2Distance(cur_pos_, destination) < waypoint_acceptance_radius_);
 }
 
 void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
