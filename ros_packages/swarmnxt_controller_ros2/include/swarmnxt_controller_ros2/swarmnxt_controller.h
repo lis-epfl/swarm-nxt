@@ -22,10 +22,10 @@ class Controller : public rclcpp::Node {
   Controller();
 
  private:
-  const float DISTANCE_TOL = 0.5f;
   // State
   ControllerState state_{ControllerState::Idle};
 
+  float waypoint_acceptance_radius_;
   std::mutex traj_mutex_;
   nav_msgs::msg::Path traj_;
   unsigned int cur_traj_index_;
