@@ -60,7 +60,7 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
                 std::placeholders::_1));
 
   desired_traj_pub_ = this->create_publisher<nav_msgs::msg::Path>(
-      ns + "/trajectory_desired", 10);
+      ns + "/trajectory", 10);
 
   // Store the timer as a member variable to keep it alive
   traj_pub_timer_ = this->create_wall_timer(
