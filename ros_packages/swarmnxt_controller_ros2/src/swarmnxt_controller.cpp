@@ -30,7 +30,7 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
       std::bind(&Controller::MavrosPoseCallback, this, std::placeholders::_1));
 
   safe_traj_sub_ = this->create_subscription<nav_msgs::msg::Path>(
-      ns + "/trajectory_safe", 10,
+      ns + "/trajectory", 10,
       std::bind(&Controller::TrajectoryCallback, this, std::placeholders::_1));
 
   state_sub_ = this->create_subscription<mavros_msgs::msg::State>(
