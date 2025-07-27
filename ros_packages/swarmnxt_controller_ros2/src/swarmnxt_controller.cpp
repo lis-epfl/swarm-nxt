@@ -5,6 +5,9 @@ namespace swarmnxt_controller {
 Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   auto logger = this->get_logger();
   RCLCPP_INFO(logger, "Starting the controller node...");
+  
+  this->declare_parameter("waypoint_acceptance_radius", 0.5f); // meters
+  this->get_parameter("waypoint_acceptance_radius", waypoint_acceptance_radius_);
 
   std::string ns = this->get_namespace();
 
@@ -57,7 +60,6 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
 }
 
 void Controller::SendTrajectoryMessage() {
-  const float DISTANCE_TOL = 0.5f;  // 50 cm
   std::lock_guard<std::mutex> lock(traj_mutex_);
   geometry_msgs::msg::PoseStamped msg;
   std_msgs::msg::Bool done_msg;
@@ -82,7 +84,7 @@ void Controller::SendTrajectoryMessage() {
     return;
   }
 
-  while (distance < DISTANCE_TOL) {
+  while (distance < waypoint_acceptance_radius_) {
     if (cur_traj_index_ < num_traj_points) {
       tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
       distance = tf2::tf2Distance(cur_pos_, cur_target_);
@@ -237,7 +239,7 @@ void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
   cur_traj_index_ = 0;
   tf2::Vector3 destination;
   tf2::fromMsg(traj_.poses.back().pose.position, destination);
-  reached_dest_ = (tf2::tf2Distance(cur_pos_, destination) < DISTANCE_TOL);
+  reached_dest_ = (tf2::tf2Distance(cur_pos_, destination) < waypoint_acceptance_radius_);
 }
 
 void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
