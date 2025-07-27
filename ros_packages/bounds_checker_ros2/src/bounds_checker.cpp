@@ -11,11 +11,14 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   this->declare_parameter("plane_file", "/var/opt/config/bounds.json");
   this->get_parameter("plane_file", filepath);
 
-  this->declare_parameter("plane_offset", 0.5f); // meters
+  this->declare_parameter("plane_offset", 0.5f);  // meters
   this->get_parameter("plane_offset", plane_offset_);
 
   if (plane_offset_ < 0) {
-    RCLCPP_WARN(this->get_logger(), "Parameter plane_offset set to: %.5f, must be positive. Setting to zero.", plane_offset_);
+    RCLCPP_WARN(this->get_logger(),
+                "Parameter plane_offset set to: %.5f, must be positive. "
+                "Setting to zero.",
+                plane_offset_);
     plane_offset_ = 0.0f;
   }
 
@@ -83,12 +86,12 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
 
     RCLCPP_INFO(logger, "Plane elements: %5.2f, %5.2f, %5.2f, %5.2f", a, b, c,
                 d);
-    if (plane_offset_ < std::abs(d)) { 
+    if (plane_offset_ < std::abs(d)) {
       d = std::signbit(d) * (std::abs(d) - plane_offset_);
     } else {
-      RCLCPP_WARN(logger, "Plane offset was too high, this facet did not get scaled!");
+      RCLCPP_WARN(logger,
+                  "Plane offset was too high, this facet did not get scaled!");
     }
-
 
     normal.set__x(a);
     normal.set__y(b);
@@ -105,7 +108,6 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
   }
 
   are_planes_valid_ = true;
-
 }
 
 bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
@@ -187,11 +189,12 @@ void BoundsChecker::HandlePoseMessage(
   }
 }
 
-// DEPRECATED: We do not project trajectory messages on the safe plane anymore. We simply land if the pose ends up outside of
-// of the (shrunk) bounds.
+// DEPRECATED: We do not project trajectory messages on the safe plane anymore.
+// We simply land if the pose ends up outside of of the (shrunk) bounds.
 void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   // TODO: What if another drone in the swarm gets the same projected value?
-  RCLCPP_WARN(this->get_logger(), "Checking trajectory messages are deprecated!");
+  RCLCPP_WARN(this->get_logger(),
+              "Checking trajectory messages are deprecated!");
   auto safe_traj = msg;
   bool safe = true;
   // todo: make the trajectory hull an inset of the true hull.

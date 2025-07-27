@@ -84,5 +84,4 @@ class Controller : public rclcpp::Node {
   bool change_px4_state(const std::string& mode);
 };
 
-
-} // namespace swarmnxt_controller
+}  // namespace swarmnxt_controller

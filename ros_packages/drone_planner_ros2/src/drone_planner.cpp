@@ -59,8 +59,8 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
       std::bind(&DronePlanner::DepthImageCallback, this,
                 std::placeholders::_1));
 
-  desired_traj_pub_ = this->create_publisher<nav_msgs::msg::Path>(
-      ns + "/trajectory", 10);
+  desired_traj_pub_ =
+      this->create_publisher<nav_msgs::msg::Path>(ns + "/trajectory", 10);
 
   // Store the timer as a member variable to keep it alive
   traj_pub_timer_ = this->create_wall_timer(
@@ -68,8 +68,7 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
       std::bind(&DronePlanner::PublishTrajectory, this));
 }
 
-void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg)
-{
+void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg) {
   // right now this just sets the current goal to the first goal in the vec.
   // Later, this can use the whole list so the drone can be more autonomous
   auto logger = this->get_logger();
@@ -99,13 +98,14 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   nav_msgs::msg::Path trajectory = nav_msgs::msg::Path();
   trajectory.header.frame_id = "map";
 
-  geometry_msgs::msg::Pose current_goal_unstamped; 
+  geometry_msgs::msg::Pose current_goal_unstamped;
   geometry_msgs::msg::Pose current_position_unstamped;
 
   current_goal_unstamped = current_goal_.pose;
   current_position_unstamped = current_position_.pose;
 
-  geometry_msgs::msg::Pose delta = current_goal_unstamped - current_position_unstamped;
+  geometry_msgs::msg::Pose delta =
+      current_goal_unstamped - current_position_unstamped;
 
   Eigen::Vector3d delta2;
   delta2 << delta.position.x, delta.position.y, delta.position.z;
@@ -119,7 +119,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   if (abs(angle) < ANGLE_TOL_RAD && abs(dist) < DISTANCE_TOL_M) {
     // we are within our tolerance, so don't plan anything.
 
-    // we are already here, so the trajectory destination time is now 
+    // we are already here, so the trajectory destination time is now
     trajectory.header.stamp = this->now();
     trajectory.poses.push_back(current_position_);
     return trajectory;
@@ -131,8 +131,9 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   float time_to_target_rotation = angle / yaw_speed_rad_s_;
   float traj_time =
       std::max(time_to_target_rotation, time_to_target_translation);
-  
-  trajectory.header.stamp = this->now() + rclcpp::Duration::from_seconds(traj_time);
+
+  trajectory.header.stamp =
+      this->now() + rclcpp::Duration::from_seconds(traj_time);
   int num_traj_points =
       static_cast<int>(std::ceil(traj_time * trajectory_density_hz_));
 
@@ -163,7 +164,8 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
 
     pose.pose.orientation = tf2::toMsg(interp_quat);
     pose.header.frame_id = "map";
-    pose.header.stamp = this->now() + rclcpp::Duration::from_seconds(t * traj_time);
+    pose.header.stamp =
+        this->now() + rclcpp::Duration::from_seconds(t * traj_time);
     trajectory.poses.push_back(pose);
   }
 
