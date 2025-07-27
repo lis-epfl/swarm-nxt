@@ -98,7 +98,6 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
 
   nav_msgs::msg::Path trajectory = nav_msgs::msg::Path();
   trajectory.header.frame_id = "map";
-  trajectory.header.stamp = this->now();
 
   geometry_msgs::msg::Pose current_goal_unstamped; 
   geometry_msgs::msg::Pose current_position_unstamped;
@@ -120,7 +119,8 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   if (abs(angle) < ANGLE_TOL_RAD && abs(dist) < DISTANCE_TOL_M) {
     // we are within our tolerance, so don't plan anything.
 
-    // todo: do we use the stamp field?
+    // we are already here, so the trajectory destination time is now 
+    trajectory.header.stamp = this->now();
     trajectory.poses.push_back(current_position_);
     return trajectory;
   }
@@ -131,6 +131,8 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   float time_to_target_rotation = angle / yaw_speed_rad_s_;
   float traj_time =
       std::max(time_to_target_rotation, time_to_target_translation);
+  
+  trajectory.header.stamp = this->now() + rclcpp::Duration::from_seconds(traj_time);
   int num_traj_points =
       static_cast<int>(std::ceil(traj_time * trajectory_density_hz_));
 
@@ -161,7 +163,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
 
     pose.pose.orientation = tf2::toMsg(interp_quat);
     pose.header.frame_id = "map";
-    pose.header.stamp = this->now();
+    pose.header.stamp = this->now() + rclcpp::Duration::from_seconds(t * traj_time);
     trajectory.poses.push_back(pose);
   }
 
