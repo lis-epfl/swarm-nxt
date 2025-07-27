@@ -2,14 +2,14 @@
 
 namespace drone_planner {
 
-geometry_msgs::msg::Pose operator-(geometry_msgs::msg::PoseStamped& pose1,
-                                   geometry_msgs::msg::PoseStamped& pose2) {
+geometry_msgs::msg::Pose operator-(geometry_msgs::msg::Pose& pose1,
+                                   geometry_msgs::msg::Pose& pose2) {
   geometry_msgs::msg::Pose result;
   tf2::Quaternion q1;
   tf2::Quaternion q2;
 
-  tf2::fromMsg(pose1.pose.orientation, q1);
-  tf2::fromMsg(pose2.pose.orientation, q2);
+  tf2::fromMsg(pose1.orientation, q1);
+  tf2::fromMsg(pose2.orientation, q2);
 
   auto q2_inv = q2;
   q2_inv[3] = -q2_inv[3];
@@ -17,9 +17,9 @@ geometry_msgs::msg::Pose operator-(geometry_msgs::msg::PoseStamped& pose1,
 
   result.orientation = tf2::toMsg(qr);
 
-  result.position.x = pose1.pose.position.x - pose2.pose.position.x;
-  result.position.y = pose1.pose.position.y - pose2.pose.position.y;
-  result.position.z = pose1.pose.position.z - pose2.pose.position.z;
+  result.position.x = pose1.position.x - pose2.position.x;
+  result.position.y = pose1.position.y - pose2.position.y;
+  result.position.z = pose1.position.z - pose2.position.z;
 
   return result;
 }
@@ -99,7 +99,13 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   trajectory.header.frame_id = "map";
   trajectory.header.stamp = this->now();
 
-  geometry_msgs::msg::Pose delta = current_goal_ - cur_pos_;
+  geometry_msgs::msg::Pose current_goal_unstamped; 
+  geometry_msgs::msg::Pose current_position_unstamped;
+
+  current_goal_unstamped = current_goal_.pose;
+  current_position_unstamped = cur_pos_.pose;
+
+  geometry_msgs::msg::Pose delta = current_goal_unstamped - current_position_unstamped;
 
   Eigen::Vector3d delta2;
   delta2 << delta.position.x, delta.position.y, delta.position.z;
