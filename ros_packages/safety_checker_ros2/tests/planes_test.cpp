@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "bounds_checker.h"
+#include "safety_checker.h"
 #include "rclcpp/rclcpp.hpp"
 
-using namespace bounds_checker;
+using namespace safety_checker;
 
 std::filesystem::path GetTestFilePath(const std::string &filename) {
   std::filesystem::path src_file_path = __FILE__;
@@ -14,57 +14,57 @@ std::filesystem::path GetTestFilePath(const std::string &filename) {
   return test_file_path;
 }
 
-TEST(BoundsCheckerTest, GetPlanesReturnsCorrectData) {
+TEST(SafetyCheckerTest, GetPlanesReturnsCorrectData) {
   // Arrange
-  auto bc = BoundsChecker();
+  auto sc = SafetyChecker();
   // Act
   std::filesystem::path invalid_file = GetTestFilePath("invalid1.json");
-  bc.LoadHullFromFile(invalid_file);
-  auto planes = bc.GetPlanes();
+  sc.LoadHullFromFile(invalid_file);
+  auto planes = sc.GetPlanes();
 
   ASSERT_FALSE(planes.empty()) << "Planes list should not be empty.";
 }
 
-TEST(BoundsCheckerTest, NonExistentFileErrorThrown) {
+TEST(SafetyCheckerTest, NonExistentFileErrorThrown) {
   // Arrange
-  auto bc = BoundsChecker();
+  auto sc = SafetyChecker();
   // Act
   std::filesystem::path non_existent = GetTestFilePath("non_existent.json");
-  ASSERT_THROW(bc.LoadHullFromFile(non_existent), std::runtime_error)
+  ASSERT_THROW(sc.LoadHullFromFile(non_existent), std::runtime_error)
       << "Expected std::runtime_error when loading a non-existent file.";
 }
 
-TEST(BoundsCheckerTest, PointInsideTest) {
-  auto bc = BoundsChecker();
-  bc.LoadHullFromFile(GetTestFilePath("valid_cube_111m.json"));
+TEST(SafetyCheckerTest, PointInsideTest) {
+  auto sc = SafetyChecker();
+  sc.LoadHullFromFile(GetTestFilePath("valid_cube_111m.json"));
 
   geometry_msgs::msg::Point point;
   point.x = 0;
   point.y = 0.5;
   point.z = 0.6;
 
-  ASSERT_TRUE(bc.IsPointInHull(point))
+  ASSERT_TRUE(sc.IsPointInHull(point))
       << "Point [0, 0.5, 0.6] is inside the convex hull of 1x1x1m";
 
   point.x = 1;
   point.y = 0;
   point.z = 0;
 
-  ASSERT_TRUE(bc.IsPointInHull(point))
+  ASSERT_TRUE(sc.IsPointInHull(point))
       << "Point [1, 0, 0] is on the surface (and therefore inside) a convex "
          "hull of 1x1x1m";
 }
 
-TEST(BoundsCheckerTest, PointOutsideTest) {
-  auto bc = BoundsChecker();
-  bc.LoadHullFromFile(GetTestFilePath("valid_cube_111m.json"));
+TEST(SafetyCheckerTest, PointOutsideTest) {
+  auto sc = SafetyChecker();
+  sc.LoadHullFromFile(GetTestFilePath("valid_cube_111m.json"));
 
   geometry_msgs::msg::Point point;
   point.x = 2;
   point.y = 0;
   point.z = 0;
 
-  ASSERT_FALSE(bc.IsPointInHull(point))
+  ASSERT_FALSE(sc.IsPointInHull(point))
       << "Point [2, 0, 0] is outside the convex hull of 1x1x1m";
 }
 

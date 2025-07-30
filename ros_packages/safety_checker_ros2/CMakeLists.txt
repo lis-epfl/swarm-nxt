@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(bounds_checker_ros2)
+project(safety_checker_ros2)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -27,22 +27,22 @@ set(DEPENDENCIES
 )
 
 include_directories(
-  include/bounds_checker_ros2
+  include/safety_checker_ros2
   ${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_cpp
 )
 
-add_library(bounds_checker_class src/bounds_checker.cpp)
-add_executable(bounds_checker_node src/bounds_checker_node.cpp)
-target_link_libraries(bounds_checker_node bounds_checker_class)
+add_library(safety_checker_class src/safety_checker.cpp)
+add_executable(safety_checker_node src/safety_checker_node.cpp)
+target_link_libraries(safety_checker_node safety_checker_class)
 
-ament_target_dependencies(bounds_checker_class
+ament_target_dependencies(safety_checker_class
   ${DEPENDENCIES}
 )
 
-ament_target_dependencies(bounds_checker_node
+ament_target_dependencies(safety_checker_node
 ${DEPENDENCIES})
 
-target_link_libraries(bounds_checker_class
+target_link_libraries(safety_checker_class
   ${PROJECT_NAME}__rosidl_typesupport_cpp
 )
 
@@ -63,12 +63,12 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 install(TARGETS
-  bounds_checker_class
+  safety_checker_class
   LIBRARY DESTINATION lib
 )
 
 install(TARGETS
-bounds_checker_node
+safety_checker_node
 DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -83,7 +83,7 @@ if(BUILD_TESTING)
   # set(ament_cmake_cpplint_FOUND TRUE)
   # ament_lint_auto_find_test_dependencies()
   ament_add_gtest(planes_test tests/planes_test.cpp)
-  target_link_libraries(planes_test bounds_checker_class)
+  target_link_libraries(planes_test safety_checker_class)
   find_package(ament_index_cpp REQUIRED)
   ament_target_dependencies(planes_test ament_index_cpp)
 
