@@ -81,7 +81,7 @@ class Controller : public rclcpp::Node {
   void MavrosPoseCallback(const geometry_msgs::msg::PoseStamped& msg);
   void MavrosStateCallback(const mavros_msgs::msg::State& msg);
   void TrajectoryCallback(const nav_msgs::msg::Path& msg);
-  bool change_px4_state(const std::string& mode);
+  bool ChangePX4State(const std::string& mode);
 };
 
 }  // namespace swarmnxt_controller

@@ -112,7 +112,7 @@ void Controller::SendTrajectoryMessage() {
   setpoint_pub_->publish(msg);
 }
 
-bool Controller::change_px4_state(const std::string& mode) {
+bool Controller::ChangePX4State(const std::string& mode) {
   auto logger = this->get_logger();
   const std::map<std::string, ControllerState> mode_map = {
       {"AUTO.LOITER",
@@ -152,7 +152,7 @@ void Controller::TakeoffService(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   if (state_ == ControllerState::Idle) {
-    change_px4_state("AUTO.TAKEOFF");
+    ChangePX4State("AUTO.TAKEOFF");
     response->success = true;
     response->message = "Taking off!";
   } else {
@@ -166,7 +166,7 @@ void Controller::LandService(
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   if (state_ != ControllerState::Idle && state_ != ControllerState::Landing) {
     RCLCPP_INFO(this->get_logger(), "Sending land command");
-    change_px4_state("AUTO.LAND");
+    ChangePX4State("AUTO.LAND");
     response->success = true;
     response->message = "Landing!";
   } else {
@@ -203,7 +203,7 @@ void Controller::Loop() {
       if (num_traj_messages_sent_ > 100 /* && altitude correct */) {
         // we are done with taking off, move to follow traj
         // dont do this yet!
-        change_px4_state("OFFBOARD");
+        ChangePX4State("OFFBOARD");
       }
       break;
     case ControllerState::FollowingTrajectory:
@@ -231,7 +231,7 @@ void Controller::Loop() {
 
       RCLCPP_INFO(logger,
                   "Transitioning to non-offboad since controller was disarmed");
-      change_px4_state("AUTO.LOITER");
+      ChangePX4State("AUTO.LOITER");
     }
   }
 }
