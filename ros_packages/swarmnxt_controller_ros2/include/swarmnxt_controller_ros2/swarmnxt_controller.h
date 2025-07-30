@@ -27,6 +27,7 @@ class Controller : public rclcpp::Node {
 
   float waypoint_acceptance_radius_;
   std::mutex traj_mutex_;
+  std::mutex pos_mutex_;
   nav_msgs::msg::Path traj_;
   unsigned int cur_traj_index_;
   bool reached_dest_ = false;
@@ -71,7 +72,8 @@ class Controller : public rclcpp::Node {
   // helpers
   void SendTrajectoryMessage();
   nav_msgs::msg::Path GetTrajectoryCopy();
-  void UpdateTrajectory(nav_msgs::msg::Path new_traj);
+  tf2::Vector3 GetPositionCopy();
+  void UpdateTrajectory(const nav_msgs::msg::Path new_traj);
 
   // Timer
   rclcpp::TimerBase::SharedPtr loop_timer_;
