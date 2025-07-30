@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bounds_checker_ros2/msg/plane.hpp"
+#include "safety_checker_ros2/msg/plane.hpp"
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/path.hpp"
@@ -8,10 +8,10 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
 
-namespace bounds_checker {
-class BoundsChecker : public ::rclcpp::Node {
+namespace safety_checker {
+class SafetyChecker : public ::rclcpp::Node {
  public:
-  BoundsChecker();
+  SafetyChecker();
 
   void LoadHullFromFile(const std::filesystem::path &filepath);
   bool IsPointInHull(const geometry_msgs::msg::Point &point);
@@ -21,10 +21,10 @@ class BoundsChecker : public ::rclcpp::Node {
       const geometry_msgs::msg::Point &point);
   void ClearPlanes();
 
-  std::vector<bounds_checker_ros2::msg::Plane> GetPlanes();
+  std::vector<safety_checker_ros2::msg::Plane> GetPlanes();
 
  private:
-  std::vector<bounds_checker_ros2::msg::Plane> planes_;
+  std::vector<safety_checker_ros2::msg::Plane> planes_;
   bool are_planes_valid_ = false;
   std::string topic_prefix_ = "";
   float plane_offset_;  // meters, positive
@@ -43,4 +43,4 @@ class BoundsChecker : public ::rclcpp::Node {
   // clients
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr land_client_;
 };
-}  // namespace bounds_checker
+}  // namespace safety_checker

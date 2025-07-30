@@ -1,9 +1,9 @@
-#include "bounds_checker.h"
+#include "safety_checker.h"
 
 #include <fstream>
-namespace bounds_checker {
+namespace safety_checker {
 
-BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
+SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   std::string filepath;
 
   std::string ns = this->get_namespace();
@@ -30,12 +30,12 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
 
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
       ns + "/mavros/local_position/pose", best_effort_qos,
-      std::bind(&BoundsChecker::HandlePoseMessage, this,
+      std::bind(&SafetyChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 
   trajectory_sub_ = create_subscription<nav_msgs::msg::Path>(
       ns + "/trajectory", 10,
-      std::bind(&BoundsChecker::HandleTrajectoryMessage, this,
+      std::bind(&SafetyChecker::HandleTrajectoryMessage, this,
                 std::placeholders::_1));
 
   // deprecated
@@ -51,7 +51,7 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
   }
 }
 
-void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
+void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
   auto logger = this->get_logger();
 
   are_planes_valid_ = false;
@@ -76,7 +76,7 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
       RCLCPP_ERROR(logger, "Invalid JSON Format...");
       valid_parse = false;
     }
-    bounds_checker_ros2::msg::Plane plane;
+    safety_checker_ros2::msg::Plane plane;
     geometry_msgs::msg::Vector3 normal;
 
     double a = arr[0].get<double>();
@@ -110,7 +110,7 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
   are_planes_valid_ = true;
 }
 
-bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
+bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   if (!are_planes_valid_) {
     return false;
   }
@@ -125,7 +125,7 @@ bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   return true;
 }
 
-geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(
+geometry_msgs::msg::Point SafetyChecker::ProjectPointToClosestPlane(
     const geometry_msgs::msg::Point &point) {
   geometry_msgs::msg::Point projected_point = point;
 
@@ -151,7 +151,7 @@ geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(
   return projected_point;
 }
 
-void BoundsChecker::HandlePoseMessage(
+void SafetyChecker::HandlePoseMessage(
     const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
   auto logger = this->get_logger();
   const auto &position = msg->pose.position;
@@ -191,7 +191,7 @@ void BoundsChecker::HandlePoseMessage(
 
 // DEPRECATED: We do not project trajectory messages on the safe plane anymore.
 // We simply land if the pose ends up outside of of the (shrunk) bounds.
-void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
+void SafetyChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   // TODO: What if another drone in the swarm gets the same projected value?
   RCLCPP_WARN(this->get_logger(),
               "Checking trajectory messages are deprecated!");
@@ -221,12 +221,12 @@ void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   safe_trajectory_pub_->publish(safe_traj);
 }
 
-void BoundsChecker::ClearPlanes() {
+void SafetyChecker::ClearPlanes() {
   are_planes_valid_ = false;
   planes_.clear();
 }
 
-std::vector<bounds_checker_ros2::msg::Plane> BoundsChecker::GetPlanes() {
+std::vector<safety_checker_ros2::msg::Plane> SafetyChecker::GetPlanes() {
   return planes_;
 }
-}  // namespace bounds_checker
+}  // namespace safety_checker
