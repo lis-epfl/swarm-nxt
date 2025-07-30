@@ -66,18 +66,32 @@ nav_msgs::msg::Path Controller::GetTrajectoryCopy() {
   return path;
 }
 
-void Controller::UpdateTrajectory(nav_msgs::msg::Path new_traj) {
+tf2::Vector3 Controller::GetPositionCopy() {
+  std::lock_guard<std::mutex> lock(pos_mutex_);
+  tf2::Vector3 pos = cur_pos_;
+  return pos;
+}
+
+void Controller::MavrosPoseCallback(
+    const geometry_msgs::msg::PoseStamped& msg) {
+  RCLCPP_INFO(this->get_logger(), "Got a new position");
+  std::lock_guard<std::mutex> lock(pos_mutex_);
+  tf2::fromMsg(msg.pose.position, cur_pos_);  // todo: yaw
+}
+
+void Controller::UpdateTrajectory(const nav_msgs::msg::Path new_traj) {
   std::lock_guard<std::mutex> lock(traj_mutex_);
   traj_ = new_traj;
 }
 
 void Controller::SendTrajectoryMessage() {
   auto cur_traj = GetTrajectoryCopy();
+  auto cur_pos = GetPositionCopy();
   geometry_msgs::msg::PoseStamped msg;
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
 
-  float distance = tf2::tf2Distance(cur_pos_, cur_target_);
+  float distance = tf2::tf2Distance(cur_pos, cur_target_);
   const unsigned int num_traj_points = cur_traj.poses.size();
 
   if (num_traj_points == 0) {
@@ -89,7 +103,7 @@ void Controller::SendTrajectoryMessage() {
   // get distance from current target
   if (reached_dest_) {
     RCLCPP_INFO(this->get_logger(), "Reached destination, so not advancing");
-    tf2::toMsg(cur_pos_, msg.pose.position);
+    tf2::toMsg(cur_pos, msg.pose.position);
     setpoint_pub_->publish(msg);
     done_msg.data = true;
     done_pub_->publish(done_msg);
@@ -100,7 +114,7 @@ void Controller::SendTrajectoryMessage() {
     if (cur_traj_index_ < num_traj_points) {
       tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position,
                    cur_target_);
-      distance = tf2::tf2Distance(cur_pos_, cur_target_);
+      distance = tf2::tf2Distance(cur_pos, cur_target_);
       cur_traj_index_++;
     } else {
       reached_dest_ = true;
@@ -236,12 +250,6 @@ void Controller::Loop() {
   }
 }
 
-void Controller::MavrosPoseCallback(
-    const geometry_msgs::msg::PoseStamped& msg) {
-  RCLCPP_INFO(this->get_logger(), "Got a new position");
-  tf2::fromMsg(msg.pose.position, cur_pos_);  // todo: yaw
-}
-
 void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
   RCLCPP_INFO(this->get_logger(), "Got a new path");
   // assumes that all trajectories are planned from the current position
@@ -249,11 +257,12 @@ void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
   // it
 
   UpdateTrajectory(msg);
+  auto cur_pos = GetPositionCopy();
   cur_traj_index_ = 0;
   tf2::Vector3 destination;
   tf2::fromMsg(msg.poses.back().pose.position, destination);
   reached_dest_ =
-      (tf2::tf2Distance(cur_pos_, destination) < waypoint_acceptance_radius_);
+      (tf2::tf2Distance(cur_pos, destination) < waypoint_acceptance_radius_);
 }
 
 void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
