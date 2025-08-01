@@ -41,7 +41,7 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
       ns + "/mavros/state", 10,
       std::bind(&Controller::MavrosStateCallback, this, std::placeholders::_1));
 
-  setpoint_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
+  command_pub_ = this->create_publisher<swarmnxt_controller_ros2::msg::ControllerCommand>(
       ns + "/mavros/setpoint_position/local", 10);
 
   done_pub_ = this->create_publisher<std_msgs::msg::Bool>(
@@ -87,7 +87,8 @@ void Controller::UpdateTrajectory(const nav_msgs::msg::Path new_traj) {
 void Controller::SendTrajectoryMessage() {
   auto cur_traj = GetTrajectoryCopy();
   auto cur_pos = GetPositionCopy();
-  geometry_msgs::msg::PoseStamped msg;
+  swarmnxt_controller_ros2::msg::ControllerCommand msg;
+  msg.command_type_mask = swarmnxt_controller_ros2::msg::ControllerCommand::POSITION_SETPOINT; 
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
 
@@ -103,8 +104,8 @@ void Controller::SendTrajectoryMessage() {
   // get distance from current target
   if (reached_dest_) {
     RCLCPP_INFO(this->get_logger(), "Reached destination, so not advancing");
-    tf2::toMsg(cur_pos, msg.pose.position);
-    setpoint_pub_->publish(msg);
+    tf2::toMsg(cur_pos, msg.pose_cmd.pose.position);
+    command_pub_->publish(msg);
     done_msg.data = true;
     done_pub_->publish(done_msg);
     return;
@@ -121,9 +122,9 @@ void Controller::SendTrajectoryMessage() {
       break;
     }
   }
-  tf2::toMsg(cur_target_, msg.pose.position);
+  tf2::toMsg(cur_target_, msg.pose_cmd.pose.position);
   done_pub_->publish(done_msg);
-  setpoint_pub_->publish(msg);
+  command_pub_->publish(msg);
 }
 
 bool Controller::ChangePX4State(const std::string& mode) {

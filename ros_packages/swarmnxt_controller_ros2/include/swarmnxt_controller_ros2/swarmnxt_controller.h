@@ -1,6 +1,7 @@
 #pragma once
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <swarmnxt_controller_ros2/msg/controller_command.hpp>
 #include <mavros_msgs/msg/state.hpp>
 #include <mavros_msgs/srv/command_bool.hpp>
 #include <mavros_msgs/srv/command_tol.hpp>
@@ -66,7 +67,7 @@ class Controller : public rclcpp::Node {
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr safe_traj_sub_;
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   // Publisher
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr setpoint_pub_;
+  rclcpp::Publisher<swarmnxt_controller_ros2::msg::ControllerCommand>::SharedPtr command_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr done_pub_;
 
   // helpers
