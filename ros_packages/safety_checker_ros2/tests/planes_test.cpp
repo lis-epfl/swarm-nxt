@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "safety_checker.h"
 #include "rclcpp/rclcpp.hpp"
+#include "safety_checker.h"
 
 using namespace safety_checker;
 

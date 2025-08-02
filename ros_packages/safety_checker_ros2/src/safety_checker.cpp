@@ -38,16 +38,57 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
       std::bind(&SafetyChecker::HandleTrajectoryMessage, this,
                 std::placeholders::_1));
 
+  command_sub_ =
+      create_subscription<swarmnxt_controller_ros2::msg::ControllerCommand>(
+          ns + "/controller/cmd", 10,
+          std::bind(&SafetyChecker::HandleControllerCommand, this,
+                    std::placeholders::_1));
+
   // deprecated
   safe_trajectory_pub_ =
       create_publisher<nav_msgs::msg::Path>(ns + "/trajectory_safe", 10);
 
+  position_cmd_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
+      ns + "/mavros/setpoint_position/local", 10);
+
+  rate_cmd_pub_ = create_publisher<mavros_msgs::msg::AttitudeTarget>(
+      ns + "/mavros/setpoint_raw/attitude", 10);
+
   land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
+
+  command_timer_ = this->create_wall_timer(
+      std::chrono::milliseconds(10), std::bind(&SafetyChecker::Loop, this));
 
   // Wait for the service to be available
   while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
     RCLCPP_WARN(this->get_logger(),
                 "Waiting for ~/controller/land service to be available...");
+  }
+}
+
+void SafetyChecker::Loop() {
+  auto cmd = latest_cmd_;
+  auto cur_time = rclcpp::Clock(RCL_SYSTEM_TIME).now();
+  auto cmd_age = cur_time - cmd.header.stamp;
+
+  // make sure the command isn't stale
+  if (cmd_age.nanoseconds() > 20E6) {
+    is_safe_ = false;
+    RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping...");
+  }
+
+  if (is_safe_) {
+    switch (cmd.command_type_mask) {
+      case swarmnxt_controller_ros2::msg::ControllerCommand::POSITION_SETPOINT:
+        position_cmd_pub_->publish(cmd.pose_cmd);
+        break;
+      case swarmnxt_controller_ros2::msg::ControllerCommand::RATE_SETPOINT:
+        rate_cmd_pub_->publish(cmd.rate_cmd);
+        break;
+      default:
+        RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",
+                     cmd.command_type_mask);
+    }
   }
 }
 
@@ -228,5 +269,9 @@ void SafetyChecker::ClearPlanes() {
 
 std::vector<safety_checker_ros2::msg::Plane> SafetyChecker::GetPlanes() {
   return planes_;
+}
+void SafetyChecker::HandleControllerCommand(
+    const swarmnxt_controller_ros2::msg::ControllerCommand &msg) {
+  latest_cmd_ = msg;
 }
 }  // namespace safety_checker
