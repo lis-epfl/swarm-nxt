@@ -13,6 +13,16 @@
 #include "swarmnxt_controller_ros2/msg/controller_command.hpp"
 
 namespace safety_checker {
+
+enum SafetyStatus : uint8_t {
+  SAFE = 0,
+  UNSAFE_OUT_OF_BOUNDS = 1 << 0,
+  UNSAFE_COMMAND_SEND_RATE = 1 << 1,
+  UNSAFE_OTHER = 1 << 2
+};
+
+enum class DroneState { Idle, TakingOff, Flying, Landing };
+
 class SafetyChecker : public ::rclcpp::Node {
  public:
   SafetyChecker();
@@ -23,6 +33,13 @@ class SafetyChecker : public ::rclcpp::Node {
   void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg);
   void HandleControllerCommand(
       const swarmnxt_controller_ros2::msg::ControllerCommand &msg);
+
+  void LandNow();
+  void LandServer(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+                  const std::shared_ptr<std_srvs::srv::Trigger::Response> resp);
+  void EStop();  // disarm immediately. not to be used except for emergencies!
+
+  bool RequestStateTransition(const DroneState to_state);
   geometry_msgs::msg::Point ProjectPointToClosestPlane(
       const geometry_msgs::msg::Point &point);
   void ClearPlanes();
@@ -35,7 +52,8 @@ class SafetyChecker : public ::rclcpp::Node {
 
   void Loop();
   bool are_planes_valid_ = false;
-  bool is_safe_ = true;
+  uint8_t safety_flags_ = SafetyStatus::SAFE;
+  DroneState drone_state_{DroneState::Idle};
   std::string topic_prefix_ = "";
   float plane_offset_;  // meters, positive
 
@@ -58,7 +76,8 @@ class SafetyChecker : public ::rclcpp::Node {
       position_cmd_pub_;
   rclcpp::Publisher<mavros_msgs::msg::AttitudeTarget>::SharedPtr rate_cmd_pub_;
 
-  // clients
-  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr land_client_;
+  // servers
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr land_service_;
 };
+
 }  // namespace safety_checker

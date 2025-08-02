@@ -54,16 +54,8 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   rate_cmd_pub_ = create_publisher<mavros_msgs::msg::AttitudeTarget>(
       ns + "/mavros/setpoint_raw/attitude", 10);
 
-  land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
-
   command_timer_ = this->create_wall_timer(
       std::chrono::milliseconds(10), std::bind(&SafetyChecker::Loop, this));
-
-  // Wait for the service to be available
-  while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
-    RCLCPP_WARN(this->get_logger(),
-                "Waiting for ~/controller/land service to be available...");
-  }
 }
 
 void SafetyChecker::Loop() {
@@ -71,23 +63,32 @@ void SafetyChecker::Loop() {
   auto cur_time = rclcpp::Clock(RCL_SYSTEM_TIME).now();
   auto cmd_age = cur_time - cmd.header.stamp;
 
-  // make sure the command isn't stale
-  if (cmd_age.nanoseconds() > 20E6) {
-    is_safe_ = false;
-    RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping...");
-  }
+  if (drone_state_ != DroneState::Idle) {
+    // make sure the command isn't stale
+    if (cmd_age.nanoseconds() > 20E6) {
+      safety_flags_ |= SafetyStatus::UNSAFE_COMMAND_SEND_RATE;
+      RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping...");
+      drone_state_ = DroneState::Landing;
+    }
 
-  if (is_safe_) {
-    switch (cmd.command_type_mask) {
-      case swarmnxt_controller_ros2::msg::ControllerCommand::POSITION_SETPOINT:
-        position_cmd_pub_->publish(cmd.pose_cmd);
-        break;
-      case swarmnxt_controller_ros2::msg::ControllerCommand::RATE_SETPOINT:
-        rate_cmd_pub_->publish(cmd.rate_cmd);
-        break;
-      default:
-        RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",
-                     cmd.command_type_mask);
+    if (safety_flags_ == SafetyStatus::SAFE) {
+      switch (cmd.command_type_mask) {
+        case swarmnxt_controller_ros2::msg::ControllerCommand::
+            POSITION_SETPOINT:
+          position_cmd_pub_->publish(cmd.pose_cmd);
+          break;
+        case swarmnxt_controller_ros2::msg::ControllerCommand::RATE_SETPOINT:
+          rate_cmd_pub_->publish(cmd.rate_cmd);
+          break;
+        default:
+          RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",
+                       cmd.command_type_mask);
+      }
+    } else {
+      RCLCPP_ERROR_THROTTLE(
+          this->get_logger(), *this->get_clock(), 1000,
+          "Not sending offboard messages because of unsafety. Code: %d",
+          safety_flags_);
     }
   }
 }
@@ -200,33 +201,8 @@ void SafetyChecker::HandlePoseMessage(
   if (IsPointInHull(position)) {
     RCLCPP_INFO(logger, "Pose is within bounds.");
   } else {
-    RCLCPP_INFO(logger, "Pose is out of bounds, landing...");
-    auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
-    auto result_future = land_client_->async_send_request(request);
-
-    try {
-      // Wait for the result with a timeout, spinning to process callbacks
-      auto start = std::chrono::steady_clock::now();
-      auto timeout = std::chrono::seconds(2);  // adjust as needed
-      while (rclcpp::ok() && result_future.wait_for(std::chrono::milliseconds(
-                                 100)) != std::future_status::ready) {
-        rclcpp::spin_some(this->get_node_base_interface());
-        if (std::chrono::steady_clock::now() - start > timeout) {
-          throw std::runtime_error(
-              "Timeout waiting for landing service response");
-        }
-      }
-      auto result = result_future.get();
-      if (result->success) {
-        RCLCPP_INFO(logger, "Landing command sent successfully: %s",
-                    result->message.c_str());
-      } else {
-        RCLCPP_WARN(logger, "Landing command failed: %s",
-                    result->message.c_str());
-      }
-    } catch (const std::exception &e) {
-      RCLCPP_ERROR(logger, "Failed to call landing service: %s", e.what());
-    }
+    RCLCPP_WARN(logger, "Pose is out of bounds, landing...");
+    safety_flags_ |= SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
   }
 }
 
@@ -273,5 +249,48 @@ std::vector<safety_checker_ros2::msg::Plane> SafetyChecker::GetPlanes() {
 void SafetyChecker::HandleControllerCommand(
     const swarmnxt_controller_ros2::msg::ControllerCommand &msg) {
   latest_cmd_ = msg;
+}
+bool SafetyChecker::RequestStateTransition(DroneState to_state) {
+  // if we're flying, requests to go to idle are blocked
+  if ((drone_state_ == DroneState::Flying ||
+       drone_state_ == DroneState::TakingOff) &&
+      to_state == DroneState::Idle) {
+    RCLCPP_ERROR(this->get_logger(),
+                 "Tranisition from Flying to Idle received. Forcing a landing "
+                 "transition state");
+    to_state = DroneState::Landing;
+  }
+
+  bool inhibit_transition = false;
+  std::string new_px4_state = "";
+
+  switch (to_state) {
+    case DroneState::Idle:
+      // disarm if landed.
+      break;
+    case DroneState::TakingOff:
+      // change to takeoff state
+      new_px4_state = "AUTO.TAKEOFF";
+      // arm?
+      break;
+    case DroneState::Flying:
+      // change to offboard
+      new_px4_state = "OFFBOARD";
+      break;
+    case DroneState::Landing:
+      // change to landing state
+      new_px4_state = "AUTO.LAND";
+      break;
+    default:
+      RCLCPP_ERROR(this->get_logger(),
+                   "Requesting switch to nonexistant state!");
+  }
+
+  if (!inhibit_transition) {
+    // call the service to change the px4 state, only change if approved.
+    drone_state_ = to_state;
+  }
+
+  return false;
 }
 }  // namespace safety_checker
