@@ -41,8 +41,9 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
       ns + "/mavros/state", 10,
       std::bind(&Controller::MavrosStateCallback, this, std::placeholders::_1));
 
-  command_pub_ = this->create_publisher<swarmnxt_controller_ros2::msg::ControllerCommand>(
-      ns + "/mavros/setpoint_position/local", 10);
+  command_pub_ =
+      this->create_publisher<swarmnxt_controller_ros2::msg::ControllerCommand>(
+          ns + "/controller/cmd", 10);
 
   done_pub_ = this->create_publisher<std_msgs::msg::Bool>(
       ns + "/controller/reached_destination", 10);
@@ -88,7 +89,8 @@ void Controller::SendTrajectoryMessage() {
   auto cur_traj = GetTrajectoryCopy();
   auto cur_pos = GetPositionCopy();
   swarmnxt_controller_ros2::msg::ControllerCommand msg;
-  msg.command_type_mask = swarmnxt_controller_ros2::msg::ControllerCommand::POSITION_SETPOINT; 
+  msg.command_type_mask =
+      swarmnxt_controller_ros2::msg::ControllerCommand::POSITION_SETPOINT;
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
 
