@@ -1,4 +1,4 @@
-#include "latency_checker_ros2/latency_checker.h"
+#include "latency_checker.h"
 
 // read a local file provided by ansible that contains list of peers (can just
 // be hostnames, since we can construct topic names) publish stochastically (so
@@ -95,9 +95,3 @@ void LatencyChecker::PublishHeartbeat() {
 }
 
 }  // namespace latency_checker
-
-int main(int argc, char *argv[]) {
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<latency_checker::LatencyChecker>());
-  rclcpp::shutdown();
-}

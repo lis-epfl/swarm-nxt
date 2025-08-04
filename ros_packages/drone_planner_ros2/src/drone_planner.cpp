@@ -2,14 +2,14 @@
 
 namespace drone_planner {
 
-geometry_msgs::msg::Pose operator-(geometry_msgs::msg::PoseStamped& pose1,
-                                   geometry_msgs::msg::PoseStamped& pose2) {
+geometry_msgs::msg::Pose operator-(geometry_msgs::msg::Pose& pose1,
+                                   geometry_msgs::msg::Pose& pose2) {
   geometry_msgs::msg::Pose result;
   tf2::Quaternion q1;
   tf2::Quaternion q2;
 
-  tf2::fromMsg(pose1.pose.orientation, q1);
-  tf2::fromMsg(pose2.pose.orientation, q2);
+  tf2::fromMsg(pose1.orientation, q1);
+  tf2::fromMsg(pose2.orientation, q2);
 
   auto q2_inv = q2;
   q2_inv[3] = -q2_inv[3];
@@ -17,9 +17,9 @@ geometry_msgs::msg::Pose operator-(geometry_msgs::msg::PoseStamped& pose1,
 
   result.orientation = tf2::toMsg(qr);
 
-  result.position.x = pose1.pose.position.x - pose2.pose.position.x;
-  result.position.y = pose1.pose.position.y - pose2.pose.position.y;
-  result.position.z = pose1.pose.position.z - pose2.pose.position.z;
+  result.position.x = pose1.position.x - pose2.position.x;
+  result.position.y = pose1.position.y - pose2.position.y;
+  result.position.z = pose1.position.z - pose2.position.z;
 
   return result;
 }
@@ -33,9 +33,6 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
   this->get_parameter("peer_file", peer_file);
 
   std::string ns = this->get_namespace();
-
-  // DeclareRosParameters();
-  // InitializeRosParameters();
 
   goals_sub_ = this->create_subscription<nav_msgs::msg::Goals>(
       ns + "/goals", 10,
@@ -62,8 +59,8 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
       std::bind(&DronePlanner::DepthImageCallback, this,
                 std::placeholders::_1));
 
-  desired_traj_pub_ = this->create_publisher<nav_msgs::msg::Path>(
-      ns + "/trajectory_desired", 10);
+  desired_traj_pub_ =
+      this->create_publisher<nav_msgs::msg::Path>(ns + "/trajectory", 10);
 
   // Store the timer as a member variable to keep it alive
   traj_pub_timer_ = this->create_wall_timer(
@@ -100,9 +97,15 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
 
   nav_msgs::msg::Path trajectory = nav_msgs::msg::Path();
   trajectory.header.frame_id = "map";
-  trajectory.header.stamp = this->now();
 
-  geometry_msgs::msg::Pose delta = current_goal_ - cur_pos_;
+  geometry_msgs::msg::Pose current_goal_unstamped;
+  geometry_msgs::msg::Pose current_position_unstamped;
+
+  current_goal_unstamped = current_goal_.pose;
+  current_position_unstamped = current_position_.pose;
+
+  geometry_msgs::msg::Pose delta =
+      current_goal_unstamped - current_position_unstamped;
 
   Eigen::Vector3d delta2;
   delta2 << delta.position.x, delta.position.y, delta.position.z;
@@ -116,8 +119,9 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   if (abs(angle) < ANGLE_TOL_RAD && abs(dist) < DISTANCE_TOL_M) {
     // we are within our tolerance, so don't plan anything.
 
-    // todo: do we use the stamp field?
-    trajectory.poses.push_back(cur_pos_);
+    // we are already here, so the trajectory destination time is now
+    trajectory.header.stamp = this->now();
+    trajectory.poses.push_back(current_position_);
     return trajectory;
   }
 
@@ -127,6 +131,9 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
   float time_to_target_rotation = angle / yaw_speed_rad_s_;
   float traj_time =
       std::max(time_to_target_rotation, time_to_target_translation);
+
+  trajectory.header.stamp =
+      this->now() + rclcpp::Duration::from_seconds(traj_time);
   int num_traj_points =
       static_cast<int>(std::ceil(traj_time * trajectory_density_hz_));
 
@@ -134,7 +141,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
 
   tf2::Quaternion start_quaternion, goal_quaternion;
 
-  tf2::fromMsg(cur_pos_.pose.orientation, start_quaternion);
+  tf2::fromMsg(current_position_.pose.orientation, start_quaternion);
   tf2::fromMsg(current_goal_.pose.orientation, goal_quaternion);
 
   // so we don't have to keep growing the vec
@@ -146,18 +153,19 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
     // linearly interpolate both the linear pose and the quaternion
     auto pose = geometry_msgs::msg::PoseStamped();
     pose.pose.position.x =
-        cur_pos_.pose.position.x + translation_step_size.x() * i;
+        current_position_.pose.position.x + translation_step_size.x() * i;
     pose.pose.position.y =
-        cur_pos_.pose.position.y + translation_step_size.y() * i;
+        current_position_.pose.position.y + translation_step_size.y() * i;
     pose.pose.position.z =
-        cur_pos_.pose.position.z + translation_step_size.z() * i;
+        current_position_.pose.position.z + translation_step_size.z() * i;
 
     double t = static_cast<double>(i) / static_cast<double>(num_traj_points);
     tf2::Quaternion interp_quat = start_quaternion.slerp(goal_quaternion, t);
 
     pose.pose.orientation = tf2::toMsg(interp_quat);
     pose.header.frame_id = "map";
-    pose.header.stamp = this->now();
+    pose.header.stamp =
+        this->now() + rclcpp::Duration::from_seconds(t * traj_time);
     trajectory.poses.push_back(pose);
   }
 
@@ -176,7 +184,7 @@ void DronePlanner::PublishTrajectory() {
 void DronePlanner::MavrosPoseCallback(
     const geometry_msgs::msg::PoseStamped& msg) {
   RCLCPP_INFO(this->get_logger(), "Got a new position");
-  cur_pos_ = msg;
+  current_position_ = msg;
 }
 
 }  // namespace drone_planner

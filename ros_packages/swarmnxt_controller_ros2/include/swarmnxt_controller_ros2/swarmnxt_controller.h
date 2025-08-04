@@ -22,11 +22,12 @@ class Controller : public rclcpp::Node {
   Controller();
 
  private:
-  const float DISTANCE_TOL = 0.5f;
   // State
   ControllerState state_{ControllerState::Idle};
 
+  float waypoint_acceptance_radius_;
   std::mutex traj_mutex_;
+  std::mutex pos_mutex_;
   nav_msgs::msg::Path traj_;
   unsigned int cur_traj_index_;
   bool reached_dest_ = false;
@@ -70,6 +71,9 @@ class Controller : public rclcpp::Node {
 
   // helpers
   void SendTrajectoryMessage();
+  nav_msgs::msg::Path GetTrajectoryCopy();
+  tf2::Vector3 GetPositionCopy();
+  void UpdateTrajectory(const nav_msgs::msg::Path new_traj);
 
   // Timer
   rclcpp::TimerBase::SharedPtr loop_timer_;
@@ -79,7 +83,7 @@ class Controller : public rclcpp::Node {
   void MavrosPoseCallback(const geometry_msgs::msg::PoseStamped& msg);
   void MavrosStateCallback(const mavros_msgs::msg::State& msg);
   void TrajectoryCallback(const nav_msgs::msg::Path& msg);
-  bool change_px4_state(const std::string& mode);
+  bool ChangePX4State(const std::string& mode);
 };
 
 }  // namespace swarmnxt_controller

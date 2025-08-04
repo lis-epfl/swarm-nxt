@@ -100,7 +100,7 @@
 
             # shell to allow for this evaluation 
           - name: "Set password"
-            ansible.builtin.shell: gsettings set org.gnome.Vino vnc-password $(echo -n 'thepassword'|base64)  # TODO: actual password? 
+            ansible.builtin.shell: gsettings set org.gnome.Vino vnc-password $(echo -n 'orin'|base64)  # TODO: actual password? 
 
       - name: "xorg configuration"
         ansible.builtin.blockinfile:
@@ -232,3 +232,8 @@
         psk: "{{ wifi_password }}"
       autoconnect: true
       state: present
+
+  - name: Reboot system and wait for it to come back
+    ansible.builtin.reboot:
+      reboot_timeout: 600        
+      test_command: whoami

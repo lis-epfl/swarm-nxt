@@ -6,6 +6,10 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   auto logger = this->get_logger();
   RCLCPP_INFO(logger, "Starting the controller node...");
 
+  this->declare_parameter("waypoint_acceptance_radius", 0.5f);  // meters
+  this->get_parameter("waypoint_acceptance_radius",
+                      waypoint_acceptance_radius_);
+
   std::string ns = this->get_namespace();
 
   takeoff_srv_ = this->create_service<std_srvs::srv::Trigger>(
@@ -30,7 +34,7 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
       std::bind(&Controller::MavrosPoseCallback, this, std::placeholders::_1));
 
   safe_traj_sub_ = this->create_subscription<nav_msgs::msg::Path>(
-      ns + "/trajectory_safe", 10,
+      ns + "/trajectory", 10,
       std::bind(&Controller::TrajectoryCallback, this, std::placeholders::_1));
 
   state_sub_ = this->create_subscription<mavros_msgs::msg::State>(
@@ -56,15 +60,39 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
       ns + "/mavros/cmd/land");
 }
 
-void Controller::SendTrajectoryMessage() {
-  const float DISTANCE_TOL = 0.5f;  // 50 cm
+nav_msgs::msg::Path Controller::GetTrajectoryCopy() {
   std::lock_guard<std::mutex> lock(traj_mutex_);
+  nav_msgs::msg::Path path = traj_;
+  return path;
+}
+
+tf2::Vector3 Controller::GetPositionCopy() {
+  std::lock_guard<std::mutex> lock(pos_mutex_);
+  tf2::Vector3 pos = cur_pos_;
+  return pos;
+}
+
+void Controller::MavrosPoseCallback(
+    const geometry_msgs::msg::PoseStamped& msg) {
+  RCLCPP_INFO(this->get_logger(), "Got a new position");
+  std::lock_guard<std::mutex> lock(pos_mutex_);
+  tf2::fromMsg(msg.pose.position, cur_pos_);  // todo: yaw
+}
+
+void Controller::UpdateTrajectory(const nav_msgs::msg::Path new_traj) {
+  std::lock_guard<std::mutex> lock(traj_mutex_);
+  traj_ = new_traj;
+}
+
+void Controller::SendTrajectoryMessage() {
+  auto cur_traj = GetTrajectoryCopy();
+  auto cur_pos = GetPositionCopy();
   geometry_msgs::msg::PoseStamped msg;
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
 
-  float distance = tf2::tf2Distance(cur_pos_, cur_target_);
-  const unsigned int num_traj_points = traj_.poses.size();
+  float distance = tf2::tf2Distance(cur_pos, cur_target_);
+  const unsigned int num_traj_points = cur_traj.poses.size();
 
   if (num_traj_points == 0) {
     RCLCPP_WARN(this->get_logger(), "no trajectory!");
@@ -75,17 +103,18 @@ void Controller::SendTrajectoryMessage() {
   // get distance from current target
   if (reached_dest_) {
     RCLCPP_INFO(this->get_logger(), "Reached destination, so not advancing");
-    tf2::toMsg(cur_pos_, msg.pose.position);
+    tf2::toMsg(cur_pos, msg.pose.position);
     setpoint_pub_->publish(msg);
     done_msg.data = true;
     done_pub_->publish(done_msg);
     return;
   }
 
-  while (distance < DISTANCE_TOL) {
+  while (distance < waypoint_acceptance_radius_) {
     if (cur_traj_index_ < num_traj_points) {
-      tf2::fromMsg(traj_.poses.at(cur_traj_index_).pose.position, cur_target_);
-      distance = tf2::tf2Distance(cur_pos_, cur_target_);
+      tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position,
+                   cur_target_);
+      distance = tf2::tf2Distance(cur_pos, cur_target_);
       cur_traj_index_++;
     } else {
       reached_dest_ = true;
@@ -97,7 +126,7 @@ void Controller::SendTrajectoryMessage() {
   setpoint_pub_->publish(msg);
 }
 
-bool Controller::change_px4_state(const std::string& mode) {
+bool Controller::ChangePX4State(const std::string& mode) {
   auto logger = this->get_logger();
   const std::map<std::string, ControllerState> mode_map = {
       {"AUTO.LOITER",
@@ -137,7 +166,7 @@ void Controller::TakeoffService(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   if (state_ == ControllerState::Idle) {
-    change_px4_state("AUTO.TAKEOFF");
+    ChangePX4State("AUTO.TAKEOFF");
     response->success = true;
     response->message = "Taking off!";
   } else {
@@ -151,7 +180,7 @@ void Controller::LandService(
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
   if (state_ != ControllerState::Idle && state_ != ControllerState::Landing) {
     RCLCPP_INFO(this->get_logger(), "Sending land command");
-    change_px4_state("AUTO.LAND");
+    ChangePX4State("AUTO.LAND");
     response->success = true;
     response->message = "Landing!";
   } else {
@@ -188,7 +217,7 @@ void Controller::Loop() {
       if (num_traj_messages_sent_ > 100 /* && altitude correct */) {
         // we are done with taking off, move to follow traj
         // dont do this yet!
-        change_px4_state("OFFBOARD");
+        ChangePX4State("OFFBOARD");
       }
       break;
     case ControllerState::FollowingTrajectory:
@@ -216,15 +245,9 @@ void Controller::Loop() {
 
       RCLCPP_INFO(logger,
                   "Transitioning to non-offboad since controller was disarmed");
-      change_px4_state("AUTO.LOITER");
+      ChangePX4State("AUTO.LOITER");
     }
   }
-}
-
-void Controller::MavrosPoseCallback(
-    const geometry_msgs::msg::PoseStamped& msg) {
-  RCLCPP_INFO(this->get_logger(), "Got a new position");
-  tf2::fromMsg(msg.pose.position, cur_pos_);  // todo: yaw
 }
 
 void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
@@ -232,12 +255,14 @@ void Controller::TrajectoryCallback(const nav_msgs::msg::Path& msg) {
   // assumes that all trajectories are planned from the current position
   // does not support trajectories that start behind the drone and continue past
   // it
-  std::lock_guard<std::mutex> lock(traj_mutex_);
-  traj_ = msg;
+
+  UpdateTrajectory(msg);
+  auto cur_pos = GetPositionCopy();
   cur_traj_index_ = 0;
   tf2::Vector3 destination;
-  tf2::fromMsg(traj_.poses.back().pose.position, destination);
-  reached_dest_ = (tf2::tf2Distance(cur_pos_, destination) < DISTANCE_TOL);
+  tf2::fromMsg(msg.poses.back().pose.position, destination);
+  reached_dest_ =
+      (tf2::tf2Distance(cur_pos, destination) < waypoint_acceptance_radius_);
 }
 
 void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {

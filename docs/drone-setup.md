@@ -217,7 +217,7 @@ First, ensure that the units in QGroundControl are set to SI Units:
 2. Click on application settings
 3. In the general tab under units, ensure that they are Meters, Meters, SquareMeters, Meters/second, Celsius. 
 
-Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epfl/swarm-nxt/refs/heads/main/docs/params/nxt_params.params) by following the steps below: 
+Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epfl/swarm-nxt/refs/heads/main/docs/params/nxt_params.params) (which you can find in the swarm-nxt cloned repo: `swarm-nxt/docs/params/nxt_params.params`) by following the steps below: 
 
 1. Click on the Q button on the top left, click on Vehicle Setup, and parameters. 
 2. Click the tools button and select "Load from file". 
@@ -227,7 +227,7 @@ Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epf
 
 #### MAV System ID
 
-The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. Follow a consistent naming scheme as described at the [top](#hardware-setup) of this document. Use the number that this drone ends with as your system ID. To set it: 
+The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. Follow a consistent naming scheme as described at the [top](#hardware-setup) of this document. Use the number that this drone ends with as your system ID. To set it:
 
 1. Search for `MAV_SYS_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
 2. Set it to the unique number of your drone. 
@@ -237,17 +237,12 @@ The MAV System ID needs to be setup for every drone individually. This ID is a p
 
 #### Telemetry Streaming
 
-The flight controller needs to be configured to output data on a serial port so that the NVIDIA Orin can read and write commands. Here, we will set up telemetry on the TELEM2 port. 
+The flight controller needs to be configured to output data on a serial port so that the NVIDIA Orin can read and write commands. Here, when you load the params file,  telemetry is set up on the TELEM2 port. 
 
 !!! note 
 	You can optionally chose to use another port to do this telemetry streaming. See [Appendix > Flight Controller > Alternate Telemetry Port](appendix.md#alternate-telemetry-port) for further instructions
 
-In the parameters tab, set the following settings: 
-
-- `MAV_0_CONFIG`: TELEM 2
-- `SER_TEL2_BAUD`: 921600 8N1
-
-Go back to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
+Go to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
 
 In the console, run the following commands: 
 ```
@@ -262,7 +257,7 @@ If you run `cat extras.txt`, the mavlink stream line should be present.
 
 #### Propeller Numbering and Spin Direction
 
-Ensure that the photo under "Actuator Testing" looks correct: 
+First make sure the power is connected to the ESC and the ESC is connected to the FC. No need to power the Orin at this point, so you can unplug the power cable from the orin before powering the ESC. Ensure that the photo under "Actuator Testing" looks correct: 
 
 ![](images/actuator_setting.png)
 
@@ -282,7 +277,7 @@ Set the spin direction for each motor so that it matches the image. Enable the s
 #### Propeller Installation 
 
 1. Observe the rotation direction in the propeller setup image. The Orin is on the back (near propeller \#2 and \#4). 
-2. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type.   
+2. Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type. Make sure that the blade orientation is in such a manner that as it turns in the rotor direction, it pushes the air down instead of up i.e. the air slides off of it downwards. 
 
    ![](images/actuator_setting.png)
    
@@ -331,15 +326,19 @@ Calibrate the accelometer by clicking on the accelerometer sub-tab and completin
 13. Select both additional SDKs
 14. Do not customize install settings
 15. Reply N to flashing the Jetson Orin NX Module
+16. Accept the license, then press enter twice for the installation to start. 
+17. Enter your password for administrative tasks.
+18. It will install host components (on the PC) and target components. It will ask you whether to install or skip the installation on the Orin, choose skip.
+19. Press enter to Exit.
 
 
 ### Flashing Process 
 
-Wait until the SDK is installed, then run the following steps: 
+After the host components of the SDK are installed, run the following steps: 
 
 1. Open the `~/nvidia/nvidia_sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra` folder. Open a terminal in this folder. 
-2. Download the post-install image from the [Google Drive](https://drive.google.com/drive/folders/1IpKJmJZyAb2P-46V7JcgBnGyn-WECAMc). Run the following command: `tar -xvf /path/to/tarball -C /home/nvidia/nvidia-sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra/tools/backup_restore`. This will take a while.
-3. Once this is done, run this command to flash the Jetson: `sudo ./tools/backup_restore/l4t_backup_restore.sh -e nvme0n1 -r jetson-orin-nano-devkit-nvme`. This will also take a while.
+2. Download the post-install image from the [Google Drive](https://drive.google.com/drive/folders/1IpKJmJZyAb2P-46V7JcgBnGyn-WECAMc). Run the following command: `tar -xvf /path/to/post-install_image.tar.gz -C ~nvidia/nvidia-sdk/JetPack_6.2_Linux_JETSON_ORIN_NX_TARGETS/Linux_for_Tegra/tools/backup_restore`. This will take a while.
+3. Once this is done, make sure that the Orin is still in recovery mode (step 8 of [Software Setup](#software-setup)), and run this command to flash the Jetson: `sudo ./tools/backup_restore/l4t_backup_restore.sh -e nvme0n1 -r jetson-orin-nano-devkit-nvme`. This will also take a while.
 4. Press the button labelled RES on the Jetson once the command has completed. 
 
 !!! important
@@ -372,7 +371,7 @@ On the host computer, navigate to the `ansible/` directory of the omni-nxt repo 
 
 ``ansible-playbook -i inventory.ini drone_setup.yml -K``
 
-Enter the sudo password of the orin when prompted. 
+Enter the sudo password of the orin when prompted, as well as the hostname which should end with the same number that you set `MAV_SYS_ID` to in [NXT Configuration and Calibration](#nxt-configuration-and-calibration). 
 
 !!! important
     It is very important that you set a unique hostname. You must follow the structured naming pattern described at the top of this document. The software depends on this assumption.
