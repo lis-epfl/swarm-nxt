@@ -17,7 +17,7 @@ find_package(nav_msgs REQUIRED)
 find_package(mavros_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
+find_package(swarmnxt_msgs REQUIRED)
 
 set(DEPENDENCIES
   rclcpp
@@ -29,14 +29,8 @@ set(DEPENDENCIES
   mavros_msgs 
   tf2_geometry_msgs
   std_msgs
+  swarmnxt_msgs
 )
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-                          "msg/ControllerCommand.msg"
-                          DEPENDENCIES std_msgs geometry_msgs mavros_msgs                          
-)
-
-ament_export_dependencies(rosidl_default_runtime)
 
 include_directories(
   include/swarmnxt_controller_ros2
@@ -65,10 +59,6 @@ install(TARGETS
 install(TARGETS
 swarmnxt_controller_node
 DESTINATION lib/${PROJECT_NAME}
-)
-
-target_link_libraries(swarmnxt_controller_class
-  ${PROJECT_NAME}__rosidl_typesupport_cpp
 )
 
 if(BUILD_TESTING)

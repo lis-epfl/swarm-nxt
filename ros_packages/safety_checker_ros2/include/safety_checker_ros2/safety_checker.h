@@ -10,9 +10,9 @@
 #include "nav_msgs/msg/path.hpp"
 #include "nlohmann/json.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "safety_checker_ros2/msg/plane.hpp"
 #include "std_srvs/srv/trigger.hpp"
-#include "swarmnxt_controller_ros2/msg/controller_command.hpp"
+#include "swarmnxt_msgs/msg/controller_command.hpp"
+#include "swarmnxt_msgs/msg/plane.hpp"
 
 namespace safety_checker {
 
@@ -34,7 +34,7 @@ class SafetyChecker : public ::rclcpp::Node {
   void HandlePoseMessage(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg);  // deprecated
   void HandleControllerCommand(
-      const swarmnxt_controller_ros2::msg::ControllerCommand &msg);
+      const swarmnxt_msgs::msg::ControllerCommand &msg);
 
   void SetModeForwarder(
       const std::shared_ptr<mavros_msgs::srv::SetMode::Request> req,
@@ -45,10 +45,10 @@ class SafetyChecker : public ::rclcpp::Node {
       const geometry_msgs::msg::Point &point);
   void ClearPlanes();
 
-  std::vector<safety_checker_ros2::msg::Plane> GetPlanes();
+  std::vector<swarmnxt_msgs::msg::Plane> GetPlanes();
 
  private:
-  std::vector<safety_checker_ros2::msg::Plane> planes_;
+  std::vector<swarmnxt_msgs::msg::Plane> planes_;
 
   bool are_planes_valid_ = false;
   uint8_t safety_flags_ = SafetyStatus::SAFE;
@@ -62,8 +62,8 @@ class SafetyChecker : public ::rclcpp::Node {
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr
       trajectory_sub_;  // deprecated
-  rclcpp::Subscription<
-      swarmnxt_controller_ros2::msg::ControllerCommand>::SharedPtr command_sub_;
+  rclcpp::Subscription<swarmnxt_msgs::msg::ControllerCommand>::SharedPtr
+      command_sub_;
 
   // publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr safe_trajectory_pub_;

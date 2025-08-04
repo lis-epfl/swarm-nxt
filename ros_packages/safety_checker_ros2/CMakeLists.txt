@@ -12,7 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(mavros_msgs REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
+find_package(swarmnxt_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(swarmnxt_controller_ros2 REQUIRED)
@@ -25,7 +25,7 @@ set(DEPENDENCIES
   std_srvs
   nav_msgs
   mavros_msgs
-  rosidl_default_generators
+  swarmnxt_msgs
   nlohmann_json
   swarmnxt_controller_ros2 
 )
@@ -45,21 +45,6 @@ ament_target_dependencies(safety_checker_class
 
 ament_target_dependencies(safety_checker_node
 ${DEPENDENCIES})
-
-target_link_libraries(safety_checker_class
-  ${PROJECT_NAME}__rosidl_typesupport_cpp
-)
-
-ament_export_dependencies(rosidl_default_runtime)
-
-set(MSG_FILES
-  "msg/Plane.msg"
-)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-  ${MSG_FILES}
-  DEPENDENCIES builtin_interfaces geometry_msgs 
-)
 
 
 install(DIRECTORY
@@ -86,11 +71,6 @@ if(BUILD_TESTING)
   # a copyright and license is added to all source files
   # set(ament_cmake_cpplint_FOUND TRUE)
   # ament_lint_auto_find_test_dependencies()
-  ament_add_gtest(planes_test tests/planes_test.cpp)
-  target_link_libraries(planes_test safety_checker_class)
-  find_package(ament_index_cpp REQUIRED)
-  ament_target_dependencies(planes_test ament_index_cpp)
-
 endif()
 
 ament_package()
