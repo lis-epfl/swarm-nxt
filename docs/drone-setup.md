@@ -156,7 +156,7 @@ For each of the cameras, perform the following tasks:
 
 1. Insert all of the camera cables into the OAK camera board.
 2. Plug in the OAK camera board via USB-C to a laptop computer with ROS installed
-3. Download and install the driver package: 
+3. Download and install the driver package: [GitHub Repository](https://github.com/lis-epfl/oak_ffc_4p_driver_ros2) 
 4. Check for focus on each of the cameras, and change the focus by turning the lenses on their holders. 
 <!--5. If continuing in this order, disconnect the cameras from the OAK camera board.-->
 
