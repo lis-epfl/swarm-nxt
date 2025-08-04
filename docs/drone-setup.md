@@ -34,7 +34,8 @@ We use `nxt#` for our drones, where `#` is replaced with an integer
 8. Solder the black wires of CAB-004 and the orin power cable together on the negative pad of the ESC.
 9. Visually inspect the solder joints to ensure no stray wires could cause a short between the pads. Use a digital multimeter in ohmmeter mode to measure the resistance between the + and - port of the ESC. The value should be >100kΩ.
 9. Solder each of the motors to one triad of pins on the ESC. 
-10. Use CAB-001 to connect the eight pin connectors on the flight controller and ESC.
+10. Use CAB-001 to connect the eight pin connectors on the flight controller and ESC. **Do not use the eight pin cable that comes with the flight controller**
+
 
 !!! warning
     Be very careful to avoid shorts between pads, especially on the big + and - pads for the power. Even a single wire strand connecting is dangerous! Visually inspect the solder connections after soldering to be confident, as well as perform a multimeter check betwen the +/- pads. 
