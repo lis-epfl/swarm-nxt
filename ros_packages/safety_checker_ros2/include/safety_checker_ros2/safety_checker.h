@@ -5,6 +5,8 @@
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "mavros_msgs/msg/attitude_target.hpp"
+#include "mavros_msgs/srv/command_tol.hpp"
+#include "mavros_msgs/srv/set_mode.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nlohmann/json.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -21,7 +23,7 @@ enum SafetyStatus : uint8_t {
   UNSAFE_OTHER = 1 << 2
 };
 
-enum class DroneState { Idle, TakingOff, Flying, Landing };
+enum class DroneState { Idle, TakingOff, Hold, Flying, Landing };
 
 class SafetyChecker : public ::rclcpp::Node {
  public:
@@ -30,16 +32,15 @@ class SafetyChecker : public ::rclcpp::Node {
   void LoadHullFromFile(const std::filesystem::path &filepath);
   bool IsPointInHull(const geometry_msgs::msg::Point &point);
   void HandlePoseMessage(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
-  void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg);
+  void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg);  // deprecated
   void HandleControllerCommand(
       const swarmnxt_controller_ros2::msg::ControllerCommand &msg);
 
+  void SetModeForwarder(
+      const std::shared_ptr<mavros_msgs::srv::SetMode::Request> req,
+      std::shared_ptr<mavros_msgs::srv::SetMode::Response> resp);
   void LandNow();
-  void LandServer(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
-                  const std::shared_ptr<std_srvs::srv::Trigger::Response> resp);
-  void EStop();  // disarm immediately. not to be used except for emergencies!
 
-  bool RequestStateTransition(const DroneState to_state);
   geometry_msgs::msg::Point ProjectPointToClosestPlane(
       const geometry_msgs::msg::Point &point);
   void ClearPlanes();
@@ -48,16 +49,10 @@ class SafetyChecker : public ::rclcpp::Node {
 
  private:
   std::vector<safety_checker_ros2::msg::Plane> planes_;
-  swarmnxt_controller_ros2::msg::ControllerCommand latest_cmd_;
 
-  void Loop();
   bool are_planes_valid_ = false;
   uint8_t safety_flags_ = SafetyStatus::SAFE;
-  DroneState drone_state_{DroneState::Idle};
-  std::string topic_prefix_ = "";
   float plane_offset_;  // meters, positive
-
-  rclcpp::TimerBase::SharedPtr command_timer_;
 
   // parameters
   std::string position_topic_suffix_;
@@ -78,6 +73,11 @@ class SafetyChecker : public ::rclcpp::Node {
 
   // servers
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr land_service_;
+  rclcpp::Service<mavros_msgs::srv::SetMode>::SharedPtr set_mode_server_;
+
+  // clients
+  rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr set_mode_client_;
+  rclcpp::Client<mavros_msgs::srv::CommandTOL>::SharedPtr land_client_;
 };
 
 }  // namespace safety_checker
