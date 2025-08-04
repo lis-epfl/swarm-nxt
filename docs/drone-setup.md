@@ -22,7 +22,7 @@ We use `nxt#` for our drones, where `#` is replaced with an integer
 
 1. Insert the antivibration rubber pieces into the four holes of both the ESC and the flight controller. On the ESC, the shorter side should be on the side with the eight pin connection port.  On the flight controller, the shorter side of the rubber piece should be on the SD card side. 
 2. Cut each of the motor wires to 55mm. Measure from the foot of the heatshrink.
-3. Cut a orin power cable from the base of the female side: 
+3. Cut a orin power cable from the base of the male side: 
     1. 9.0cm on the red wire
     2. 8.5cm on the black wire
 4. Take the XT60 Cable (CAB-004) and cut it to the following lengths: 
