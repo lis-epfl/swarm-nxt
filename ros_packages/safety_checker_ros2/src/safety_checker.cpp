@@ -54,43 +54,90 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   rate_cmd_pub_ = create_publisher<mavros_msgs::msg::AttitudeTarget>(
       ns + "/mavros/setpoint_raw/attitude", 10);
 
-  command_timer_ = this->create_wall_timer(
-      std::chrono::milliseconds(10), std::bind(&SafetyChecker::Loop, this));
+  set_mode_server_ = create_service<mavros_msgs::srv::SetMode>(
+      ns + "/safety/mavros/set_mode",
+      std::bind(&SafetyChecker::SetModeForwarder, this, std::placeholders::_1,
+                std::placeholders::_2));
+
+  set_mode_client_ =
+      create_client<mavros_msgs::srv::SetMode>(ns + "/mavros/set_mode");
+
+  land_client_ = this->create_client<mavros_msgs::srv::CommandTOL>(
+      ns + "/mavros/cmd/land");
 }
 
-void SafetyChecker::Loop() {
-  auto cmd = latest_cmd_;
+void SafetyChecker::HandleControllerCommand(
+    const swarmnxt_controller_ros2::msg::ControllerCommand &msg) {
+  auto cmd = msg;
   auto cur_time = rclcpp::Clock(RCL_SYSTEM_TIME).now();
   auto cmd_age = cur_time - cmd.header.stamp;
-
-  if (drone_state_ != DroneState::Idle) {
-    // make sure the command isn't stale
-    if (cmd_age.nanoseconds() > 20E6) {
-      safety_flags_ |= SafetyStatus::UNSAFE_COMMAND_SEND_RATE;
-      RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping...");
-      drone_state_ = DroneState::Landing;
-    }
-
-    if (safety_flags_ == SafetyStatus::SAFE) {
-      switch (cmd.command_type_mask) {
-        case swarmnxt_controller_ros2::msg::ControllerCommand::
-            POSITION_SETPOINT:
-          position_cmd_pub_->publish(cmd.pose_cmd);
-          break;
-        case swarmnxt_controller_ros2::msg::ControllerCommand::RATE_SETPOINT:
-          rate_cmd_pub_->publish(cmd.rate_cmd);
-          break;
-        default:
-          RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",
-                       cmd.command_type_mask);
-      }
-    } else {
-      RCLCPP_ERROR_THROTTLE(
-          this->get_logger(), *this->get_clock(), 1000,
-          "Not sending offboard messages because of unsafety. Code: %d",
-          safety_flags_);
-    }
+  // make sure the command isn't stale
+  if (cmd_age.nanoseconds() > 20E6) {
+    safety_flags_ |= SafetyStatus::UNSAFE_COMMAND_SEND_RATE;
+    RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping...");
+    LandNow();
   }
+
+  if (safety_flags_ == SafetyStatus::SAFE) {
+    switch (cmd.command_type_mask) {
+      case swarmnxt_controller_ros2::msg::ControllerCommand::POSITION_SETPOINT:
+        position_cmd_pub_->publish(cmd.pose_cmd);
+        break;
+      case swarmnxt_controller_ros2::msg::ControllerCommand::RATE_SETPOINT:
+        rate_cmd_pub_->publish(cmd.rate_cmd);
+        break;
+      default:
+        RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",
+                     cmd.command_type_mask);
+    }
+  } else {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                          "Not sending offboard messages because of "
+                          "unsafety. Code: %d. Landing!",
+                          safety_flags_);
+    LandNow();
+  }
+}
+
+void SafetyChecker::SetModeForwarder(
+    const std::shared_ptr<mavros_msgs::srv::SetMode::Request> req,
+    std::shared_ptr<mavros_msgs::srv::SetMode::Response> resp) {
+  // if its safe, then forward the setmode request. otherwise, send a fail
+  // response.
+  if (safety_flags_ == SafetyStatus::SAFE) {
+    RCLCPP_INFO(get_logger(), "Forwarding SetMode to Mavros");
+    auto set_mode_future = set_mode_client_->async_send_request(
+        req,
+        [resp](rclcpp::Client<mavros_msgs::srv::SetMode>::SharedFuture future) {
+          auto response = future.get();
+          resp->mode_sent = response->mode_sent;
+        });
+
+  } else {
+    RCLCPP_WARN(
+        get_logger(),
+        "Did not forward the mode change request because we are in an unsafe "
+        "state. Unsafe code: %d",
+        safety_flags_);
+    resp->mode_sent = false;
+  }
+}
+
+void SafetyChecker::LandNow() {
+  mavros_msgs::srv::CommandTOL::Request::SharedPtr req;
+  // do we have to send any position or something?
+  auto land_future = land_client_->async_send_request(
+      req,
+      [this](
+          rclcpp::Client<mavros_msgs::srv::CommandTOL>::SharedFuture future) {
+        auto response = future.get();
+        if (!response->success) {
+          RCLCPP_ERROR(get_logger(),
+                       "Could not send a land now command to MAVROS!");
+        } else {
+          RCLCPP_INFO(get_logger(), "Successfully changed mode to land");
+        }
+      });
 }
 
 void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
@@ -200,9 +247,11 @@ void SafetyChecker::HandlePoseMessage(
 
   if (IsPointInHull(position)) {
     RCLCPP_INFO(logger, "Pose is within bounds.");
+    safety_flags_ &= ~SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
   } else {
     RCLCPP_WARN(logger, "Pose is out of bounds, landing...");
     safety_flags_ |= SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
+    LandNow();
   }
 }
 
@@ -245,52 +294,5 @@ void SafetyChecker::ClearPlanes() {
 
 std::vector<safety_checker_ros2::msg::Plane> SafetyChecker::GetPlanes() {
   return planes_;
-}
-void SafetyChecker::HandleControllerCommand(
-    const swarmnxt_controller_ros2::msg::ControllerCommand &msg) {
-  latest_cmd_ = msg;
-}
-bool SafetyChecker::RequestStateTransition(DroneState to_state) {
-  // if we're flying, requests to go to idle are blocked
-  if ((drone_state_ == DroneState::Flying ||
-       drone_state_ == DroneState::TakingOff) &&
-      to_state == DroneState::Idle) {
-    RCLCPP_ERROR(this->get_logger(),
-                 "Tranisition from Flying to Idle received. Forcing a landing "
-                 "transition state");
-    to_state = DroneState::Landing;
-  }
-
-  bool inhibit_transition = false;
-  std::string new_px4_state = "";
-
-  switch (to_state) {
-    case DroneState::Idle:
-      // disarm if landed.
-      break;
-    case DroneState::TakingOff:
-      // change to takeoff state
-      new_px4_state = "AUTO.TAKEOFF";
-      // arm?
-      break;
-    case DroneState::Flying:
-      // change to offboard
-      new_px4_state = "OFFBOARD";
-      break;
-    case DroneState::Landing:
-      // change to landing state
-      new_px4_state = "AUTO.LAND";
-      break;
-    default:
-      RCLCPP_ERROR(this->get_logger(),
-                   "Requesting switch to nonexistant state!");
-  }
-
-  if (!inhibit_transition) {
-    // call the service to change the px4 state, only change if approved.
-    drone_state_ = to_state;
-  }
-
-  return false;
 }
 }  // namespace safety_checker
