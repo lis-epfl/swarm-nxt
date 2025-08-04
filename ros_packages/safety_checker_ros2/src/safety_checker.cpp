@@ -38,11 +38,10 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
       std::bind(&SafetyChecker::HandleTrajectoryMessage, this,
                 std::placeholders::_1));
 
-  command_sub_ =
-      create_subscription<swarmnxt_controller_ros2::msg::ControllerCommand>(
-          ns + "/controller/cmd", 10,
-          std::bind(&SafetyChecker::HandleControllerCommand, this,
-                    std::placeholders::_1));
+  command_sub_ = create_subscription<swarmnxt_msgs::msg::ControllerCommand>(
+      ns + "/controller/cmd", 10,
+      std::bind(&SafetyChecker::HandleControllerCommand, this,
+                std::placeholders::_1));
 
   // deprecated
   safe_trajectory_pub_ =
@@ -67,7 +66,7 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
 }
 
 void SafetyChecker::HandleControllerCommand(
-    const swarmnxt_controller_ros2::msg::ControllerCommand &msg) {
+    const swarmnxt_msgs::msg::ControllerCommand &msg) {
   auto cmd = msg;
   auto cur_time = rclcpp::Clock(RCL_SYSTEM_TIME).now();
   auto cmd_age = cur_time - cmd.header.stamp;
@@ -80,10 +79,10 @@ void SafetyChecker::HandleControllerCommand(
 
   if (safety_flags_ == SafetyStatus::SAFE) {
     switch (cmd.command_type_mask) {
-      case swarmnxt_controller_ros2::msg::ControllerCommand::POSITION_SETPOINT:
+      case swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT:
         position_cmd_pub_->publish(cmd.pose_cmd);
         break;
-      case swarmnxt_controller_ros2::msg::ControllerCommand::RATE_SETPOINT:
+      case swarmnxt_msgs::msg::ControllerCommand::RATE_SETPOINT:
         rate_cmd_pub_->publish(cmd.rate_cmd);
         break;
       default:
@@ -165,7 +164,7 @@ void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
       RCLCPP_ERROR(logger, "Invalid JSON Format...");
       valid_parse = false;
     }
-    safety_checker_ros2::msg::Plane plane;
+    swarmnxt_msgs::msg::Plane plane;
     geometry_msgs::msg::Vector3 normal;
 
     double a = arr[0].get<double>();
@@ -292,7 +291,7 @@ void SafetyChecker::ClearPlanes() {
   planes_.clear();
 }
 
-std::vector<safety_checker_ros2::msg::Plane> SafetyChecker::GetPlanes() {
+std::vector<swarmnxt_msgs::msg::Plane> SafetyChecker::GetPlanes() {
   return planes_;
 }
 }  // namespace safety_checker

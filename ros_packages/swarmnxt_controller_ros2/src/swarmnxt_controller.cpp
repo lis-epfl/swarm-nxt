@@ -41,9 +41,8 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
       ns + "/mavros/state", 10,
       std::bind(&Controller::MavrosStateCallback, this, std::placeholders::_1));
 
-  command_pub_ =
-      this->create_publisher<swarmnxt_controller_ros2::msg::ControllerCommand>(
-          ns + "/controller/cmd", 10);
+  command_pub_ = this->create_publisher<swarmnxt_msgs::msg::ControllerCommand>(
+      ns + "/controller/cmd", 10);
 
   done_pub_ = this->create_publisher<std_msgs::msg::Bool>(
       ns + "/controller/reached_destination", 10);
@@ -88,9 +87,9 @@ void Controller::UpdateTrajectory(const nav_msgs::msg::Path new_traj) {
 void Controller::SendTrajectoryMessage() {
   auto cur_traj = GetTrajectoryCopy();
   auto cur_pos = GetPositionCopy();
-  swarmnxt_controller_ros2::msg::ControllerCommand msg;
+  swarmnxt_msgs::msg::ControllerCommand msg;
   msg.command_type_mask =
-      swarmnxt_controller_ros2::msg::ControllerCommand::POSITION_SETPOINT;
+      swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
 
@@ -219,7 +218,6 @@ void Controller::Loop() {
       SendTrajectoryMessage();
       if (num_traj_messages_sent_ > 100 /* && altitude correct */) {
         // we are done with taking off, move to follow traj
-        // dont do this yet!
         ChangePX4State("OFFBOARD");
       }
       break;
@@ -272,4 +270,91 @@ void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
   RCLCPP_INFO(this->get_logger(), "Got mavros state");
   mavros_state_ = msg;
 }
+
+// bool SafetyChecker::RequestStateTransition(DroneState to_state) {
+//   constexpr unsigned int MIN_OFFBOARD_CMDS = 100;
+//   auto logger = this->get_logger();
+//   // if we're flying, requests to go to idle are blocked
+//   if ((drone_state_ == DroneState::Flying ||
+//        drone_state_ == DroneState::TakingOff) &&
+//       to_state == DroneState::Idle) {
+//     RCLCPP_WARN(logger,
+//                 "Tranisition from Flying to Idle received. Forcing a landing
+//                 " "transition state");
+//     to_state = DroneState::Landing;
+//   }
+//
+//   bool inhibit_transition = false;
+//   std::string new_px4_state = "";
+//
+//   switch (to_state) {
+//     case DroneState::Idle:
+//       num_offboard_cmds_ = 0;
+//       // disarm if landed.
+//       break;
+//     case DroneState::TakingOff:
+//       // change to takeoff state
+//       new_px4_state = "AUTO.TAKEOFF";
+//       // arm?
+//       break;
+//     case DroneState::Hold:
+//       if (drone_state_ == DroneState::Idle ||
+//           drone_state_ == DroneState::Landing) {
+//         inhibit_transition = true;
+//         RCLCPP_WARN(logger,
+//                     "Rejecting transition to hold state from Idle or
+//                     Landing!");
+//       } else {
+//         new_px4_state = "AUTO.LOITER";
+//       }
+//     case DroneState::Flying:
+//       // change to offboard
+//       if (num_offboard_cmds_ < MIN_OFFBOARD_CMDS) {
+//         inhibit_transition = true;
+//         RCLCPP_WARN(logger,
+//                     "Got request to switch to offboard, but refused because "
+//                     "not enough offboard commands: %d",
+//                     num_offboard_cmds_);
+//       } else {
+//         new_px4_state = "OFFBOARD";
+//       }
+//       break;
+//     case DroneState::Landing:
+//       // change to landing state
+//       new_px4_state = "AUTO.LAND";
+//       break;
+//     default:
+//       RCLCPP_ERROR(logger, "Requesting switch to nonexistent state!");
+//   }
+//
+//   if (!inhibit_transition) {
+//     mavros_msgs::srv::SetMode::Request set_mode_request;
+//     set_mode_request.custom_mode = new_px4_state;
+//     // call the service to change the px4 state, only change if approved.
+//     if (set_mode_client_->wait_for_service(std::chrono::seconds(1))) {
+//       auto set_mode_future = set_mode_client_->async_send_request(
+//           std::make_shared<mavros_msgs::srv::SetMode::Request>(
+//               set_mode_request),
+//           [this, logger, new_px4_state, to_state](
+//               rclcpp::Client<mavros_msgs::srv::SetMode>::SharedFuture future)
+//               {
+//             auto response = future.get();
+//             if (response->mode_sent) {
+//               RCLCPP_INFO(logger, "PX4 state changed to %s",
+//                           new_px4_state.c_str());
+//               drone_state_ = to_state;
+//             } else {
+//               RCLCPP_ERROR(logger, "Failed to change mode to %s",
+//                            new_px4_state.c_str());
+//             }
+//           });
+//     } else {
+//       RCLCPP_ERROR(logger, "SetMode service not available");
+//       return false;
+//     }
+//   }
+//
+//   return false;
+// }
+
 }  // namespace swarmnxt_controller
