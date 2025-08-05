@@ -44,7 +44,8 @@ ament_target_dependencies(safety_checker_class
 )
 
 ament_target_dependencies(safety_checker_node
-${DEPENDENCIES})
+  ${DEPENDENCIES}
+)
 
 
 install(DIRECTORY
