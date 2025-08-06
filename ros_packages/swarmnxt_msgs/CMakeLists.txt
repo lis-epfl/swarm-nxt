@@ -16,6 +16,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Plane.msg"
   "msg/ControllerCommand.msg"
   "msg/Trigger.msg"
+  "msg/DroneState.msg"
   DEPENDENCIES ${DEPENDENCIES}
 )
 
