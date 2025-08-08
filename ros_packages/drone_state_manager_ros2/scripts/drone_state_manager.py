@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from functools import partial
 import rclpy
 from rclpy.node import Node
