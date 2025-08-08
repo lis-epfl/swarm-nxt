@@ -71,8 +71,8 @@ We use `nxt#` for our drones, where `#` is replaced with an integer
 4. Solder the four pin cable. Looking from the side with the antenna U.Fl Port towards you, and at the bottom. In order from the left pad to the right pad: 
     - GND (Black Wire\*)
     - 5V (Red Wire\*) 
-    - FC TX (Green Wire\*)
-    - FC RCIn (Yellow Wire\*)
+    - FC RCIn (Green Wire\*)
+    - FC TX (Yellow Wire\*)
 5. Attach the antenna wire to the U.Fl Connector 
 6. Cut 2cm of the clear heatshrink off and dispose of this length 
 6. Put the rest of the clear heatshrink around the assembly and use a heatgun at 165℃ to protect the connections
@@ -82,6 +82,8 @@ We use `nxt#` for our drones, where `#` is replaced with an integer
 !!! note
     \*: The wire colours may not be reliable. Look at the silkscreen on the FC PCB to ensure the correct connection
 
+!!! todo
+    Put SBUS link and make the RC page visible
 
 ### Orin Connection 
 
@@ -222,7 +224,8 @@ Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epf
 
 1. Click on the Q button on the top left, click on Vehicle Setup, and parameters. 
 2. Click the tools button and select "Load from file". 
-3. Select the parameter file that can be found on the Google Drive. 
+3. Select the parameter file that can be found on github.
+4. Click okay to confirm 
 
 ### NXT Configuration and Calibration
 
@@ -311,17 +314,17 @@ Calibrate the accelometer by clicking on the accelerometer sub-tab and completin
 
 ## Software Setup
 
-
+<!-- TODO: Add photo for recovery port, REC button, RES button --> 
+1. Plug the external power into the XT60 cable for the battery.
 1. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
 2. Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board
-3. Ensure that the devkit is turned off and the power unplugged, but ready to be plugged in
-4. Press the button labelled "REC" on the Devboard
-5. While pressing the REC button, press the RES button
+4. Press the button labelled "RES" on the Devboard
+5. While pressing the RES button, press the REC button
 6. Release the RES button while still pressing the REC button
-7. Connect the power to the Jetson, and release the REC button after the power is connected
+7. Release the REC button after the power is connected
 8. On the host computer, run `lsusb`. This sequence was a success if an entry with NVIDIA Corp. APX is visible (`ID 0955:7323 NVIDIA Corp. APX`)
 9. Run the sdkmanager: `sdkmanager --cli`
-10. Login, and then select the following options: install -> jetson -> target hardare
+10. Login, and then select the following options: install -> jetson -> target hardware
 11. Select Jetson Orin NX, it should already be pre-selected
 12. Reply Y to showing all Jetson versions. Select JetPack 6.2
 13. Select both additional SDKs
