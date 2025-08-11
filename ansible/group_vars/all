@@ -27,3 +27,8 @@ host_fc_path: "{{ host_base_path }}/nxt_flight_controller"
 ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}" 
 
 optitrack_server_address: "192.168.194.150"
+
+drone_rosbag_topics: 
+  - "{{ ns }}/mavros/local_position/*"
+  - "{{ ns }}/mavros/global_position/*"
+  

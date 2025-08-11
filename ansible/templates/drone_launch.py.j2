@@ -22,7 +22,7 @@ def generate_launch_description():
             "-o",
             bag_dir,
             "--regex",
-            "/{{ ns }}/*",  # will be problematic with image files
+            "{{ '(' ~ (drone_rosbag_topics | map('regex_escape') | join('|')) ~ ')' if drone_rosbag_topics else '' }}",
         ]
     )
     mavros_include = IncludeLaunchDescription(
