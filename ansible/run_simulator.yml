@@ -99,7 +99,7 @@
 
     - name: Send launch file
       ansible.builtin.template:
-        src: templates/drone_launch.yaml.j2
+        src: templates/drone_launch.py.j2
         dest: "{{ drone_base_path }}/launch.py"
       vars: 
         ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}"
