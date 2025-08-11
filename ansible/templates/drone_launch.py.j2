@@ -1,13 +1,30 @@
 # swarm_stack.launch.py
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, ExecuteProcess
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+import os
 
 
 def generate_launch_description():
+    bag_dir = os.path.join(os.environ.get("ROS_LOG_DIR"), "bag")
+    rosbag_start = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "bag",
+            "record",
+            "-b",
+            "1_073_741_824",  # 1GiB
+            "-s",
+            "mcap",
+            "o",
+            bag_dir,
+            "--regex",
+            "/{{ ns }}/*",  # will be problematic with image files
+        ]
+    )
     mavros_include = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -19,7 +36,6 @@ def generate_launch_description():
             )
         ),
         launch_arguments={
-            # keep Ansible templating
             "gcs_url": "udp://@{{ gcs_url }}:14550",
             "fcu_url": "{{ drone_fcu_url }}",
             "namespace": "{{ ns }}/mavros",
@@ -36,7 +52,7 @@ def generate_launch_description():
                 "peer_file_path": "{{ drone_ros_path }}/config/peer_list.yaml",
             }
         ],
-        output="screen",
+        output="log",
     )
 
     bounds_checker = Node(
@@ -48,21 +64,21 @@ def generate_launch_description():
                 "plane_file": "{{ drone_ros_path }}/config/bounds.json",
             }
         ],
-        output="screen",
+        output="log",
     )
 
     drone_planner = Node(
         package="drone_planner_ros2",
         executable="drone_planner_node",
         namespace="{{ ns }}",
-        output="screen",
+        output="log",
     )
 
     controller = Node(
         package="swarmnxt_controller_ros2",
         executable="swarmnxt_controller_node",
         namespace="{{ ns }}",
-        output="screen",
+        output="log",
     )
 
     return LaunchDescription(
