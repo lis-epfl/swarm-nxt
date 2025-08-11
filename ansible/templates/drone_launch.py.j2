@@ -83,6 +83,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            rosbag_start,
             mavros_include,
             latency_checker,
             bounds_checker,
