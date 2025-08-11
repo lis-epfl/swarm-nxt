@@ -1,0 +1,93 @@
+# swarm_stack.launch.py
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription, ExecuteProcess
+from launch.launch_description_sources import AnyLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+import os
+
+
+def generate_launch_description():
+    bag_dir = os.path.join(os.environ.get("ROS_LOG_DIR"), "bag")
+    rosbag_start = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "bag",
+            "record",
+            "-b",
+            "1_073_741_824",  # 1GiB
+            "-s",
+            "mcap",
+            "-o",
+            bag_dir,
+            "--regex",
+            "/{{ ns }}/*",  # will be problematic with image files
+        ]
+    )
+    mavros_include = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("mavros"),
+                    "launch",
+                    "px4.launch",  # works with xml or .py via AnyLaunchDescriptionSource
+                ]
+            )
+        ),
+        launch_arguments={
+            "gcs_url": "udp://@{{ gcs_url }}:14550",
+            "fcu_url": "{{ drone_fcu_url }}",
+            "namespace": "{{ ns }}/mavros",
+            "tgt_system": '{{ ns | regex_search("[0-9]+$") }}',
+        }.items(),
+    )
+
+    latency_checker = Node(
+        package="latency_checker_ros2",
+        executable="latency_checker_node",
+        namespace="{{ ns }}",
+        parameters=[
+            {
+                "peer_file_path": "{{ drone_ros_path }}/config/peer_list.yaml",
+            }
+        ],
+        output="log",
+    )
+
+    bounds_checker = Node(
+        package="bounds_checker_ros2",
+        executable="bounds_checker_node",
+        namespace="{{ ns }}",
+        parameters=[
+            {
+                "plane_file": "{{ drone_ros_path }}/config/bounds.json",
+            }
+        ],
+        output="log",
+    )
+
+    drone_planner = Node(
+        package="drone_planner_ros2",
+        executable="drone_planner_node",
+        namespace="{{ ns }}",
+        output="log",
+    )
+
+    controller = Node(
+        package="swarmnxt_controller_ros2",
+        executable="swarmnxt_controller_node",
+        namespace="{{ ns }}",
+        output="log",
+    )
+
+    return LaunchDescription(
+        [
+            rosbag_start,
+            mavros_include,
+            latency_checker,
+            bounds_checker,
+            drone_planner,
+            controller,
+        ]
+    )
