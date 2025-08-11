@@ -1,12 +1,12 @@
 ---
 - name: Collect logs from drones into timestamped run folder
   hosts: drones
-  gather_facts: true
+  remote_user: lis
 
   vars:
     # Timestamp computed on the controller (same for all hosts in this run)
     timestamp: "{{ lookup('pipe', 'date +%Y/%m/%d/%H%M%S') }}"
-    run_dir: "{{ base_path }}/logs/{{ timestamp }}"
+    run_dir: "{{ host_base_path }}/logs/{{ timestamp }}"
 
   tasks:
     - name: Create timestamped run directory on controller
@@ -20,9 +20,11 @@
     - name: Pull latest log contents from each drone into its hostname subfolder
       ansible.posix.synchronize:
         mode: pull
-        src: "{{ base_path }}/logs/latest/"   # trailing slash = copy CONTENTS
+        src: "{{ drone_base_path }}/logs/latest/"   # trailing slash = copy CONTENTS
         dest: "{{ run_dir }}/{{ ansible_hostname }}/"
         recursive: yes
         archive: yes
         compress: yes
+        rsync_opts:
+          - "--mkpath"
       delegate_to: localhost
