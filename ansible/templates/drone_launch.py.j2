@@ -32,7 +32,7 @@ def generate_launch_description():
         parameters=[{
             'peer_file_path': '{{ drone_ros_path }}/config/peer_list.yaml',
         }],
-        output='screen',
+        output='log',
     )
 
     bounds_checker = Node(
@@ -42,21 +42,21 @@ def generate_launch_description():
         parameters=[{
             'plane_file': '{{ drone_ros_path }}/config/bounds.json',
         }],
-        output='screen',
+        output='log',
     )
 
     drone_planner = Node(
         package='drone_planner_ros2',
         executable='drone_planner_node',
         namespace='{{ ns }}',
-        output='screen',
+        output='log',
     )
 
     controller = Node(
         package='swarmnxt_controller_ros2',
         executable='swarmnxt_controller_node',
         namespace='{{ ns }}',
-        output='screen',
+        output='log',
     )
 
     return LaunchDescription([
