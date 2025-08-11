@@ -19,7 +19,7 @@ def generate_launch_description():
             "1_073_741_824",  # 1GiB
             "-s",
             "mcap",
-            "o",
+            "-o",
             bag_dir,
             "--regex",
             "/{{ ns }}/*",  # will be problematic with image files
