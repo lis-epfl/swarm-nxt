@@ -23,6 +23,19 @@
         ansible.builtin.file:
           path: /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
           state: absent
+  - name: Install mcap
+    become: yes
+    ansible.builtin.apt:
+      name: ros-humble-rosbag2-storage-mcap
+      state: latest
+
+  - name: Ensure persistent storage in journald.conf
+    become: yes
+    ansible.builtin.replace:
+      path: /etc/systemd/journald.conf
+      regexp: '^\s*#?Storage=.*$'
+      replace: 'Storage=persistent'
+                        
   
   - name: Ensure ros2 ws exists
     ansible.builtin.file:
@@ -55,16 +68,13 @@
         dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
         version: "niel/fix-check-launch" # TODO: temp
         force: yes 
-        
     - name: SwarmNXT Nodes
       block: 
         - name: Get repository 
           ansible.builtin.git: 
-            repo: git@github.com:lis-epfl/swarm-nxt
-            dest: "{{ drone_base_path }}/repos/swarm-nxt"
-            key_file: /home/lis/.ssh/id_ed25519
-            accept_newhostkey: yes
-            force: yes
+              repo: https://github.com/lis-epfl/swarm-nxt
+              dest: "{{ drone_base_path }}/repos/swarm-nxt"
+              force: yes
           
         - name: List ros_packages directories
           ansible.builtin.find:
