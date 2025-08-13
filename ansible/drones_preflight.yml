@@ -1,5 +1,66 @@
 ---
 
+- name: Local Actions
+  connection: local
+  hosts: localhost
+  tasks:
+    - name: Local ROS Packages
+      when: "position_estimation == 'optitrack'"
+      delegate_to: 127.0.0.1
+      connection: local
+      block:
+      - name: Build local packages
+        ansible.builtin.shell: ". /opt/ros/humble/setup.sh && colcon build --symlink-install"
+        args:
+          chdir: "{{ host_ros_path }}"
+
+      - name: Create local launch file
+        ansible.builtin.template: 
+          src: templates/host_launch.py.j2
+          dest: "{{ host_base_path }}/launch.py"
+      - name: Create ros_packages script 
+        become: false
+        vars: 
+          ros_path: "{{ host_ros_path }}"
+          base_path: "{{ host_base_path }}"
+        ansible.builtin.template: 
+          src: scripts/ros_packages_start.sh
+          dest: "{{ host_base_path }}/ros_packages_start.sh"
+          mode: "755"
+     
+      - name: Create config directory
+        ansible.builtin.file:
+          dest: "{{ host_ros_path }}/config"
+          state: directory
+          mode: "755"
+    
+      - name: Copy peer list
+        ansible.builtin.template: 
+          src: templates/peer_list.yaml.j2
+          dest: "{{ host_ros_path }}/config/peer_list.yaml"
+          mode: "644"
+        vars:
+          peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
+
+      - name: Create local systemd folder
+        ansible.builtin.file:
+          dest: "~/.local/share/systemd/user"
+          state: directory
+          
+      - name: Copy ros_packages service 
+        vars:
+          base_path: "{{ host_base_path }}"
+        ansible.builtin.template: 
+          src: templates/ros_packages_service.j2
+          dest: ~/.local/share/systemd/user/ros_packages.service
+      - name: Start ros_packages service
+        ansible.builtin.systemd:
+          name: "ros_packages"
+          state: restarted
+          enabled: false
+          scope: user
+          daemon_reload: true
+
 - name: Preflight
   hosts: drones
   remote_user: lis
@@ -93,67 +154,6 @@
           ansible.builtin.shell: /tmp/chronyc_check.py
           register: chronyc_check
           changed_when: false
-
-- name: Local Actions
-  connection: local
-  hosts: localhost
-  tasks:
-    - name: Local ROS Packages
-      when: "position_estimation == 'optitrack'"
-      delegate_to: 127.0.0.1
-      connection: local
-      block:
-      - name: Build local packages
-        ansible.builtin.shell: ". /opt/ros/humble/setup.sh && colcon build --symlink-install"
-        args:
-          chdir: "{{ host_ros_path }}"
-
-      - name: Create local launch file
-        ansible.builtin.template: 
-          src: templates/host_launch.py.j2
-          dest: "{{ host_base_path }}/launch.py"
-      - name: Create ros_packages script 
-        become: false
-        vars: 
-          ros_path: "{{ host_ros_path }}"
-          base_path: "{{ host_base_path }}"
-        ansible.builtin.template: 
-          src: scripts/ros_packages_start.sh
-          dest: "{{ host_base_path }}/ros_packages_start.sh"
-          mode: "755"
-     
-      - name: Create config directory
-        ansible.builtin.file:
-          dest: "{{ host_ros_path }}/config"
-          state: directory
-          mode: "755"
-    
-      - name: Copy peer list
-        ansible.builtin.template: 
-          src: templates/peer_list.yaml.j2
-          dest: "{{ host_ros_path }}/config/peer_list.yaml"
-          mode: "644"
-        vars:
-          peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
-
-      - name: Create local systemd folder
-        ansible.builtin.file:
-          dest: "~/.local/share/systemd/user"
-          state: directory
-          
-      - name: Copy ros_packages service 
-        vars:
-          base_path: "{{ host_base_path }}"
-        ansible.builtin.template: 
-          src: templates/ros_packages_service.j2
-          dest: ~/.local/share/systemd/user/ros_packages.service
-      - name: Start ros_packages service
-        ansible.builtin.systemd:
-          name: "ros_packages"
-          state: restarted
-          enabled: false
-          scope: user
-          daemon_reload: true
 
 
 # TODO: Add something about waiting and checking all the packages after :)
