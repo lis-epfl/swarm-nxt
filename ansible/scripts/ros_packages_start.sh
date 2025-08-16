@@ -10,5 +10,6 @@ cd {{ ros_path }}
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 
-
-ros2 launch {{ base_path }}/launch.py 
+# Use exec to replace the shell process with ros2 launch
+# This ensures signals (SIGTERM) from systemd are properly forwarded
+exec ros2 launch {{ base_path }}/launch.py 
