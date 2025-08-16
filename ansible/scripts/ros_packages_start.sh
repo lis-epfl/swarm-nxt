@@ -1,6 +1,6 @@
 #!/bin/bash
 set -exo pipefail 
-export ROS_DOMAIN_ID={{ ros_domain_id }}
+export ROS_DOMAIN_ID={{ ns | regex_search("[0-9]+$") | default("0", true) }}
 export ROS_LOG_DIR={{ base_path }}/logs/$(date +%Y/%m/%d/%H%M%S)
 
 mkdir -p {{ base_path }}/logs
