@@ -18,12 +18,19 @@
           src: templates/90-disable-wifi-powersave.conf.j2
           dest: /etc/NetworkManager/conf.d/90-disable-wifi-powersave.conf
           mode: '0644'
+        register: disable_powersave1
       
       - name: Remove default NetworkManager WiFi power save configuration
         ansible.builtin.file:
           path: /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
           state: absent
+        register: disable_powersave2
 
+      - name: Restart nmcli if needed
+        when: disable_powersave1.changed or disable_powersave2.changed
+        ansible.builtin.systemd: 
+          name: NetworkManager
+          state: restarted
   - name: Check for zellij 
     ansible.builtin.command: zellij --version 
     register: zellij_check

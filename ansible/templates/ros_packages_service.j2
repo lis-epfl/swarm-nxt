@@ -6,12 +6,9 @@ After=multi-user.target
 Type=simple
 ExecStart=/bin/bash {{ base_path }}/ros_packages_start.sh
 # Ensure proper signal handling for clean shutdown
-KillMode=mixed
+KillMode=control-group
 KillSignal=SIGTERM
-# Give nodes time to clean up, but don't wait too long
-TimeoutStopSec=30
-# Send SIGKILL if SIGTERM doesn't work within timeout
-SendSIGKILL=yes
+
 
 [Install]
 WantedBy=multi-user.target
