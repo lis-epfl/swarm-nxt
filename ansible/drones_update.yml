@@ -23,6 +23,28 @@
         ansible.builtin.file:
           path: /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
           state: absent
+
+  - name: Check for zellij 
+    ansible.builtin.command: zellij --version 
+    register: zellij_check
+    changed_when: false
+    failed_when: false
+
+  - name: Install zellij if needed
+    when: zellij_check.rc != 0
+    block:
+      - name: Get zellij release
+        ansible.builtin.get_url:
+          url: https://github.com/zellij-org/zellij/releases/latest/download/zellij-aarch64-unknown-linux-musl.tar.gz
+          dest: /tmp/zellij.tar.gz
+      - name: Extract zellij
+        become: yes
+        ansible.builtin.unarchive: 
+          src: /tmp/zellij.tar.gz
+          dest: /usr/bin/
+          remote_src: true
+
+
   - name: Install mcap
     become: yes
     ansible.builtin.apt:
