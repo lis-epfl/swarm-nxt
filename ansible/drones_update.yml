@@ -10,6 +10,20 @@
       update_cache: yes
       upgrade: "safe"
   
+  - name: Update WiFi power save configuration
+    become: yes
+    block:
+      - name: Create NetworkManager WiFi power save disable configuration
+        ansible.builtin.template: 
+          src: templates/90-disable-wifi-powersave.conf.j2
+          dest: /etc/NetworkManager/conf.d/90-disable-wifi-powersave.conf
+          mode: '0644'
+      
+      - name: Remove default NetworkManager WiFi power save configuration
+        ansible.builtin.file:
+          path: /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
+          state: absent
+  
   - name: Ensure ros2 ws exists
     ansible.builtin.file:
       path: "{{ drone_ros_path }}/src"

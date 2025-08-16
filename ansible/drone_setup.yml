@@ -53,17 +53,16 @@
       delay: 10
       timeout: 360 
   
-  - name: Ensure power save disable service
+  - name: Create NetworkManager WiFi power save disable configuration
     ansible.builtin.template: 
-      src: templates/disable-wifi-powersave.j2
-      dest: /etc/systemd/system/disable-wifi-powersave.service
+      src: templates/90-disable-wifi-powersave.conf.j2
+      dest: /etc/NetworkManager/conf.d/90-disable-wifi-powersave.conf
+      mode: '0644'
   
-  - name: Start and enable the power save inhibition service
-    ansible.builtin.systemd:
-      name: disable-wifi-powersave
-      state: started
-      enabled: true
-      daemon_reload: true
+  - name: Remove default NetworkManager WiFi power save configuration
+    ansible.builtin.file:
+      path: /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
+      state: absent
 
   - name: "Setup VNC"
     block: 
