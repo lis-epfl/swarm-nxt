@@ -153,17 +153,7 @@
             repo: "deb [arch=arm64 signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_distribution_release }} main"
             state: present
         - name: Download ROS
-          ansible.builtin.apt:
-            name: 
-              - ros-humble-ros-base
-              - ros-dev-tools
-              - ros-humble-mavros
-              - ros-humble-mavros-extras
-              - ros-humble-rosbag2-storage-mcap
-              - ros-humble-domain-bridge
-            update_cache: true
-            state: latest
-
+          ansible.builtin.include_tasks: "download-ros.yml"
         - name: Set bashrc
           become: false
           ansible.builtin.blockinfile: 
