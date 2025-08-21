@@ -18,6 +18,13 @@ import os
 
 def generate_launch_description():
 
+    bridge_node = Node(
+        package="domain_bridge",
+        executable="domain_bridge",
+        name="domain_bridge",
+        output="log",
+        arguments=["{{ drone_ros_path }}/config/bridge_config.yaml"],
+    )
     bag_dir = os.path.join(os.environ.get("ROS_LOG_DIR"), "bag")
     rosbag_start = ExecuteProcess(
         cmd=[
@@ -131,6 +138,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            bridge_node,
             rosbag_start,
             mavros_include,
             #            wait_for_mavros,
