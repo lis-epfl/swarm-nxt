@@ -41,6 +41,12 @@
           mode: "644"
         vars:
           peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
+      
+      - name: Send bridge configuration 
+        ansible.builtin.template: 
+          src: templates/host_bridge_config.yaml.j2
+          dest: "{{ host_ros_path }}/config/bridge_config.yaml"
+          mode: "644"
 
       - name: Create local systemd folder
         ansible.builtin.file:
