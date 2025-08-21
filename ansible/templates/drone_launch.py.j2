@@ -1,11 +1,15 @@
 # swarm_stack.launch.py
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, ExecuteProcess
+from launch.actions import IncludeLaunchDescription, ExecuteProcess,  OpaqueFunction, Shutdown, RegisterEventHandler
+from launch.events.process import ProcessExited
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 import os
+
+
 
 
 def generate_launch_description():
@@ -36,12 +40,45 @@ def generate_launch_description():
             )
         ),
         launch_arguments={
-            "gcs_url": "udp://@{{ gcs_url }}:14550",
+            "gcs_url": "",
             "fcu_url": "{{ drone_fcu_url }}",
             "namespace": "{{ ns }}/mavros",
             "tgt_system": '{{ ns | regex_search("[0-9]+$") }}',
         }.items(),
     )
+
+
+    wait_for_mavros = ExecuteProcess(
+        cmd=[
+            'bash', '-lc', f"timeout 20s ros2 topic echo --once /{{ ns }}/mavros/imu/data"
+        ],
+        shell=False,
+        output='screen',
+    )
+
+    mocap_to_vision_pose = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+        PathJoinSubstitution([
+            FindPackageShare('mocap_to_vision_pose_ros2'),
+            'launch',
+            'mocap_to_vision_pose.launch.py',  # adjust to actual filename if different
+        ])
+        ),
+        launch_arguments={
+        'namespace': '{{ ns }}',
+        'mocap_topic': '/optitrack_multiplexer_node/rigid_body/{{ ns }}'
+        }.items(),
+    )
+
+    def _on_wait_exit(event: ProcessExited, *args, **kwargs): 
+        if event.returncode == 0: 
+            return [mocap_to_vision_pose]
+        return [Shutdown(reason="MAVROS did not start in time (did not publish {{ ns }}/mavros/imu/data)")]
+    
+    mocap_to_vision_pose_if_mavros = RegisterEventHandler(
+        OnProcessExit(target_action=wait_for_mavros, on_exit=_on_wait_exit)
+    )
+
 
     latency_checker = Node(
         package="latency_checker_ros2",
@@ -85,9 +122,11 @@ def generate_launch_description():
         [
             rosbag_start,
             mavros_include,
-            latency_checker,
-            bounds_checker,
-            drone_planner,
-            controller,
+#            wait_for_mavros, 
+#            mocap_to_vision_pose_if_mavros
+ #           latency_checker,
+ #           bounds_checker,
+ #           drone_planner,
+ #           controller,
         ]
     )
