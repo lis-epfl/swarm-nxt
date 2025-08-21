@@ -1,0 +1,7 @@
+name: domain_bridge
+from_domain: {{ drone_num }}
+to_domain: 0 
+topics: 
+  {{ns}}/mavros/state: 
+    type: mavros_msgs/msg/State
+    
