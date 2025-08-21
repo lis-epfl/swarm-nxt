@@ -1,0 +1,8 @@
+---
+- name: Setup
+  hosts: drones
+  remote_user: lis
+  become: yes # runs everything with sudo 
+  tasks:
+    - name: "Common Components"
+      ansible.builtin.include_tasks: "tasks/setup-common.yml"
