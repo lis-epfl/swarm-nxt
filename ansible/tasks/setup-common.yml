@@ -1,9 +1,8 @@
 - name: Check kernel, patch if needed
   ansible.builtin.include_tasks: "patch-kernel.yml"       
-- name: Perform a safe upgrade # installs new packages if needed
+- name: Perform an upgrade # installs new packages if needed
   ansible.builtin.apt:
     update_cache: yes
-    upgrade: "safe"
 - name: Ensure apt packages are installed
   ansible.builtin.apt: 
     name: 
@@ -41,17 +40,27 @@
     delay: 10
     timeout: 360 
 
-- name: Create NetworkManager WiFi power save disable configuration
-  ansible.builtin.template: 
-    src: templates/90-disable-wifi-powersave.conf.j2
-    dest: /etc/NetworkManager/conf.d/90-disable-wifi-powersave.conf
-    mode: '0644'
+- name: Update WiFi power save configuration
+  become: yes
+  block:
+    - name: Create NetworkManager WiFi power save disable configuration
+      ansible.builtin.template: 
+        src: templates/90-disable-wifi-powersave.conf.j2
+        dest: /etc/NetworkManager/conf.d/90-disable-wifi-powersave.conf
+        mode: '0644'
+      register: disable_powersave1
+    
+    - name: Remove default NetworkManager WiFi power save configuration
+      ansible.builtin.file:
+        path: /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
+        state: absent
+      register: disable_powersave2
 
-- name: Remove default NetworkManager WiFi power save configuration
-  ansible.builtin.file:
-    path: /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
-    state: absent
-
+    - name: Restart nmcli if needed
+      when: disable_powersave1.changed or disable_powersave2.changed
+      ansible.builtin.systemd: 
+        name: NetworkManager
+        state: restarted
 - name: "Setup VNC"
   block: 
     - name: Enable Automatic Login
@@ -151,6 +160,7 @@
               - ros-humble-mavros
               - ros-humble-mavros-extras
               - ros-humble-rosbag2-storage-mcap
+              - ros-humble-domain-bridge
             update_cache: true
             state: latest
 
@@ -173,8 +183,37 @@
         - name: Patch px4_rate
           ansible.builtin.template:
             src: templates/px4_config.j2 
-            dest: /opt/ros/humble/share/mavros/launch/px4_config.yaml 
-            
+            dest: /opt/ros/humble/share/mavros/launch/px4_config.yaml
+        
+        - name: Ensure persistent storage in journald.conf
+          become: true
+          ansible.builtin.replace:
+            path: /etc/systemd/journald.conf
+            regexp: '^\s*#?Storage=.*$'
+            replace: 'Storage=persistent'
+                        
+   
+- name: Check for zellij 
+  ansible.builtin.command: zellij --version 
+  register: zellij_check
+  changed_when: false
+  failed_when: false
+
+- name: Install zellij if needed
+  when: zellij_check.rc != 0
+  block:
+    - name: Get zellij release
+      ansible.builtin.get_url:
+        url: https://github.com/zellij-org/zellij/releases/latest/download/zellij-aarch64-unknown-linux-musl.tar.gz
+        dest: /tmp/zellij.tar.gz
+    - name: Extract zellij
+      become: true
+      ansible.builtin.unarchive: 
+        src: /tmp/zellij.tar.gz
+        dest: /usr/bin/
+        remote_src: true
+
+ 
 - name: NXT compatability
   block: 
     - name: Allow rootless access to flight controller
