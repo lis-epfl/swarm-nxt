@@ -104,8 +104,8 @@
     
     - name: Send bridge configuration 
       ansible.builtin.template: 
-        src: templates/drone_brige_config.yaml.j2
-        dest: "{{ drone_ros_path }}/config/bridge_config.yaml.j2"
+        src: templates/drone_bridge_config.yaml.j2
+        dest: "{{ drone_ros_path }}/config/bridge_config.yaml"
         mode: "644"
 
     - name: Send launch file
