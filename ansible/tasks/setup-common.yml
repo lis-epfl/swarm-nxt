@@ -78,6 +78,7 @@
         name: 
           - xserver-xorg-video-dummy
           - vino
+        state: present
     - name: Add vino to graphical session wants
       ansible.builtin.file: 
         src: /usr/lib/systemd/user/vino-server.service
@@ -231,11 +232,7 @@
           - mavsdk
           - mavproxy
 
-- name: Chrony Configuration 
-  block:
-    - name: Install Chrony
-      ansible.builtin.apt: 
-        name: chrony
+
 
 
 - name: Set WiFi
