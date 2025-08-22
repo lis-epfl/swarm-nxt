@@ -86,3 +86,11 @@ To check EKF tracking, perform the following steps:
 	2. `/mavros/vision_pose/pose_cov` xyz, orientation quaternions (optitrack)
 5. Move the drone around in all directions and ensure there are no discontinuities, and the values are tracking each other. 
 6. Rotate the drone in different directions and ensure the values are tracking each other
+
+# Common Issues
+
+## Ansible Stuck 
+
+There are a few reasons that ansible can be stuck. Sometimes, the wrong BECOME password is provided. This may result in a long time without any feedback. 
+
+If the password is correct, it is possible that the host or target went to sleep or shutdown in the middle of a play. This can result in Ansible trying to use a dead ssh session. In this case, try deleting the `~/.ansible/cp` folder and restarting the play.
