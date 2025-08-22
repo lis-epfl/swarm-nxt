@@ -52,7 +52,7 @@ def generate_launch_description():
             )
         ),
         launch_arguments={
-            "gcs_url": "",
+            "gcs_url": "udp://@{{ gcs_url }}:14550",
             "fcu_url": "{{ drone_fcu_url }}",
             "namespace": "{{ ns }}/mavros",
             "tgt_system": '{{ ns | regex_search("[0-9]+$") }}',
@@ -69,20 +69,17 @@ def generate_launch_description():
         output="screen",
     )
 
-    mocap_to_vision_pose = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [
-                    FindPackageShare("mocap_to_vision_pose_ros2"),
-                    "launch",
-                    "mocap_to_vision_pose.launch.py",  # adjust to actual filename if different
-                ]
-            )
-        ),
-        launch_arguments={
-            "namespace": "{{ ns }}",
-            "mocap_topic": "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
-        }.items(),
+    mocap_to_vision_pose = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "run",
+            "mocap_to_vision_pose",
+            "check_and_launch.py",
+            "--namespace",  
+            "{{ ns }}",
+            "--mocap-topic",
+            "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
+        ]
     )
 
     def _on_wait_exit(event: ProcessExited, *args, **kwargs):
@@ -141,11 +138,11 @@ def generate_launch_description():
             bridge_node,
             rosbag_start,
             mavros_include,
-            #            wait_for_mavros,
-            #            mocap_to_vision_pose_if_mavros
-            #           latency_checker,
-            #           bounds_checker,
-            #           drone_planner,
-            #           controller,
+            wait_for_mavros,
+            mocap_to_vision_pose_if_mavros,
+            latency_checker,
+            # bounds_checker,
+            # drone_planner,
+            # controller,
         ]
     )
