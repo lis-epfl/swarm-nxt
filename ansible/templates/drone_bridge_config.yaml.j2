@@ -7,21 +7,3 @@ topics:
   # Latency checker topic: drone heartbeat to host domain
   {{ns}}/latency_checker/heartbeat:
     type: latency_checker_ros2/msg/Heartbeat
-
----
-# Bridge topics from host domain 0 to this drone domain
-name: host_to_drone_bridge  
-from_domain: 0
-to_domain: {{ drone_num }}
-topics:
-  # Host latency checker heartbeat to drone
-  /{{ host_hostname | map('regex_replace', '\\.local', '') | map('regex_replace', '-', '_') | join('') }}/latency_checker/heartbeat:
-    type: latency_checker_ros2/msg/Heartbeat
-  # Other drones' latency checker heartbeats to this drone
-{% for peer in groups['drones'] %}
-{% set peer_num = peer | regex_replace('\\.local', '') | regex_search('[0-9]+$') %}
-{% if peer_num != drone_num %}
-  /nxt{{ peer_num }}/latency_checker/heartbeat:
-    type: latency_checker_ros2/msg/Heartbeat
-{% endif %}
-{% endfor %}
