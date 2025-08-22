@@ -4,4 +4,6 @@ to_domain: 0
 topics: 
   {{ns}}/mavros/state: 
     type: mavros_msgs/msg/State
-    
+  # Latency checker topic: drone heartbeat to host domain
+  {{ns}}/latency_checker/heartbeat:
+    type: latency_checker_ros2/msg/Heartbeat

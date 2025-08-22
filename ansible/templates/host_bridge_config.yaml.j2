@@ -7,4 +7,8 @@ topics:
   /optitrack_multiplexer_node/rigid_body/nxt{{ num }}: 
     type: optitrack_multiplexer_ros2_msgs/msg/RigidBodyStamped
     to_domain: {{ num }}
+  # Latency checker topic: host heartbeat to drone domain {{ num }}
+  /{{ host_hostname | map('regex_replace', '\\.local', '') | map('regex_replace', '-', '_') | join('') }}/latency_checker/heartbeat:
+    type: latency_checker_ros2/msg/Heartbeat
+    to_domain: {{ num }}
 {% endfor %}
