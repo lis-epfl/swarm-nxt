@@ -8,3 +8,24 @@ topics:
     type: optitrack_multiplexer_ros2_msgs/msg/RigidBodyStamped
     to_domain: {{ num }}
 {% endfor %}
+  # Latency checker topics: host heartbeat to all drone domains
+{% for drone in groups['drones'] %}
+{% set num = drone | regex_replace('\\.local', '') | regex_search('[0-9]+$') %}
+  /{{ host_hostname | map('regex_replace', '\\.local', '') | map('regex_replace', '-', '_') | join('') }}/latency_checker/heartbeat:
+    type: latency_checker_ros2/msg/Heartbeat
+    to_domain: {{ num }}
+{% endfor %}
+
+---
+# Bridge drone latency checker heartbeats from each drone domain to host domain 0
+{% for drone in groups['drones'] %}
+{% set num = drone | regex_replace('\\.local', '') | regex_search('[0-9]+$') %}
+name: drone{{ num }}_to_host_bridge
+from_domain: {{ num }}
+to_domain: 0
+topics:
+  /nxt{{ num }}/latency_checker/heartbeat:
+    type: latency_checker_ros2/msg/Heartbeat
+
+---
+{% endfor %}
