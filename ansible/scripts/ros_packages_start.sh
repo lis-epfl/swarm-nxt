@@ -30,28 +30,29 @@ DRONE_NUM={{ drone_num | int }}
 # All drone numbers in the group, sorted
 SORTED_DRONE_NUMS=({{ groups['drones'] | map('regex_replace', '\\.local$', '') | map('regex_search', '[0-9]+$') | map('int') | sort | join(' ') }})
 
-# Find position of current drone in sorted list
-POSITION=-1
-for i in "${!SORTED_DRONE_NUMS[@]}"; do
-    if [[ "${SORTED_DRONE_NUMS[$i]}" == "$DRONE_NUM" ]]; then
-        POSITION=$i
-        break
-    fi
-done
-
-# Error check: drone number should be found in the sorted list
-if [[ $POSITION -eq -1 ]]; then
-    echo "ERROR: Drone number $DRONE_NUM not found in sorted drone list: ${SORTED_DRONE_NUMS[*]}"
-    echo "This indicates a configuration issue. Check inventory.ini and hostname."
-    exit 1
-fi
-
-# Calculate sleep time: position 0 gets 2s, position 1 gets 4s, etc.
-SLEEP_TIME=$(( ($POSITION + 1) * 2 ))
 
 # Override sleep time if --now flag is used
-if [[ "$NOW_FLAG" == "true" ]]; then
+if [[ "$NOW_FLAG" == "true" || $DRONE_NUM -eq 0 ]]; then
     SLEEP_TIME=0
+else
+    # Find position of current drone in sorted list
+    POSITION=-1
+    for i in "${!SORTED_DRONE_NUMS[@]}"; do
+        if [[ "${SORTED_DRONE_NUMS[$i]}" == "$DRONE_NUM" ]]; then
+            POSITION=$i
+            break
+        fi
+    done
+    
+    # Error check: drone number should be found in the sorted list
+    if [[ $POSITION -eq -1 ]]; then
+        echo "ERROR: Drone number $DRONE_NUM not found in sorted drone list: ${SORTED_DRONE_NUMS[*]}"
+        echo "This indicates a configuration issue. Check inventory.ini and hostname."
+        exit 1
+    fi
+    
+    # Calculate sleep time: position 0 gets 2s, position 1 gets 4s, etc.
+    SLEEP_TIME=$(( ($POSITION + 1) * 2 ))
 fi
 
 # Stagger start times based on sorted order
