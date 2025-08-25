@@ -4,12 +4,6 @@
   become: false
   
   tasks: 
-  - name: Perform a safe upgrade # installs new packages if needed
-    become: yes
-    ansible.builtin.apt:
-      update_cache: yes
-      upgrade: "safe"
-  
   - name: Ensure ros2 ws exists
     ansible.builtin.file:
       path: "{{ drone_ros_path }}/src"
@@ -41,16 +35,13 @@
         dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
         version: "niel/fix-check-launch" # TODO: temp
         force: yes 
-        
     - name: SwarmNXT Nodes
       block: 
         - name: Get repository 
           ansible.builtin.git: 
-            repo: git@github.com:lis-epfl/swarm-nxt
-            dest: "{{ drone_base_path }}/repos/swarm-nxt"
-            key_file: /home/lis/.ssh/id_ed25519
-            accept_newhostkey: yes
-            force: yes
+              repo: https://github.com/lis-epfl/swarm-nxt
+              dest: "{{ drone_base_path }}/repos/swarm-nxt"
+              force: yes
           
         - name: List ros_packages directories
           ansible.builtin.find:

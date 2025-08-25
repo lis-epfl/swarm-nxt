@@ -16,6 +16,8 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(mavros_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(swarmnxt_msgs REQUIRED)
 
 set(DEPENDENCIES
   rclcpp
@@ -26,6 +28,8 @@ set(DEPENDENCIES
   nav_msgs 
   mavros_msgs 
   tf2_geometry_msgs
+  std_msgs
+  swarmnxt_msgs
 )
 
 include_directories(

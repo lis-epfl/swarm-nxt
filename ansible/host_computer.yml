@@ -49,24 +49,34 @@
               ansible.builtin.apt_repository:
                 repo: "deb [arch={{ deb_arch.stdout }} signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_distribution_release }} main"
                 state: present
+            - name: Download base ROS 
+              ansible.builtin.include_tasks: "tasks/download-ros.yml"
             - name: Download ROS
               ansible.builtin.apt:
                 name: 
                   - ros-humble-desktop
-                  - ros-dev-tools
-                  - ros-humble-mavros
-                  - ros-humble-mavros-extras
                   - ros-humble-plotjuggler
                 update_cache: true
                 state: latest   
             - name: Install geoids
               ansible.builtin.shell: geographiclib-get-geoids all 
             
-    - name: Set domain id
+    - name: Set domain id and ROS aliases
       ansible.builtin.blockinfile: 
         path: ~/.bashrc
         block: |
-          export ROS_DOMAIN_ID={{ ros_domain_id }}
+          export ROS_DOMAIN_ID={{ drone_num }}
+          
+          # ROS package systemctl aliases
+          alias ros_status='systemctl --user status ros_packages'
+          alias ros_start='systemctl --user start ros_packages'
+          alias ros_stop='systemctl --user stop ros_packages'
+          alias ros_restart='systemctl --user restart ros_packages'
+          
+          # ROS package logs function with argument support
+          ros_logs() {
+            journalctl --user -u ros_packages "$@"
+          }
     - name: VNC Viewer
       become: yes
       ansible.builtin.apt:

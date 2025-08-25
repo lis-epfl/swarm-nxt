@@ -74,6 +74,30 @@ On the host computer, go to terminal and type `gvncviewer lis@nxt1.local` where 
 !!! important
     If you want to connect the Orin to an external monitor, you have to first modify `/etc/X11/xorg.conf` and comment all the the paragraph that starts with `Section "Device"` and contains `Identifier "Dummy0"`, as well as all the lines after it.
 
+## ROS Package Management
+
+The ansible setup automatically installs convenient bash aliases for managing the ROS packages systemd service on both host computers and drones. These aliases simplify common systemctl operations:
+
+### Available Aliases
+
+- `ros_status` - Check the status of the ros_packages service (`systemctl --user status ros_packages`)
+- `ros_start` - Start the ros_packages service (`systemctl --user start ros_packages`)
+- `ros_stop` - Stop the ros_packages service (`systemctl --user stop ros_packages`)
+- `ros_restart` - Restart the ros_packages service (`systemctl --user restart ros_packages`)
+
+### Log Viewing Function
+
+- `ros_logs [arguments]` - View logs from the ros_packages service with optional journalctl arguments
+
+Examples:
+```bash
+ros_logs                    # View all logs
+ros_logs -f                 # Follow logs in real-time
+ros_logs --this-boot        # Show logs from current boot only
+ros_logs -n 50              # Show last 50 lines
+ros_logs --since "1 hour ago"  # Show logs from last hour
+```
+
 ## Check EKF Tracking
 
 To check EKF tracking, perform the following steps:
@@ -86,3 +110,11 @@ To check EKF tracking, perform the following steps:
 	2. `/mavros/vision_pose/pose_cov` xyz, orientation quaternions (optitrack)
 5. Move the drone around in all directions and ensure there are no discontinuities, and the values are tracking each other. 
 6. Rotate the drone in different directions and ensure the values are tracking each other
+
+# Common Issues
+
+## Ansible Stuck 
+
+There are a few reasons that ansible can be stuck. Sometimes, the wrong BECOME password is provided. This may result in a long time without any feedback. 
+
+If the password is correct, it is possible that the host or target went to sleep or shutdown in the middle of a play. This can result in Ansible trying to use a dead ssh session. In this case, try deleting the `~/.ansible/cp` folder and restarting the play.

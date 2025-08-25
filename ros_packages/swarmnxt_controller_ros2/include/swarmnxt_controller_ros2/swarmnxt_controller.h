@@ -10,6 +10,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <swarmnxt_msgs/msg/controller_command.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace swarmnxt_controller {
@@ -66,7 +67,8 @@ class Controller : public rclcpp::Node {
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr safe_traj_sub_;
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   // Publisher
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr setpoint_pub_;
+  rclcpp::Publisher<swarmnxt_msgs::msg::ControllerCommand>::SharedPtr
+      command_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr done_pub_;
 
   // helpers

@@ -1,0 +1,51 @@
+
+---
+
+- name: Copy the local log to the right place  
+  hosts: localhost
+  gather_facts: true
+  vars:
+    timestamp: "{{ lookup('pipe', 'date +%Y/%m/%d/%H%M%S') }}"
+  tasks:
+    - name: Create facts
+      set_fact:
+        run_dir: "{{ host_base_path }}/consolidated_logs/{{ timestamp }}"
+    - name: Create timestamped run directory on controller
+      ansible.builtin.file:
+       path: "{{ run_dir }}"
+       state: directory
+       mode: "0755"
+
+    - name: Copy latest logs to consolidated folder
+      ansible.posix.synchronize: 
+       mode: push
+       src: "{{ host_base_path }}/logs/latest"
+       dest: "{{ run_dir }}/host"
+       recursive: yes
+       archive: yes
+       compress: yes
+       rsync_opts: 
+         - "--mkpath"
+    - name: Create latest consolidated log link
+      ansible.builtin.file:
+        src: "{{ run_dir }}"
+        dest: "{{ host_base_path }}/consolidated_logs/latest"
+        state: link
+
+- name: Collect logs from drones into timestamped run folder
+  hosts: drones
+  remote_user: lis
+  gather_facts: true
+  tasks:
+    - name: Pull latest log contents from each drone into its hostname subfolder
+      ansible.posix.synchronize:
+        mode: pull
+        src: "{{ drone_base_path }}/logs/latest/"   # trailing slash = copy CONTENTS
+        dest: "{{ host_base_path }}/consolidated_logs/latest/{{ ansible_hostname }}/"
+        recursive: yes
+        archive: yes
+        compress: yes
+        rsync_opts:
+          - "--mkpath"
+      delegate_to: localhost
+

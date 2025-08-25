@@ -1,9 +1,9 @@
-#include "bounds_checker.h"
+#include "safety_checker.h"
 
 #include <fstream>
-namespace bounds_checker {
+namespace safety_checker {
 
-BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
+SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   std::string filepath;
 
   std::string ns = this->get_namespace();
@@ -30,28 +30,116 @@ BoundsChecker::BoundsChecker() : ::rclcpp::Node("bounds_checker") {
 
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
       ns + "/mavros/local_position/pose", best_effort_qos,
-      std::bind(&BoundsChecker::HandlePoseMessage, this,
+      std::bind(&SafetyChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 
   trajectory_sub_ = create_subscription<nav_msgs::msg::Path>(
       ns + "/trajectory", 10,
-      std::bind(&BoundsChecker::HandleTrajectoryMessage, this,
+      std::bind(&SafetyChecker::HandleTrajectoryMessage, this,
+                std::placeholders::_1));
+
+  command_sub_ = create_subscription<swarmnxt_msgs::msg::ControllerCommand>(
+      ns + "/controller/cmd", 10,
+      std::bind(&SafetyChecker::HandleControllerCommand, this,
                 std::placeholders::_1));
 
   // deprecated
   safe_trajectory_pub_ =
       create_publisher<nav_msgs::msg::Path>(ns + "/trajectory_safe", 10);
 
-  land_client_ = create_client<std_srvs::srv::Trigger>(ns + "/controller/land");
+  position_cmd_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
+      ns + "/mavros/setpoint_position/local", 10);
 
-  // Wait for the service to be available
-  while (!land_client_->wait_for_service(std::chrono::seconds(1))) {
-    RCLCPP_WARN(this->get_logger(),
-                "Waiting for ~/controller/land service to be available...");
+  rate_cmd_pub_ = create_publisher<mavros_msgs::msg::AttitudeTarget>(
+      ns + "/mavros/setpoint_raw/attitude", 10);
+
+  set_mode_server_ = create_service<mavros_msgs::srv::SetMode>(
+      ns + "/safety/mavros/set_mode",
+      std::bind(&SafetyChecker::SetModeForwarder, this, std::placeholders::_1,
+                std::placeholders::_2));
+
+  set_mode_client_ =
+      create_client<mavros_msgs::srv::SetMode>(ns + "/mavros/set_mode");
+
+  land_client_ = this->create_client<mavros_msgs::srv::CommandTOL>(
+      ns + "/mavros/cmd/land");
+}
+
+void SafetyChecker::HandleControllerCommand(
+    const swarmnxt_msgs::msg::ControllerCommand &msg) {
+  auto cmd = msg;
+  auto cur_time = rclcpp::Clock(RCL_SYSTEM_TIME).now();
+  auto cmd_age = cur_time - cmd.header.stamp;
+  // make sure the command isn't stale
+  if (cmd_age.nanoseconds() > 20E6) {
+    safety_flags_ |= SafetyStatus::UNSAFE_COMMAND_SEND_RATE;
+    RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping...");
+    LandNow();
+  }
+
+  if (safety_flags_ == SafetyStatus::SAFE) {
+    switch (cmd.command_type_mask) {
+      case swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT:
+        position_cmd_pub_->publish(cmd.pose_cmd);
+        break;
+      case swarmnxt_msgs::msg::ControllerCommand::RATE_SETPOINT:
+        rate_cmd_pub_->publish(cmd.rate_cmd);
+        break;
+      default:
+        RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",
+                     cmd.command_type_mask);
+    }
+  } else {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                          "Not sending offboard messages because of "
+                          "unsafety. Code: %d. Landing!",
+                          safety_flags_);
+    LandNow();
   }
 }
 
-void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
+void SafetyChecker::SetModeForwarder(
+    const std::shared_ptr<mavros_msgs::srv::SetMode::Request> req,
+    std::shared_ptr<mavros_msgs::srv::SetMode::Response> resp) {
+  // if its safe, then forward the setmode request. otherwise, send a fail
+  // response.
+  if (safety_flags_ == SafetyStatus::SAFE) {
+    RCLCPP_INFO(get_logger(), "Forwarding SetMode to Mavros");
+    auto set_mode_future = set_mode_client_->async_send_request(
+        req,
+        [resp](rclcpp::Client<mavros_msgs::srv::SetMode>::SharedFuture future) {
+          auto response = future.get();
+          resp->mode_sent = response->mode_sent;
+        });
+
+  } else {
+    RCLCPP_WARN(
+        get_logger(),
+        "Did not forward the mode change request because we are in an unsafe "
+        "state. Unsafe code: %d",
+        safety_flags_);
+    resp->mode_sent = false;
+  }
+}
+
+void SafetyChecker::LandNow() {
+  mavros_msgs::srv::CommandTOL::Request::SharedPtr req;
+  // do we have to send any position or something?
+  auto land_future = land_client_->async_send_request(
+      req,
+      [this](
+          rclcpp::Client<mavros_msgs::srv::CommandTOL>::SharedFuture future) {
+        auto response = future.get();
+        if (!response->success) {
+          RCLCPP_ERROR(get_logger(),
+                       "Could not send a land now command to MAVROS!");
+        } else {
+          RCLCPP_INFO(get_logger(), "Successfully changed mode to land");
+        }
+      });
+}
+
+void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
   auto logger = this->get_logger();
 
   are_planes_valid_ = false;
@@ -76,7 +164,7 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
       RCLCPP_ERROR(logger, "Invalid JSON Format...");
       valid_parse = false;
     }
-    bounds_checker_ros2::msg::Plane plane;
+    swarmnxt_msgs::msg::Plane plane;
     geometry_msgs::msg::Vector3 normal;
 
     double a = arr[0].get<double>();
@@ -110,7 +198,7 @@ void BoundsChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
   are_planes_valid_ = true;
 }
 
-bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
+bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   if (!are_planes_valid_) {
     return false;
   }
@@ -125,7 +213,7 @@ bool BoundsChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   return true;
 }
 
-geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(
+geometry_msgs::msg::Point SafetyChecker::ProjectPointToClosestPlane(
     const geometry_msgs::msg::Point &point) {
   geometry_msgs::msg::Point projected_point = point;
 
@@ -151,47 +239,24 @@ geometry_msgs::msg::Point BoundsChecker::ProjectPointToClosestPlane(
   return projected_point;
 }
 
-void BoundsChecker::HandlePoseMessage(
+void SafetyChecker::HandlePoseMessage(
     const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
   auto logger = this->get_logger();
   const auto &position = msg->pose.position;
 
   if (IsPointInHull(position)) {
     RCLCPP_INFO(logger, "Pose is within bounds.");
+    safety_flags_ &= ~SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
   } else {
-    RCLCPP_INFO(logger, "Pose is out of bounds, landing...");
-    auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
-    auto result_future = land_client_->async_send_request(request);
-
-    try {
-      // Wait for the result with a timeout, spinning to process callbacks
-      auto start = std::chrono::steady_clock::now();
-      auto timeout = std::chrono::seconds(2);  // adjust as needed
-      while (rclcpp::ok() && result_future.wait_for(std::chrono::milliseconds(
-                                 100)) != std::future_status::ready) {
-        rclcpp::spin_some(this->get_node_base_interface());
-        if (std::chrono::steady_clock::now() - start > timeout) {
-          throw std::runtime_error(
-              "Timeout waiting for landing service response");
-        }
-      }
-      auto result = result_future.get();
-      if (result->success) {
-        RCLCPP_INFO(logger, "Landing command sent successfully: %s",
-                    result->message.c_str());
-      } else {
-        RCLCPP_WARN(logger, "Landing command failed: %s",
-                    result->message.c_str());
-      }
-    } catch (const std::exception &e) {
-      RCLCPP_ERROR(logger, "Failed to call landing service: %s", e.what());
-    }
+    RCLCPP_WARN(logger, "Pose is out of bounds, landing...");
+    safety_flags_ |= SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
+    LandNow();
   }
 }
 
 // DEPRECATED: We do not project trajectory messages on the safe plane anymore.
 // We simply land if the pose ends up outside of of the (shrunk) bounds.
-void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
+void SafetyChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   // TODO: What if another drone in the swarm gets the same projected value?
   RCLCPP_WARN(this->get_logger(),
               "Checking trajectory messages are deprecated!");
@@ -221,12 +286,12 @@ void BoundsChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   safe_trajectory_pub_->publish(safe_traj);
 }
 
-void BoundsChecker::ClearPlanes() {
+void SafetyChecker::ClearPlanes() {
   are_planes_valid_ = false;
   planes_.clear();
 }
 
-std::vector<bounds_checker_ros2::msg::Plane> BoundsChecker::GetPlanes() {
+std::vector<swarmnxt_msgs::msg::Plane> SafetyChecker::GetPlanes() {
   return planes_;
 }
-}  // namespace bounds_checker
+}  // namespace safety_checker

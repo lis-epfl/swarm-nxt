@@ -1,0 +1,148 @@
+# swarm_stack.launch.py
+from launch import LaunchDescription
+from launch.actions import (
+    IncludeLaunchDescription,
+    ExecuteProcess,
+    OpaqueFunction,
+    Shutdown,
+    RegisterEventHandler,
+)
+from launch.events.process import ProcessExited
+from launch.event_handlers import OnProcessExit
+from launch.launch_description_sources import AnyLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+import os
+
+
+def generate_launch_description():
+
+    bridge_node = Node(
+        package="domain_bridge",
+        executable="domain_bridge",
+        name="domain_bridge",
+        output="log",
+        arguments=["{{ drone_ros_path }}/config/bridge_config.yaml"],
+    )
+    bag_dir = os.path.join(os.environ.get("ROS_LOG_DIR"), "bag")
+    rosbag_start = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "bag",
+            "record",
+            "-b",
+            "1_073_741_824",  # 1GiB
+            "-s",
+            "mcap",
+            "-o",
+            bag_dir,
+            "--regex",
+            "{{ drone_rosbag_topics | map('regex_replace', '^(.*)$', '(\\1)') | join('|') if drone_rosbag_topics else '' }}",
+        ]
+    )
+    mavros_include = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("mavros"),
+                    "launch",
+                    "px4.launch",  # works with xml or .py via AnyLaunchDescriptionSource
+                ]
+            )
+        ),
+        launch_arguments={
+            "gcs_url": "udp://@{{ gcs_url }}:14550",
+            "fcu_url": "{{ drone_fcu_url }}",
+            "namespace": "{{ ns }}/mavros",
+            "tgt_system": '{{ ns | regex_search("[0-9]+$") }}',
+        }.items(),
+    )
+
+    wait_for_mavros = ExecuteProcess(
+        cmd=[
+            "bash",
+            "-lc",
+            f"timeout 20s ros2 topic echo --once /{{ ns }}/mavros/imu/data",
+        ],
+        shell=False,
+        output="screen",
+    )
+
+    mocap_to_vision_pose = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "run",
+            "mocap_to_vision_pose",
+            "check_and_launch.py",
+            "--namespace",  
+            "{{ ns }}",
+            "--mocap-topic",
+            "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
+        ]
+    )
+
+    def _on_wait_exit(event: ProcessExited, *args, **kwargs):
+        if event.returncode == 0:
+            return [mocap_to_vision_pose]
+        return [
+            Shutdown(
+                reason="MAVROS did not start in time (did not publish {{ ns }}/mavros/imu/data)"
+            )
+        ]
+
+    mocap_to_vision_pose_if_mavros = RegisterEventHandler(
+        OnProcessExit(target_action=wait_for_mavros, on_exit=_on_wait_exit)
+    )
+
+    latency_checker = Node(
+        package="latency_checker_ros2",
+        executable="latency_checker_node",
+        namespace="{{ ns }}",
+        parameters=[
+            {
+                "peer_file_path": "{{ drone_ros_path }}/config/peer_list.yaml",
+            }
+        ],
+        output="log",
+    )
+
+    bounds_checker = Node(
+        package="bounds_checker_ros2",
+        executable="bounds_checker_node",
+        namespace="{{ ns }}",
+        parameters=[
+            {
+                "plane_file": "{{ drone_ros_path }}/config/bounds.json",
+            }
+        ],
+        output="log",
+    )
+
+    drone_planner = Node(
+        package="drone_planner_ros2",
+        executable="drone_planner_node",
+        namespace="{{ ns }}",
+        output="log",
+    )
+
+    controller = Node(
+        package="swarmnxt_controller_ros2",
+        executable="swarmnxt_controller_node",
+        namespace="{{ ns }}",
+        output="log",
+    )
+
+    return LaunchDescription(
+        [
+            bridge_node,
+            rosbag_start,
+            mavros_include,
+            wait_for_mavros,
+            mocap_to_vision_pose_if_mavros,
+            latency_checker,
+            # bounds_checker,
+            # drone_planner,
+            # controller,
+        ]
+    )
