@@ -1,4 +1,4 @@
-ros_domain_id: "1"
+ansible_become_password: orin
 position_estimation: "optitrack"
 
 wifi_ssid: "WiFli"
@@ -30,6 +30,5 @@ drone_num: "{{ ns | regex_search('[0-9]+$') | default('0', true) }}"
 optitrack_server_address: "192.168.194.150"
 
 drone_rosbag_topics: 
-  - "{{ ns }}/mavros/local_position/*"
-  - "{{ ns }}/mavros/global_position/*"
+  - "/{{ ns }}/*"
   
