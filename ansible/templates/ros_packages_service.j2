@@ -5,10 +5,15 @@ After=multi-user.target
 [Service]
 Type=simple
 ExecStart=/bin/bash {{ base_path }}/ros_packages_start.sh
+# Gracefully stop ROS2 daemon before killing processes
+ExecStop=/bin/bash -c "ros2 daemon stop 2>/dev/null || true"
+# Force cleanup any remaining ROS2 processes after timeout
+ExecStopPost=/bin/bash -c "pkill -f 'ros2cli.daemon.daemonize' 2>/dev/null || true; pkill -f 'ros2 launch' 2>/dev/null || true"
+# Give reasonable time for clean shutdown before force killing
+TimeoutStopSec=30
 # Ensure proper signal handling for clean shutdown
 KillMode=control-group
 KillSignal=SIGTERM
-
 
 [Install]
 WantedBy=multi-user.target
