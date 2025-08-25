@@ -154,6 +154,50 @@
         daemon_reload: true
         scope: user
     
+    - name: Pre-flight Validation Checks
+      block:
+        - name: Check if ROS2 workspace install directory exists
+          ansible.builtin.stat:
+            path: "{{ drone_ros_path }}/install"
+          register: ros_install_check
+          
+        - name: Fail if ROS2 workspace install directory does not exist
+          ansible.builtin.fail:
+            msg: "ROS2 workspace install directory {{ drone_ros_path }}/install does not exist on {{ ansible_hostname }}. Please ensure the workspace is properly built."
+          when: not ros_install_check.stat.exists
+          
+        - name: Get local repository git commit hash
+          ansible.builtin.shell: git rev-parse HEAD
+          args:
+            chdir: "{{ playbook_dir }}/.."
+          delegate_to: localhost
+          register: local_git_hash
+          run_once: true
+          changed_when: false
+          
+        - name: Check if swarm-nxt repository exists on drone
+          ansible.builtin.stat:
+            path: "~/repos/swarm-nxt"
+          register: drone_repo_check
+          
+        - name: Fail if swarm-nxt repository does not exist on drone
+          ansible.builtin.fail:
+            msg: "Repository ~/repos/swarm-nxt does not exist on {{ ansible_hostname }}. Please ensure the repository is cloned."
+          when: not drone_repo_check.stat.exists
+          
+        - name: Get drone repository git commit hash
+          ansible.builtin.shell: git rev-parse HEAD
+          args:
+            chdir: "~/repos/swarm-nxt"
+          register: drone_git_hash
+          changed_when: false
+          when: drone_repo_check.stat.exists
+          
+        - name: Fail if git versions do not match
+          ansible.builtin.fail:
+            msg: "Git version mismatch on {{ ansible_hostname }}. Local: {{ local_git_hash.stdout }}, Drone: {{ drone_git_hash.stdout }}. Please ensure both repositories are synchronized."
+          when: drone_repo_check.stat.exists and local_git_hash.stdout != drone_git_hash.stdout
+
     - name: Chrony Tracking Check
       block: 
         - name: Copy script
