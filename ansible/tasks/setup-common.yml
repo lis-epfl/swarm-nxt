@@ -154,13 +154,24 @@
             state: present
         - name: Download ROS
           ansible.builtin.include_tasks: "download-ros.yml"
-        - name: Set bashrc
+        - name: Set bashrc with ROS and aliases
           become: false
           ansible.builtin.blockinfile: 
             path: /home/lis/.bashrc
             block: |
               source /opt/ros/humble/setup.bash
               export ROS_DOMAIN_ID={{ drone_num }} 
+              
+              # ROS package systemctl aliases
+              alias ros_status='systemctl --user status ros_packages'
+              alias ros_start='systemctl --user start ros_packages'
+              alias ros_stop='systemctl --user stop ros_packages'
+              alias ros_restart='systemctl --user restart ros_packages'
+              
+              # ROS package logs function with argument support
+              ros_logs() {
+                journalctl --user -u ros_packages "$@"
+              } 
 
         - name: Get geoids
           ansible.builtin.shell: geographiclib-get-geoids all
