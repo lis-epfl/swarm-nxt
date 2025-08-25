@@ -39,7 +39,10 @@ def generate_launch_description():
             bag_dir,
             "--regex",
             "{{ drone_rosbag_topics | map('regex_replace', '^(.*)$', '(\\1)') | join('|') if drone_rosbag_topics else '' }}",
-        ]
+        ],
+        # Ensure rosbag process can be cleanly terminated
+        sigterm_timeout=5,
+        sigkill_timeout=10
     )
     mavros_include = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
@@ -67,6 +70,9 @@ def generate_launch_description():
         ],
         shell=False,
         output="screen",
+        # Ensure this process can be cleanly terminated
+        sigterm_timeout=3,
+        sigkill_timeout=5
     )
 
     mocap_to_vision_pose = ExecuteProcess(
@@ -79,7 +85,10 @@ def generate_launch_description():
             "{{ ns }}",
             "--mocap-topic",
             "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
-        ]
+        ],
+        # Ensure this process can be cleanly terminated
+        sigterm_timeout=5,
+        sigkill_timeout=10
     )
 
     def _on_wait_exit(event: ProcessExited, *args, **kwargs):
