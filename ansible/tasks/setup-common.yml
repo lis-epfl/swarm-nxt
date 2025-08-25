@@ -167,7 +167,7 @@
               alias ros_start='systemctl --user start ros_packages'
               alias ros_stop='systemctl --user stop ros_packages'
               alias ros_restart='systemctl --user restart ros_packages'
-              alias ros_kill='ros2 daemon stop 2>/dev/null || true; pkill -f "ros2cli.daemon.daemonize" 2>/dev/null || true; pkill -f "ros2 launch" 2>/dev/null || true'
+              alias ros_kill='ros2 daemon stop 2>/dev/null || true'
               
               # ROS package logs function with argument support
               ros_logs() {
