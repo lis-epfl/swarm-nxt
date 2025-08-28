@@ -98,6 +98,210 @@ ros_logs -n 50              # Show last 50 lines
 ros_logs --since "1 hour ago"  # Show logs from last hour
 ```
 
+## Logger Configuration and Usage
+
+The SwarmNXT system includes a dedicated `logger_ros2` package for recording ROS 2 topics to bag files. This section covers how to configure and use the logger through YAML configuration files.
+
+### Logger Package Overview
+
+The `logger_ros2` package provides:
+- Dynamic topic selection for logging
+- Start/stop logging through service calls
+- Integration with ROS 2 bag Python library
+- MCAP format support for efficient storage
+
+### YAML Configuration Examples
+
+The following examples show different logger configurations. Complete example files are available in `docs/examples/`.
+
+#### Basic Logger Launch Configuration
+
+Create a YAML configuration file (see `docs/examples/logger_config_basic.yaml`):
+
+```yaml
+# Basic logger configuration
+logger_node:
+  ros__parameters:
+    topics_to_log:
+      - "/mavros/local_position/pose"
+      - "/mavros/state"
+      - "/mavros/imu/data"
+    output_directory: "/home/lis/logs"
+    bag_name_prefix: "swarm_flight"
+    max_bag_duration: 300  # seconds
+    storage_format: "mcap"
+```
+
+#### Multi-Drone Logging Configuration
+
+For swarm operations, configure logging for multiple drones (see `docs/examples/logger_config_swarm.yaml`):
+
+```yaml
+# Multi-drone logger configuration
+multi_drone_logger:
+  ros__parameters:
+    drone_namespaces: ["nxt1", "nxt2", "nxt3"]
+    common_topics:
+      - "/mavros/local_position/pose"
+      - "/mavros/state"
+      - "/mavros/setpoint_position/local"
+      - "/latency_checker/heartbeat"
+    drone_specific_topics:
+      - "/mavros/imu/data"
+      - "/mavros/global_position/global"
+    sync_logging: true
+    output_directory: "/shared/logs"
+```
+
+#### Advanced Logger Configuration with QoS Settings
+
+For debugging and advanced use cases (see `docs/examples/logger_config_debug.yaml`):
+
+```yaml
+# Advanced logger configuration
+advanced_logger:
+  ros__parameters:
+    logging_profiles:
+      high_frequency:
+        topics:
+          - "/mavros/imu/data"
+          - "/mavros/local_position/velocity_local"
+        qos_profile:
+          depth: 1000
+          reliability: "best_effort"
+        sample_rate: 100  # Hz
+      
+      low_frequency:
+        topics:
+          - "/mavros/state"
+          - "/mavros/battery"
+        qos_profile:
+          depth: 10
+          reliability: "reliable"
+        sample_rate: 1  # Hz
+    
+    storage_options:
+      max_bag_size_mb: 500
+      compression: "zstd"
+      split_duration: 60  # seconds
+```
+
+### Using the Logger
+
+#### Starting the Logger Node
+
+```bash
+# Launch with default configuration
+ros2 launch logger_ros2 logger.launch.py
+
+# Launch with custom configuration
+ros2 launch logger_ros2 logger.launch.py config_file:=/path/to/logger_config.yaml
+```
+
+#### Service Calls for Runtime Control
+
+```bash
+# Start logging specific topics
+ros2 service call /logger_node/start_logging logger_ros2/srv/StartLogging "topics: ['/mavros/local_position/pose', '/mavros/state']"
+
+# Stop logging
+ros2 service call /logger_node/stop_logging logger_ros2/srv/StopLogging
+
+# Get logging status
+ros2 service call /logger_node/get_status logger_ros2/srv/GetStatus
+```
+
+#### Integration with Launch Files
+
+Include logger in your launch file:
+
+```python
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+
+def generate_launch_description():
+    return LaunchDescription([
+        # Include logger with configuration
+        Node(
+            package='logger_ros2',
+            executable='logger_node',
+            name='logger_node',
+            parameters=['/path/to/logger_config.yaml'],
+            output='screen'
+        ),
+        
+        # Your other nodes...
+    ])
+```
+
+### Ansible Integration
+
+The logger can be configured through Ansible templates. Create a template file `logger_config.yaml.j2`:
+
+```yaml
+# Ansible template for logger configuration
+logger_node:
+  ros__parameters:
+    topics_to_log:
+{% for topic in logger_topics %}
+      - "{{ topic }}"
+{% endfor %}
+    output_directory: "{{ drone_log_path }}"
+    bag_name_prefix: "{{ drone_hostname }}_{{ ansible_date_time.date }}"
+    drone_namespace: "{{ ns }}"
+```
+
+### Viewing Logged Data
+
+```bash
+# Play back logged data
+ros2 bag play /path/to/your_bag_file
+
+# Get bag info
+ros2 bag info /path/to/your_bag_file
+
+# Convert to other formats if needed
+ros2 bag convert -i /path/to/mcap_file -o /path/to/output_folder --output-options "format=rosbag2_storage_sqlite"
+```
+
+### Best Practices
+
+1. **Topic Selection**: Only log topics you need to reduce storage requirements
+2. **QoS Configuration**: Match the QoS settings of the original publishers
+3. **Storage Management**: Use automatic splitting and compression for long flights
+4. **Synchronization**: For multi-drone operations, ensure time synchronization across drones
+5. **Monitoring**: Check disk space regularly when logging high-frequency topics
+
+### Common Logger YAML Configurations
+
+#### Mission Logging
+```yaml
+mission_logger:
+  ros__parameters:
+    topics_to_log:
+      - "/mavros/local_position/pose"
+      - "/mavros/setpoint_position/local"
+      - "/drone_planner/trajectory"
+      - "/swarmnxt_controller/command"
+    auto_start: true
+    mission_name: "waypoint_mission"
+```
+
+#### Debug Logging
+```yaml
+debug_logger:
+  ros__parameters:
+    topics_to_log:
+      - "/mavros/imu/data"
+      - "/mavros/local_position/velocity_local"
+      - "/safety_checker/violations"
+      - "/bounds_checker/status"
+    log_level: "DEBUG"
+    include_system_topics: true
+```
+
 ## Check EKF Tracking
 
 To check EKF tracking, perform the following steps:

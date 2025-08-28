@@ -1,0 +1,24 @@
+# Basic logger configuration for SwarmNXT
+# This file demonstrates how to configure the logger_ros2 package for basic flight logging
+
+logger_node:
+  ros__parameters:
+    # Topics to log during flight
+    topics_to_log:
+      - "/mavros/local_position/pose"         # Drone position from EKF
+      - "/mavros/state"                       # Flight controller state
+      - "/mavros/imu/data"                    # IMU sensor data
+      - "/mavros/setpoint_position/local"     # Position setpoints
+      - "/mavros/battery"                     # Battery status
+    
+    # Output configuration
+    output_directory: "/home/lis/logs"
+    bag_name_prefix: "swarm_flight"
+    max_bag_duration: 300  # seconds (5 minutes)
+    storage_format: "mcap"
+    
+    # QoS settings
+    default_qos:
+      depth: 10
+      reliability: "reliable"
+      durability: "volatile"
