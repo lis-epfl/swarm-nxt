@@ -1,0 +1,22 @@
+FROM ros:humble 
+
+# Create a lis user with the password being orin
+RUN useradd -m lis && echo "lis:orin" | chpasswd
+
+# Add the lis user to sudoers
+RUN apt-get update && apt-get install -y sudo && echo "lis ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Switch to the lis user
+USER lis
+
+# Set the working directory
+WORKDIR /home/lis
+
+# Ensure git is installed, and clone the PX4-Autopilot repository
+RUN sudo apt-get update && sudo apt-get install -y git wget curl gnupg x11-apps  && \
+    git clone https://github.com/PX4/PX4-Autopilot.git
+
+# Build the PX4-Autopilot
+RUN cd PX4-Autopilot && \
+    ./Tools/setup/ubuntu.sh && \
+     make px4_sitl
