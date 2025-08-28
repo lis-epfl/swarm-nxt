@@ -1,10 +1,7 @@
 site_name: SwarmNXT
 repo_url: https://github.com/lis-epfl/swarm-nxt
 repo_name: GitHub
-# edit_uri will be determined automatically by RTD based on the version being built
-# For main branch: edit/main/docs/
-# For devel branch: edit/devel/docs/
-# For tags: edit/{tag}/docs/
+edit_uri: edit/main/docs/
 nav: 
   - Home: index.md
   - Infrastructure Setup: infra-setup.md
@@ -13,7 +10,6 @@ nav:
   - Flying: flying.md
   - Common Software Tasks: software-common-tasks.md
   - Manual Setup Instructions: manual-setup.md
-  - Read the Docs Setup: readthedocs-setup.md
   - Appendix: appendix.md
 theme: readthedocs
 markdown_extensions:
@@ -21,8 +17,8 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
 plugins:
-  - search
   - asciinema-player
+  - search
       
 extra_javascript:
   - js/mathjax.js
