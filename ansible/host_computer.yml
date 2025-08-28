@@ -1,7 +1,6 @@
 ---
 - name: Host Dependencies
-  hosts: localhost
-  connection: local 
+  hosts: host
   become: no
 
         
@@ -11,13 +10,14 @@
         path: "{{ host_base_path }}"
         state: directory
     - name: Add WiFi
+      when: ansible_connection != 'community.docker.docker'
       become: yes
-      community.general.nmcli: 
+      community.general.nmcli:
         type: wifi
         conn_name: default_drones
         ifname: "{{ host_wifi_interface }}"
         ssid: "{{ wifi_ssid }}"
-        wifi_sec: 
+        wifi_sec:
           key-mgmt: wpa-psk
           psk: "{{ wifi_password }}"
         autoconnect: true
@@ -151,64 +151,66 @@
 
     - name: Build ROS Packages
       ansible.builtin.shell: "cd {{ host_ros_path }} && . /opt/ros/humble/setup.sh && colcon build"
-
-    - name: Make path
-      ansible.builtin.file: 
-        path: "{{ host_fc_path }}"
-        state: directory
-        mode: "0755"
-    - name: NXT APT Dependencies
-      become: yes
-      ansible.builtin.apt:
-        update_cache: true
-        name: 
-          - gcc-arm-none-eabi=15:10.3-2021.07-4
-          - fuse=2.9.9-5ubuntu3
-          - gstreamer1.0-plugins-bad=1.20.3-0ubuntu1.1
-          - gstreamer1.0-libav=1.20.3-0ubuntu1
-          - gstreamer1.0-gl=1.20.1-1ubuntu0.4
-          - libfuse2=2.9.9-5ubuntu3
-          - libxcb-xinerama0=1.14-3ubuntu3 
-          - libxkbcommon-x11-0=1.4.0-1 
-          - libxcb-cursor-dev=0.1.1-4ubuntu1
-    - name: Allow rootless access to flight controller (needed for QGroundControl)
-      become: true
-      ansible.builtin.user: 
-        name: "{{ ansible_user_id }}"
-        groups: dialout
-        append: true
-    - name: Remove modemmanager (needed for QGroundControl)
-      become: true
-      ansible.builtin.apt:
-        name: modemmanager
-        state: absent
-    - name: Download necessary items
-      become: false
-      block: 
-      - name: Get QGroundControl
-        ansible.builtin.get_url:
-          url: https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage
-          dest: "{{ host_fc_path }}/QGroundControl.AppImage"
-          mode: '0755' # executable for us
-      - name: Install required python packages for PX4
-        ansible.builtin.pip:
-          name:
-            - kconfiglib==14.1.0
-            - pyros-genmsg==0.5.8
-            - jsonschema==4.24.0
-      - name: Clone px4 repository
-        ansible.builtin.git: 
-          repo: "https://github.com/PX4/PX4-Autopilot"
-          version: v1.15.4
-          dest: "{{ host_fc_path }}/PX4-Autopilot"
-          force: yes
-      - name: Build bootloader
-        community.general.make:
-          chdir: "{{ host_fc_path }}/PX4-Autopilot"
-          target: hkust_nxt-dual_bootloader
-      - name: Build main code
-        community.general.make:
-          chdir: "{{ host_fc_path }}/PX4-Autopilot"
-          target: hkust_nxt-dual        
-          
+    - name: NXT Operations
+      when: ansible_connection != 'community.docker.docker'
+      block:
+      - name: Make path
+        ansible.builtin.file: 
+          path: "{{ host_fc_path }}"
+          state: directory
+          mode: "0755"
+      - name: NXT APT Dependencies
+        become: yes
+        ansible.builtin.apt:
+          update_cache: true
+          name: 
+            - gcc-arm-none-eabi=15:10.3-2021.07-4
+            - fuse=2.9.9-5ubuntu3
+            - gstreamer1.0-plugins-bad=1.20.3-0ubuntu1.1
+            - gstreamer1.0-libav=1.20.3-0ubuntu1
+            - gstreamer1.0-gl=1.20.1-1ubuntu0.4
+            - libfuse2=2.9.9-5ubuntu3
+            - libxcb-xinerama0=1.14-3ubuntu3 
+            - libxkbcommon-x11-0=1.4.0-1 
+            - libxcb-cursor-dev=0.1.1-4ubuntu1
+      - name: Allow rootless access to flight controller (needed for QGroundControl)
+        become: true
+        ansible.builtin.user: 
+          name: "{{ ansible_user_id }}"
+          groups: dialout
+          append: true
+      - name: Remove modemmanager (needed for QGroundControl)
+        become: true
+        ansible.builtin.apt:
+          name: modemmanager
+          state: absent
+      - name: Download necessary items
+        become: false
+        block: 
+        - name: Get QGroundControl
+          ansible.builtin.get_url:
+            url: https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage
+            dest: "{{ host_fc_path }}/QGroundControl.AppImage"
+            mode: '0755' # executable for us
+        - name: Install required python packages for PX4
+          ansible.builtin.pip:
+            name:
+              - kconfiglib==14.1.0
+              - pyros-genmsg==0.5.8
+              - jsonschema==4.24.0
+        - name: Clone px4 repository
+          ansible.builtin.git: 
+            repo: "https://github.com/PX4/PX4-Autopilot"
+            version: v1.15.4
+            dest: "{{ host_fc_path }}/PX4-Autopilot"
+            force: yes
+        - name: Build bootloader
+          community.general.make:
+            chdir: "{{ host_fc_path }}/PX4-Autopilot"
+            target: hkust_nxt-dual_bootloader
+        - name: Build main code
+          community.general.make:
+            chdir: "{{ host_fc_path }}/PX4-Autopilot"
+            target: hkust_nxt-dual        
+            
 

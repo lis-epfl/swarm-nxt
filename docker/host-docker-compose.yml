@@ -1,0 +1,14 @@
+services: 
+  ros: 
+    image: swarmnxt_drone:v2 
+    container_name: host_computer
+    network_mode: "host"
+    volumes: 
+      - .:/root/repo
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/dri:/dev/dri
+    environment: 
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    command: tail -F anything

@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  nxt:
+    image: swarmnxt_drone:latest
+    hostname: nxt{{.Task.Slot}}
+    environment:
+      - DRONE_ID={{.Task.Slot}}
+    networks:
+      - host
+    deploy:
+      replicas: 3 # Set desired number of drones here or scale with CLI
+
+    command: tail -F anything
+
+networks:
+  host:
+    external: true
+    name: "host"

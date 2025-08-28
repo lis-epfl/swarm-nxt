@@ -1,7 +1,7 @@
 FROM ros:humble 
 
 # Create a lis user with the password being orin
-RUN useradd -m lis && echo "lis:orin" | chpasswd
+RUN useradd -m -s /bin/bash lis && echo "lis:orin" | chpasswd
 
 # Add the lis user to sudoers
 RUN apt-get update && apt-get install -y sudo && echo "lis ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y sudo && echo "lis ALL=(ALL) NOPASSWD:AL
 # Switch to the lis user
 USER lis
 
+ENV USER=lis
+ENV HOME=/home/lis
 # Set the working directory
 WORKDIR /home/lis
 
@@ -20,3 +22,20 @@ RUN sudo apt-get update && sudo apt-get install -y git wget curl gnupg x11-apps 
 RUN cd PX4-Autopilot && \
     ./Tools/setup/ubuntu.sh && \
      make px4_sitl
+
+
+RUN sudo apt install -y software-properties-common curl && \ 
+    sudo add-apt-repository -y universe && \
+    export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}') && \ 
+    curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo $UBUNTU_CODENAME)_all.deb"  && \
+    sudo dpkg -i /tmp/ros2-apt-source.deb
+
+# There's a tradeoff here: this makes the image big, but makes ansible fast on rebuild. 
+RUN sudo apt update && sudo apt-get install -y ros-humble-desktop ros-humble-plotjuggler 
+
+# Cleanup apt
+RUN sudo rm -f /etc/apt/sources.list.d/ros2* && \
+    sudo rm -f /etc/apt/sources.list.d/ros* && \
+    sudo rm -f /usr/share/keyrings/ros-archive-keyring.gpg && \ 
+    sudo apt-get clean && \
+    sudo rm -rf /var/lib/apt/lists/*
