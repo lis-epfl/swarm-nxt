@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - devel
+    paths:
+      - 'docker/Dockerfile'
 
 env:
   REGISTRY: ghcr.io
