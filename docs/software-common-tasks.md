@@ -98,6 +98,97 @@ ros_logs -n 50              # Show last 50 lines
 ros_logs --since "1 hour ago"  # Show logs from last hour
 ```
 
+## Data Logging with ROS Bag
+
+The SwarmNXT system automatically records flight data using the standard ROS 2 bag recording functionality. This section covers how to configure and use the logging system.
+
+### Logging Overview
+
+The system uses `ros2 bag record` integrated into the drone launch files to automatically capture:
+- MAVROS topics (position, state, IMU data)
+- Drone planner commands
+- Safety checker outputs
+- Custom application topics
+
+All data is stored in MCAP format for efficient storage and playback.
+
+### Configuring Logged Topics
+
+Topics to log are configured in the Ansible inventory file `ansible/group_vars/all`:
+
+```yaml
+# Configure which topics to record
+drone_rosbag_topics: 
+  - "/{{ ns }}/*"                    # All topics in drone namespace
+  # Or specify individual topics:
+  # - "/{{ ns }}/mavros/local_position/pose"
+  # - "/{{ ns }}/mavros/state"
+  # - "/{{ ns }}/mavros/imu/data"
+```
+
+### Common Topic Configurations
+
+#### Basic Flight Logging
+```yaml
+drone_rosbag_topics:
+  - "/{{ ns }}/mavros/local_position/pose"
+  - "/{{ ns }}/mavros/state"
+  - "/{{ ns }}/mavros/setpoint_position/local"
+```
+
+#### Complete Mission Logging
+```yaml
+drone_rosbag_topics:
+  - "/{{ ns }}/mavros/*"
+  - "/{{ ns }}/drone_planner/*"
+  - "/{{ ns }}/swarmnxt_controller/*"
+  - "/{{ ns }}/latency_checker/*"
+```
+
+#### Debug Logging
+```yaml
+drone_rosbag_topics:
+  - "/{{ ns }}/*"                    # All drone topics
+  - "/optitrack_multiplexer_node/*"  # OptiTrack data
+```
+
+### Recorded Data Location
+
+Bag files are automatically saved to:
+- **Location**: `$ROS_LOG_DIR/bag/` on each drone
+- **Format**: MCAP (`.mcap` files)
+- **Size limit**: 1 GiB per file (automatically splits)
+
+### Viewing Recorded Data
+
+```bash
+# List available bag files
+ls $ROS_LOG_DIR/bag/
+
+# Get information about a bag file
+ros2 bag info /path/to/bag_file
+
+# Play back recorded data
+ros2 bag play /path/to/bag_file
+
+# Play specific topics only
+ros2 bag play /path/to/bag_file --topics /nxt1/mavros/local_position/pose /nxt1/mavros/state
+```
+
+### Data Analysis
+
+```bash
+# Convert MCAP to other formats
+ros2 bag convert -i input.mcap -o output_folder --output-options "format=rosbag2_storage_sqlite"
+
+# Extract data for analysis
+ros2 topic echo --bag /path/to/bag_file /topic_name > data.txt
+
+# Use with plotjuggler for visualization
+ros2 run plotjuggler plotjuggler --buffer-size 100000
+# Then: File -> Load Data -> Load ROS2 bag
+```
+
 ## Check EKF Tracking
 
 To check EKF tracking, perform the following steps:
