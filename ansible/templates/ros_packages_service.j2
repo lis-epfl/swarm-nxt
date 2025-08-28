@@ -5,6 +5,8 @@ After=multi-user.target
 [Service]
 Type=simple
 ExecStart=/bin/bash {{ base_path }}/ros_packages_start.sh
+# Allow reasonable time for ROS launch to shut down all processes cleanly
+TimeoutStopSec=45
 # Ensure proper signal handling for clean shutdown
 KillMode=control-group
 KillSignal=SIGTERM
