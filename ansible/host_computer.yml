@@ -58,8 +58,8 @@
                   - ros-humble-plotjuggler
                 update_cache: true
                 state: latest   
-            - name: Install geoids
-              ansible.builtin.shell: geographiclib-get-geoids all 
+            - name: Get Geographic Lib
+              ansible.builtin.include_tasks: "tasks/geographic-lib.yml"       
             
     - name: Set domain id and ROS aliases
       ansible.builtin.blockinfile: 

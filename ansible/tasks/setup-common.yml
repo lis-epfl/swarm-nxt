@@ -173,8 +173,8 @@
                 journalctl --user -u ros_packages "$@"
               } 
 
-        - name: Get geoids
-          ansible.builtin.shell: geographiclib-get-geoids all
+        - name: Get Geographic Lib
+          ansible.builtin.include_tasks: "geographic-lib.yml"       
 
         - name: Patch pluginlists
           ansible.builtin.template:
