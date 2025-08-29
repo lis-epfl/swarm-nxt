@@ -89,7 +89,7 @@ class DroneStateManager(Node):
         self.get_logger().info(f"Attempting to set the mode to {mode.state}")
 
         mode_map = {
-            DroneState.IDLE: "AUTO.LAND",
+            DroneState.IDLE: "POSCTL",
             DroneState.TAKING_OFF: "AUTO.TAKEOFF",
             DroneState.HOVERING: "AUTO.LOITER",
             DroneState.OFFBOARD: "OFFBOARD",
@@ -178,7 +178,10 @@ class DroneStateManager(Node):
             pass
 
         # if at any point that we think we're flying but we get disarmed, move back to idle.
-        if self.mode != DroneState.IDLE and not self.mavros_state.armed:
+        if (
+            self.mode not in [DroneState.IDLE, DroneState.LANDING]
+            and not self.mavros_state.armed
+        ):
             self.get_logger().warning(
                 "Drone got disarmed, switching drone state to idle"
             )
