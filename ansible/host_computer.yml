@@ -120,19 +120,26 @@
             force: yes
 
     
-    - name: Latency Node
+    - name: Swarm Nodes
       block: 
-        - name: Get latency package 
+        - name: Get swarm package 
           ansible.builtin.git: 
             repo: https://github.com/lis-epfl/swarm-nxt
             dest: "{{ host_base_path }}/repos/swarm-nxt"
             force: yes
-        - name: Link to ros_ws
+            version: devel
+        - name: Link latency to ros_ws
           ansible.builtin.file: 
             src: "{{ host_base_path }}/repos/swarm-nxt/ros_packages/latency_checker_ros2"
             dest: "{{ host_ros_path }}/src/latency_checker_ros2"
             state: link
-      
+
+        - name: Link messages to ros_ws
+          ansible.builtin.file: 
+            src: "{{ host_base_path }}/repos/swarm-nxt/ros_packages/swarmnxt_msgs"
+            dest: "{{ host_ros_path }}/src/swarmnxt_msgs"
+            state: link
+    
     - name: Run rosdep
       become: yes
       ansible.builtin.shell: |
