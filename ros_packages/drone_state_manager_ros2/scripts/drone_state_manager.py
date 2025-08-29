@@ -86,7 +86,7 @@ class DroneStateManager(Node):
         if type(mode) != DroneState:
             self.get_logger().error(f"Did not get a valid mode to set. Got {mode}")
             return
-        self.get_logger().info(f"Attempting to set the mode to {mode.state}")
+        self.get_logger().info(f"Attempting to set the mode to {mode}")
 
         mode_map = {
             DroneState.IDLE: "POSCTL",
@@ -146,7 +146,7 @@ class DroneStateManager(Node):
             return
 
         self.local_arm_client_.call_async(req).add_done_callback(
-            lambda res: self.get_logger().info(res)
+            lambda res: self.get_logger().info(f"Arm command result: {res.result().success}")
         )
 
     def mavros_state_cb(self, msg: State):
@@ -160,26 +160,26 @@ class DroneStateManager(Node):
         if self.mavros_state is None:
             return
 
-        if self.mode == DroneState.TAKING_OFF:
+        if self.mode.state == DroneState.TAKING_OFF:
             # check if the takeoff is finished.
             # px4 mode changes?
             if self.mavros_state.mode == "AUTO.LOITER":
                 # we've finished takeoff...
                 self.set_mode(make_drone_state(DroneState.HOVERING))
-        elif self.mode == DroneState.HOVERING:
+        elif self.mode.state == DroneState.HOVERING:
             # wait n seconds and then initiate the switch to offboard mode
             if self.control_msgs > 50:
                 self.set_mode(make_drone_state(DroneState.OFFBOARD))
-        elif self.mode == DroneState.OFFBOARD:
+        elif self.mode.state == DroneState.OFFBOARD:
             # nothing to automatically do
             pass
-        elif self.mode == DroneState.LANDING:
+        elif self.mode.state == DroneState.LANDING:
             # nothign to automatically do
             pass
 
         # if at any point that we think we're flying but we get disarmed, move back to idle.
         if (
-            self.mode not in [DroneState.IDLE, DroneState.LANDING]
+            self.mode.state in [DroneState.HOVERING, DroneState.OFFBOARD, DroneState.LANDING]
             and not self.mavros_state.armed
         ):
             self.get_logger().warning(
