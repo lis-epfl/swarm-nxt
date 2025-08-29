@@ -19,19 +19,23 @@ class DroneStateManager(Node):
     def __init__(self):
         super().__init__("drone_state_manager")
         self.get_logger().info("DroneStateManager node has been started.")
+        
+        # Initialize drone state and MAVROS state
+        self.mode = make_drone_state(DroneState.IDLE)
+        self.mavros_state = None
 
         self.loop_timer = self.create_timer(0.1, self.loop_cb)
             
         self.create_control_cmd_sub()
         namespace = self.get_namespace()
-        reliable_qos = QoSProfile(reliablity=QoSReliabilityPolicy.RELIABLE, depth=10)
+        reliable_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
 
 
         self.global_takeoff_sub_ = self.create_subscription(
             Trigger, "/global/takeoff", self.takeoff_cb, reliable_qos
         )
         self.global_land_sub_ = self.create_subscription(
-            Trigger, "/global/takeoff", self.land_cb, reliable_qos
+            Trigger, "/global/land", self.land_cb, reliable_qos
         )
 
         self.global_arm_sub_ = self.create_subscription(
@@ -137,12 +141,16 @@ class DroneStateManager(Node):
         self.control_msgs += 1
 
     def loop_cb(self):
+        # Skip state logic if MAVROS state not available yet
+        if self.mavros_state is None:
+            return
+            
         if self.mode == DroneState.TAKING_OFF:
             # check if the takeoff is finished.
             # px4 mode changes? 
             if self.mavros_state.mode == "AUTO.LOITER": 
                 # we've finished takeoff... 
-                self.set_mode(DroneState(mode=DroneState.HOVERING))
+                self.set_mode(make_drone_state(DroneState.HOVERING))
         elif self.mode == DroneState.HOVERING:
             # wait n seconds and then initiate the switch to offboard mode
             if self.control_msgs > 50:
