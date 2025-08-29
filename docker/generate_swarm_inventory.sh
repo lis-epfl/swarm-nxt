@@ -6,7 +6,7 @@ SERVICE_NAME="nxt"
 STACK_NAME="swarmnxt"
 
 # Get running container names for the service
-CONTAINERS=$(docker ps --filter "name=${STACK_NAME}_${SERVICE_NAME}" --format "{{.Names}}")
+CONTAINERS=$(docker ps --filter "name=${STACK_NAME}_${SERVICE_NAME}" --format "{{.Names}}" | sort)
 
 # Start inventory file
 echo "[drones]"

@@ -1,11 +1,12 @@
 - name: Check if kernel needs to be patched # if the wifi interface doesn't exist, we need to patch the kernel (or its not plugged in)
+  when: ansible.connection != 'community.docker.docker'
   ansible.builtin.shell: ifconfig wlP1p1s0
   changed_when: false
   register: ifconfig_result
   ignore_errors: true # don't fail the playbook if we get an error, we use this result as a conditional next
 
 - name: Patched kernel operations
-  when: ifconfig_result.rc != 0
+  when: ansible_connection != 'community.docker.docker' and ifconfig_result.rc != 0 
   block:
     - name: Check if patched kernel exists
       ansible.builtin.stat:

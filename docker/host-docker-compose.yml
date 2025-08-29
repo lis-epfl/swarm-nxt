@@ -1,6 +1,6 @@
 services: 
   ros: 
-    image: swarmnxt_drone:v2 
+    image: ghcr.io/lis-epfl/swarmnxt_drone:latest
     container_name: host_computer
     network_mode: "host"
     volumes: 

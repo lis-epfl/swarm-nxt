@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   nxt:
-    image: swarmnxt_drone:latest
+    image: ghcr.io/lis-epfl/swarmnxt_drone:latest 
     hostname: nxt{{.Task.Slot}}
     environment:
       - DRONE_ID={{.Task.Slot}}
