@@ -98,6 +98,24 @@ ros_logs -n 50              # Show last 50 lines
 ros_logs --since "1 hour ago"  # Show logs from last hour
 ```
 
+### Updating Drone Software
+
+Use the `drones_update.yml` playbook to update and rebuild the ROS packages on drones:
+
+```bash
+# Regular update (incremental build)
+ansible-playbook ansible/drones_update.yml
+
+# Clean build (removes build/ and install/ directories first)
+ansible-playbook ansible/drones_update.yml -e clean_build=true
+```
+
+The clean build option is useful when:
+- Switching between branches with significant changes
+- Resolving build cache issues
+- After updating message definitions or package dependencies
+- Troubleshooting package discovery problems
+
 ## Data Logging with ROS Bag
 
 The SwarmNXT system automatically records flight data using the standard ROS 2 bag recording functionality. This section covers how to configure and use the logging system.
