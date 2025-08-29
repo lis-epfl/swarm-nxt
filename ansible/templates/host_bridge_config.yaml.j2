@@ -7,4 +7,13 @@ topics:
   /optitrack_multiplexer_node/rigid_body/nxt{{ num }}: 
     type: optitrack_multiplexer_ros2_msgs/msg/RigidBodyStamped
     to_domain: {{ num }}
+  /global/takeoff:
+    type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
+  /global/land:
+    type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
+  /global/arm:
+    type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
 {% endfor %}
