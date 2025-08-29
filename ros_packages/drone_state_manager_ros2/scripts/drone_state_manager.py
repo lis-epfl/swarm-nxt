@@ -112,6 +112,11 @@ class DroneStateManager(Node):
         req = SetMode.Request()
         req.custom_mode = px4_mode
 
+        # Add timeout for service call
+        if not self.set_mode_client_.wait_for_service(timeout_sec=2.0):
+            self.get_logger().warning("Set mode service not available")
+            return
+        
         self.set_mode_client_.call_async(req).add_done_callback(partial(self.set_mode_future_cb, mode=mode))
 
     def takeoff_cb(self, msg: Trigger):
@@ -130,6 +135,12 @@ class DroneStateManager(Node):
         # call the local arming service
         req = CommandBool.Request()
         req.value = msg.enable
+        
+        # Add timeout for service call
+        if not self.local_arm_client_.wait_for_service(timeout_sec=2.0):
+            self.get_logger().warning("Arming service not available")
+            return
+            
         self.local_arm_client_.call_async(req).add_done_callback(
             lambda res: self.get_logger().info(res)
         )
