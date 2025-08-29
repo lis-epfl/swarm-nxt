@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 project(swarmnxt_msgs)
 
 # Find dependencies
@@ -21,8 +21,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DroneState.msg"
   DEPENDENCIES ${DEPENDENCIES}
 )
-
-# Export dependencies
-ament_export_dependencies(rosidl_default_runtime)
 
 ament_package()
