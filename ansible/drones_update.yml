@@ -78,7 +78,7 @@
         - "{{ drone_ros_path }}/install"
     
     - name: Build ros packages
-      ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
+      ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build  
       args:
         chdir: "{{ drone_ros_path }}"
     
