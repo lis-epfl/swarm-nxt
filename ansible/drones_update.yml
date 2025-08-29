@@ -69,6 +69,14 @@
         rosdep update
         rosdep install --from-paths {{ drone_ros_path }}/src -y --ignore-src -r
              
+    - name: Clean previous build
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ drone_ros_path }}/build"
+        - "{{ drone_ros_path }}/install"
+    
     - name: Build ros packages
       ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
       args:
