@@ -107,9 +107,9 @@ def generate_launch_description():
         output="log",
     )
 
-    bounds_checker = Node(
-        package="bounds_checker_ros2",
-        executable="bounds_checker_node",
+    safety_checker = Node(
+        package="safety_checker_ros2",
+        executable="safety_checker_node",
         namespace="{{ ns }}",
         parameters=[
             {
@@ -119,19 +119,13 @@ def generate_launch_description():
         output="log",
     )
 
-    drone_planner = Node(
-        package="drone_planner_ros2",
-        executable="drone_planner_node",
+    drone_state_manager = Node(
+        package="drone_state_manager_ros2",
+        executable="drone_state_manager.py",
         namespace="{{ ns }}",
         output="log",
     )
 
-    controller = Node(
-        package="swarmnxt_controller_ros2",
-        executable="swarmnxt_controller_node",
-        namespace="{{ ns }}",
-        output="log",
-    )
 
     return LaunchDescription(
         [
@@ -141,8 +135,7 @@ def generate_launch_description():
             wait_for_mavros,
             mocap_to_vision_pose_if_mavros,
             latency_checker,
-            # bounds_checker,
-            # drone_planner,
-            # controller,
+            safety_checker,
+            drone_state_manager,
         ]
     )
