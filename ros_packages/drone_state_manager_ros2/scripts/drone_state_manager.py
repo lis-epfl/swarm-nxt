@@ -77,7 +77,7 @@ class DroneStateManager(Node):
     def set_mode_future_cb(self, result: Future, mode: DroneState):
         response = result.result()
         if response.mode_sent:
-            self.mode = mode.state
+            self.mode = mode
             self.get_logger().info(f"Mode {mode} sent successfully")
         else:
             self.get_logger().warning(f"Mode {mode} not sent!")
