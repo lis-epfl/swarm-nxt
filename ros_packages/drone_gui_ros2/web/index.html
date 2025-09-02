@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Control Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚁 Drone Control Dashboard</h1>
+            <div class="connection-status" id="connection-status">
+                <span class="status-indicator" id="status-indicator"></span>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <section class="global-controls">
+            <h2>Global Commands</h2>
+            <div class="button-group">
+                <button class="btn btn-success" id="global-arm" onclick="sendGlobalCommand('arm')">
+                    ✈️ Arm All
+                </button>
+                <button class="btn btn-danger" id="global-disarm" onclick="sendGlobalCommand('disarm')">
+                    ⛔ Disarm All
+                </button>
+                <button class="btn btn-primary" id="global-takeoff" onclick="sendGlobalCommand('takeoff')">
+                    🚀 Takeoff All
+                </button>
+                <button class="btn btn-warning" id="global-land" onclick="sendGlobalCommand('land')">
+                    🛬 Land All
+                </button>
+            </div>
+        </section>
+
+        <section class="drone-grid">
+            <h2>Individual Drone Status & Control</h2>
+            <div id="drone-cards" class="cards-container">
+                <!-- Drone cards will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <footer>
+            <p>Last updated: <span id="last-update">Never</span></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
