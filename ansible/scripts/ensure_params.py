@@ -159,7 +159,7 @@ def get_and_check_params(conn, wanted_params, change_enabled):
         return mismatch
 
 conn = mavutil.mavlink_connection("/dev/ttyTHS1", baud=921600)
-with open("{{ drone_ros_path }}/config/params.yaml", "r") as f:
+with open("{{ drone_ros_path }}/config/params.yml", "r") as f:
     wanted_params = yaml.safe_load(f)
 
 signal.signal(signal.SIGINT, signal_handler)

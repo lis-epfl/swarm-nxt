@@ -3,7 +3,15 @@
   remote_user: lis
   become: false
   
-  tasks: 
+  tasks:
+  - name: Stop ros_packages if its on
+    ansible.builtin.systemd: 
+      name: ros_packages
+      state: stopped
+      enabled: false
+      daemon_reload: false
+      scope: user
+
   - name: Ensure ros2 ws exists
     ansible.builtin.file:
       path: "{{ drone_ros_path }}/src"
@@ -98,8 +106,8 @@
             state: 'directory'
         - name: Send params file
           ansible.builtin.template:
-            src: "scripts/params.yaml"
-            dest: "{{ drone_ros_path }}/config/params.yaml"
+            src: "scripts/params.yml"
+            dest: "{{ drone_ros_path }}/config/params.yml"
         - name: Run ensure params script
           ansible.builtin.shell: 
             cmd: python3 /tmp/ensure_params.py
