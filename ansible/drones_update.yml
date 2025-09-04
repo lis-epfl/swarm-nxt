@@ -82,4 +82,45 @@
       ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build  
       args:
         chdir: "{{ drone_ros_path }}"
+      async: 2400
+      poll: 0
+      register: ros_build_async
+     
+    - name: Ensure params
+      block: 
+        - name: Send script
+          ansible.builtin.template:
+            src: "scripts/ensure_params.py"
+            dest: "/tmp/ensure_params.py"
+        - name: Ensure config folder exists
+          ansible.builtin.file: 
+            path: "{{ drone_ros_path }}/config"
+            state: 'directory'
+        - name: Send params file
+          ansible.builtin.template:
+            src: "scripts/params.yaml"
+            dest: "{{ drone_ros_path }}/config/params.yaml"
+        - name: Run ensure params script
+          ansible.builtin.shell: 
+            cmd: python3 /tmp/ensure_params.py
+          register: ensure_params_reg
+          changed_when: ensure_params_reg.rc == 10
+          failed_when: ensure_params_reg.rc != 0 and ensure_params_reg.rc != 10
+
+    - name: Wait for ros build to finish 
+      ansible.builtin.async_status: 
+        jid: "{{ ros_build_async.ansible_job_id }}"
+      register: build_ros_result
+      until: build_ros_result.finished
+      retries: 100
+      delay: 10
+
+    - name: Cleanup async
+      ansible.builtin.async_status:
+        jid: "{{ ros_build_async.ansible_job_id }}"
+        mode: cleanup
+      changed_when: false
+    
+
+      
     
