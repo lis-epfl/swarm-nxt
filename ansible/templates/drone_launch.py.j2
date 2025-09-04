@@ -39,6 +39,8 @@ def generate_launch_description():
             bag_dir,
             "--regex",
             "{{ drone_rosbag_topics | map('regex_replace', '^(.*)$', '(\\1)') | join('|') if drone_rosbag_topics else '' }}",
+            "--storage-config-file", 
+            "{{ drone_ros_path }}/config/mcap_bag_options.yml"
         ]
     )
     mavros_include = IncludeLaunchDescription(
