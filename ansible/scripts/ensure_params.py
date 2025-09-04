@@ -10,7 +10,7 @@ import sys
 import struct
 
 os.makedirs("{{ drone_base_path }}/logs/scripts/ensure_params", exist_ok=True)
-logger.add(f"{{ drone_base_path }}/logs/ensure_params/{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+logger.add(f"{{ drone_base_path }}/logs/scripts/ensure_params/{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 
 shutdown_event = threading.Event()
 param_queue = queue.Queue()
