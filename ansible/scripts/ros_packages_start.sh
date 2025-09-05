@@ -21,6 +21,7 @@ done
 mkdir -p {{ base_path }}/logs
 ln -sfn $ROS_LOG_DIR {{ base_path }}/logs/latest
 
+
 cd {{ ros_path }}
 source /opt/ros/humble/setup.bash
 source install/setup.bash
@@ -30,7 +31,9 @@ DRONE_NUM={{ drone_num | int }}
 # All drone numbers in the group, sorted
 SORTED_DRONE_NUMS=({{ groups['drones'] | map('regex_replace', '\\.local$', '') | map('regex_search', '[0-9]+$') | map('int') | sort | join(' ') }})
 
-
+if [[ $DRONE_NUM -ne 0 ]]; then
+    echo "system_time set $(date +%s)" | python3 {{ drone_base_path }}/scripts/mavlink_shell.py /dev/ttyTHS1 --baudrate 921600 >> {{ drone_base_path }}/logs/scripts/systimeset
+fi
 # Override sleep time if --now flag is used
 if [[ "$NOW_FLAG" == "true" || $DRONE_NUM -eq 0 ]]; then
     SLEEP_TIME=0

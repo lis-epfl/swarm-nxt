@@ -74,6 +74,14 @@
     gcs_url: "{{ host_hostname }}.local" 
 
   tasks:
+    - name: Stop ros_packages service
+      ansible.builtin.systemd: 
+        name: ros_packages
+        state: stopped
+        enabled: false
+        daemon_reload: true
+        scope: user
+
     - name: Chrony Stuff
       become: yes
       block:
@@ -94,16 +102,16 @@
           name: chronyd
           state: restarted
 
-    - name: Create config directory
+    - name: Create directories
       ansible.builtin.file:
-        dest: "{{ drone_ros_path }}/config"
+        dest: "{{ item.dest }}"
         state: directory
         mode: "755"
-    
-    - name: Create local services dir
-      ansible.builtin.file: 
-        dest: ~/.local/share/systemd/user
-        state: directory
+      loop: 
+        - {dest: "{{ drone_ros_path }}/config"}
+        - {dest: "{{ drone_base_path }}/scripts"}
+        - {dest: "{{ drone_base_path }}/logs/scripts"}
+        - {dest: "~/.local/share/systemd/user"}
     
     - name: Send files
       ansible.builtin.template:
@@ -122,30 +130,19 @@
         ros_path: "{{ drone_ros_path }}"
         base_path: "{{ drone_base_path }}"
         
-
-    - name: Send 3D Bounds file
-      ansible.builtin.copy:
-        src: templates/bounds.json
-        dest: "{{ drone_ros_path }}/config/bounds.json"
       
-
-    - name: Create ros_packages script 
+    - name: Send executable files
+      ansible.builtin.template: 
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "0755"
       vars: 
         ros_path: "{{ drone_ros_path }}"
         base_path: "{{ drone_base_path }}"
-      ansible.builtin.template: 
-        src: scripts/ros_packages_start.sh
-        dest: "{{ drone_base_path }}/ros_packages_start.sh"
-        mode: "755"
-      
-    - name: Start ros_packages service
-      ansible.builtin.systemd: 
-        name: ros_packages
-        state: restarted
-        enabled: false
-        daemon_reload: true
-        scope: user
-    
+      loop: 
+        - { src: "scripts/ros_packages_start.sh", dest: "{{ drone_base_path }}/ros_packages_start.sh"}
+        - { src: "scripts/mavlink_shell.py", dest: "{{ drone_base_path }}/scripts/mavlink_shell.py"}
+  
     - name: Chrony Tracking Check
       block: 
         - name: Copy script
@@ -158,6 +155,17 @@
           ansible.builtin.shell: /tmp/chronyc_check.py
           register: chronyc_check
           changed_when: false
+
+
+    - name: Start ros_packages service
+      ansible.builtin.systemd: 
+        name: ros_packages
+        state: started
+        enabled: false
+        daemon_reload: true
+        scope: user
+    
+  
 
 
 # TODO: Add something about waiting and checking all the packages after :)
