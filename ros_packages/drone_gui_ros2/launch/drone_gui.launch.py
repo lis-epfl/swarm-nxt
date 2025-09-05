@@ -15,7 +15,7 @@ def generate_launch_description():
     
     peers_file_arg = DeclareLaunchArgument(
         'peers_file',
-        default_value='~/ros/config/peers.yaml',
+        default_value='~/data/ros2_swarmnxt_ws/config/peer_list.yaml',
         description='Path to the peers.yaml file containing drone list'
     )
     
