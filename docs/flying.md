@@ -30,3 +30,27 @@ This will update apt repositories, pull the latest version of ros packages, and 
     "file": "/swarm-nxt/demos/drones_update.cast"
 }
 ```
+
+## Post-Flight Procedures
+
+### Log Collection
+
+After completing flight operations, collect all flight data and logs using:
+
+```bash
+cd /path/to/swarmnxtrepo/ansible
+ansible-playbook -i inventory.ini drones_postflight.yml -K
+```
+
+This will automatically:
+- Download MAVLink logs from each drone's flight controller
+- Collect ROS bag files and system logs from all drones  
+- Consolidate logs into timestamped directories on the host computer
+- Create convenient symlinks for accessing the latest flight data
+
+Collected data includes:
+- **ROS bag files**: High-level flight data, sensor readings, commands
+- **MAVLink logs**: Low-level flight controller data, parameters, system status
+- **System logs**: Service status, error messages, performance metrics
+
+For more details on log analysis and data handling, see [Data Logging with ROS Bag](software-common-tasks.md#data-logging-with-ros-bag).
