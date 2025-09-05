@@ -37,6 +37,23 @@
   remote_user: lis
   gather_facts: true
   tasks:
+    - name: Copy MAVLink log collection script to drone
+      ansible.builtin.template:
+        src: scripts/get_mavlogs.py
+        dest: /tmp/get_mavlogs.py
+        mode: '0755'
+    
+    - name: Download MAVLink logs from flight controller
+      ansible.builtin.shell: python3 /tmp/get_mavlogs.py
+      register: mavlink_log_result
+      failed_when: false  # Don't fail the whole playbook if MAVLink logs unavailable
+      changed_when: false
+    
+    - name: Log MAVLink collection result
+      ansible.builtin.debug:
+        msg: "MAVLink log collection: {{ mavlink_log_result.stdout_lines | default(['No output']) }}"
+      when: mavlink_log_result is defined
+    
     - name: Pull latest log contents from each drone into its hostname subfolder
       ansible.posix.synchronize:
         mode: pull
