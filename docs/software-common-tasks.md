@@ -207,6 +207,42 @@ ros2 run plotjuggler plotjuggler --buffer-size 100000
 # Then: File -> Load Data -> Load ROS2 bag
 ```
 
+### Postflight Log Collection
+
+The SwarmNXT system includes automated postflight log collection that gathers all relevant flight data from drones into a centralized location. This includes both ROS bag data and MAVLink flight controller logs.
+
+#### MAVLink Log Collection
+
+In addition to ROS bag data, the system automatically downloads MAVLink logs directly from each drone's flight controller using pymavlink. These logs contain:
+- Low-level flight controller data
+- Parameter changes
+- System status and error messages
+- Detailed flight performance metrics
+
+MAVLink logs are saved to:
+- **Location**: `${drone_base_path}/logs/latest/mavlink/` on each drone
+- **Format**: Binary `.bin` files (standard ArduPilot format)
+- **Naming**: `mavlink_log_{id}_{timestamp}.bin`
+
+#### Running Postflight Collection
+
+```bash
+# Collect logs from all configured drones
+cd /path/to/swarmnxt/ansible
+ansible-playbook -i inventory.ini drones_postflight.yml -K
+```
+
+This will:
+1. Download MAVLink logs from each drone's flight controller
+2. Collect all log files from each drone
+3. Consolidate them into timestamped directories on the host computer
+4. Create symlinks for easy access to latest logs
+
+Collected logs are stored in:
+- **Host location**: `${host_base_path}/consolidated_logs/latest/`
+- **Structure**: `{hostname}/` subdirectories for each drone
+- **Contents**: ROS bags, MAVLink logs, and system logs
+
 ## Check EKF Tracking
 
 To check EKF tracking, perform the following steps:
