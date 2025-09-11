@@ -23,7 +23,7 @@ class DronePlanner : public ::rclcpp::Node {
 
   nav_msgs::msg::Path trajectory_;
   // TODO: make these parameters?
-  float drone_speed_m_s_ = 1;         // max linear speed
+  float drone_speed_m_s_ = 5;         // max linear speed
   float yaw_speed_rad_s_ = 0.175;     // max yaw speed
   float trajectory_density_hz_ = 10;  // the frequency to generate trajectory
                                       // information for
