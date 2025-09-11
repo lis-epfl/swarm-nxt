@@ -1,4 +1,4 @@
-ansible_become_password: orin
+# ansible_become_password: orin
 position_estimation: "optitrack"
 
 wifi_ssid: "WiFli"
@@ -19,8 +19,9 @@ chrony_minpoll: 2
 chrony_maxpoll: 3
 chrony_allowed_subnets: 
   - "192.168.194.1/24"
-host_hostname: adminlis-Precision-3571
-host_base_path: "/home/adminlis/data"
+
+host_hostname: adminlis-ThinkPad-T450s
+host_base_path: "/home/mistry/data"
 host_ros_path: "{{ host_base_path }}/ros2_swarmnxt_ws"
 host_fc_path: "{{ host_base_path }}/nxt_flight_controller"
 

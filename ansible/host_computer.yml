@@ -10,19 +10,19 @@
       ansible.builtin.file: 
         path: "{{ host_base_path }}"
         state: directory
-#    - name: Add WiFi
-#      become: yes
-#      community.general.nmcli: 
-#        type: wifi
-#        conn_name: default_drones
-#        ifname: "{{ host_wifi_interface }}"
-#        ssid: "{{ wifi_ssid }}"
-#        wifi_sec: 
-#          key-mgmt: wpa-psk
-#          psk: "{{ wifi_password }}"
-#        autoconnect: true
-#        state: present
-        
+    - name: Add WiFi
+      become: yes
+      when: add_wifi | default(false) | bool
+      community.general.nmcli: 
+        type: wifi
+        conn_name: default_drones
+        ifname: "{{ host_wifi_interface }}"
+        ssid: "{{ wifi_ssid }}"
+        wifi_sec: 
+          key-mgmt: wpa-psk
+          psk: "{{ wifi_password }}"
+        autoconnect: true
+        state: present
     - name: Setup ROS
       become: yes
       block: 
