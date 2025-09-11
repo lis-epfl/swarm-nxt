@@ -12,35 +12,25 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
 
   std::string ns = this->get_namespace();
 
-  takeoff_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      ns + "/controller/takeoff",
-      std::bind(&Controller::TakeoffService, this, std::placeholders::_1,
-                std::placeholders::_2));
-  land_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      ns + "/controller/land",
-      std::bind(&Controller::LandService, this, std::placeholders::_1,
-                std::placeholders::_2));
-  start_traj_srv_ = this->create_service<std_srvs::srv::Trigger>(
-      ns + "/controller/start_trajectory",
-      std::bind(&Controller::StartTrajectoryService, this,
-                std::placeholders::_1, std::placeholders::_2));
-
   rclcpp::QoS best_effort_qos =
       rclcpp::QoS(rclcpp::KeepLast(10))
           .reliability(rclcpp::ReliabilityPolicy::BestEffort);
+
+  rclcpp::QoS reliable_qos =
+      rclcpp::QoS(rclcpp::KeepLast(10))
+          .reliability(rclcpp::ReliabilityPolicy::Reliable);
 
   drone_pos_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
       ns + "/mavros/local_position/pose", best_effort_qos,
       std::bind(&Controller::MavrosPoseCallback, this, std::placeholders::_1));
 
-  safe_traj_sub_ = this->create_subscription<nav_msgs::msg::Path>(
+  enable_sub_ = this->create_subscription<swarmnxt_msgs::msg::Trigger>(
+      ns + "/controller/enable", reliable_qos,
+      std::bind(&Controller::EnableCallback, this, std::placeholders::_1));
+
+  traj_sub_ = this->create_subscription<nav_msgs::msg::Path>(
       ns + "/trajectory", 10,
       std::bind(&Controller::TrajectoryCallback, this, std::placeholders::_1));
-
-  state_sub_ = this->create_subscription<mavros_msgs::msg::State>(
-      ns + "/mavros/state", 10,
-      std::bind(&Controller::MavrosStateCallback, this, std::placeholders::_1));
-
   command_pub_ = this->create_publisher<swarmnxt_msgs::msg::ControllerCommand>(
       ns + "/controller/cmd", 10);
 
@@ -49,17 +39,7 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
 
   loop_timer_ = this->create_wall_timer(std::chrono::milliseconds(30),
                                         std::bind(&Controller::Loop, this));
-
-  set_mode_client_ =
-      this->create_client<mavros_msgs::srv::SetMode>(ns + "/mavros/set_mode");
-  arming_client_ = this->create_client<mavros_msgs::srv::CommandBool>(
-      ns + "/mavros/cmd/arming");
-  takeoff_client_ = this->create_client<mavros_msgs::srv::CommandTOL>(
-      ns + "/mavros/cmd/takeoff");
-  land_client_ = this->create_client<mavros_msgs::srv::CommandTOL>(
-      ns + "/mavros/cmd/land");
 }
-
 nav_msgs::msg::Path Controller::GetTrajectoryCopy() {
   std::lock_guard<std::mutex> lock(traj_mutex_);
   nav_msgs::msg::Path path = traj_;
@@ -74,20 +54,31 @@ tf2::Vector3 Controller::GetPositionCopy() {
 
 void Controller::MavrosPoseCallback(
     const geometry_msgs::msg::PoseStamped& msg) {
-  RCLCPP_INFO(this->get_logger(), "Got a new position");
+  RCLCPP_INFO(this->get_logger(),
+              "Got a new position. x: %5.2f, y: %5.2f, z: %5.2f",
+              msg.pose.position.x, msg.pose.position.y, msg.pose.position.z);
   std::lock_guard<std::mutex> lock(pos_mutex_);
   tf2::fromMsg(msg.pose.position, cur_pos_);  // todo: yaw
 }
 
+void Controller::EnableCallback(const swarmnxt_msgs::msg::Trigger& msg) {
+  RCLCPP_INFO(this->get_logger(), "Got an enable message");
+  enabled_ = msg.enable;
+}
 void Controller::UpdateTrajectory(const nav_msgs::msg::Path new_traj) {
   std::lock_guard<std::mutex> lock(traj_mutex_);
   traj_ = new_traj;
+  cur_traj_index_ = 0;
 }
 
 void Controller::SendTrajectoryMessage() {
   auto cur_traj = GetTrajectoryCopy();
   auto cur_pos = GetPositionCopy();
   swarmnxt_msgs::msg::ControllerCommand msg;
+  msg.header.stamp = this->now();
+  msg.header.frame_id = "map";
+  msg.pose_cmd.header.stamp = this->now();
+  msg.pose_cmd.header.frame_id = "map";
   msg.command_type_mask =
       swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
   std_msgs::msg::Bool done_msg;
@@ -100,7 +91,6 @@ void Controller::SendTrajectoryMessage() {
     RCLCPP_WARN(this->get_logger(), "no trajectory!");
     return;
   }
-  num_traj_messages_sent_ += 1;
 
   // get distance from current target
   if (reached_dest_) {
@@ -112,142 +102,68 @@ void Controller::SendTrajectoryMessage() {
     return;
   }
 
-  while (distance < waypoint_acceptance_radius_) {
-    if (cur_traj_index_ < num_traj_points) {
-      tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position,
-                   cur_target_);
-      distance = tf2::tf2Distance(cur_pos, cur_target_);
-      cur_traj_index_++;
-    } else {
-      reached_dest_ = true;
+  auto& clk = *this->get_clock();
+  auto current_time = this->now();
+
+  RCLCPP_INFO_THROTTLE(
+      this->get_logger(), clk, 500,
+      "Before timestamp search - cur_pos: [%5.2f, %5.2f, %5.2f], cur_target_: "
+      "[%5.2f, %5.2f, %5.2f], traj_index: %u, num_points: %u",
+      cur_pos.x(), cur_pos.y(), cur_pos.z(), cur_target_.x(), cur_target_.y(),
+      cur_target_.z(), cur_traj_index_, num_traj_points);
+
+  // Find the first waypoint that's in the future
+  bool found_future_waypoint = false;
+  for (unsigned int i = cur_traj_index_; i < num_traj_points; i++) {
+    rclcpp::Time traj_point_time(cur_traj.poses[i].header.stamp);
+    if (traj_point_time > current_time) {
+      cur_traj_index_ = i;
+      found_future_waypoint = true;
+      RCLCPP_INFO_THROTTLE(this->get_logger(), clk, 500,
+                           "Found future waypoint at index %u",
+                           cur_traj_index_);
       break;
     }
   }
+
+  if (!found_future_waypoint) {
+    // All waypoints are in the past, use the last one or mark as done
+    if (num_traj_points > 0) {
+      cur_traj_index_ = num_traj_points - 1;
+      RCLCPP_INFO_THROTTLE(
+          this->get_logger(), clk, 500,
+          "No future waypoints, using last waypoint at index %u",
+          cur_traj_index_);
+    } else {
+      reached_dest_ = true;
+      RCLCPP_INFO_THROTTLE(this->get_logger(), clk, 500,
+                           "No waypoints available, marking as done");
+    }
+  }
+
+  // Set the current target from the selected waypoint
+  if (cur_traj_index_ < num_traj_points) {
+    tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position, cur_target_);
+    RCLCPP_INFO_THROTTLE(this->get_logger(), clk, 500,
+                         "Set target from waypoint %u: [%5.2f, %5.2f, %5.2f]",
+                         cur_traj_index_, cur_target_.x(), cur_target_.y(),
+                         cur_target_.z());
+  }
+
+  RCLCPP_INFO(this->get_logger(),
+              "Setting target: x: %5.2f, y: %5.2f, z: %5.2f", cur_target_.x(),
+              cur_target_.y(), cur_target_.z());
   tf2::toMsg(cur_target_, msg.pose_cmd.pose.position);
   done_pub_->publish(done_msg);
   command_pub_->publish(msg);
 }
 
-bool Controller::ChangePX4State(const std::string& mode) {
-  auto logger = this->get_logger();
-  const std::map<std::string, ControllerState> mode_map = {
-      {"AUTO.LOITER",
-       ControllerState::Idle},  // todo: this needs to be more complicated
-      {"AUTO.LAND", ControllerState::Landing},
-      {"AUTO.TAKEOFF", ControllerState::TakingOff},
-      {"OFFBOARD", ControllerState::FollowingTrajectory}};
-  if (mode_map.find(mode) == mode_map.end()) {
-    RCLCPP_ERROR(logger, "Invalid mode: %s", mode.c_str());
-    return false;
-  }
-  mavros_msgs::srv::SetMode::Request set_mode_request;
-  set_mode_request.custom_mode = mode;
-
-  if (set_mode_client_->wait_for_service(std::chrono::seconds(1))) {
-    auto set_mode_future = set_mode_client_->async_send_request(
-        std::make_shared<mavros_msgs::srv::SetMode::Request>(set_mode_request),
-        [this, logger, mode, mode_map](
-            rclcpp::Client<mavros_msgs::srv::SetMode>::SharedFuture future) {
-          auto response = future.get();
-          if (response->mode_sent) {
-            RCLCPP_INFO(logger, "Mode changed to %s", mode.c_str());
-            this->state_ = mode_map.at(mode);
-          } else {
-            RCLCPP_ERROR(logger, "Failed to change mode to %s", mode.c_str());
-          }
-        });
-  } else {
-    RCLCPP_ERROR(logger, "SetMode service not available");
-    return false;
-  }
-
-  return true;
-}
-
-void Controller::TakeoffService(
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  if (state_ == ControllerState::Idle) {
-    ChangePX4State("AUTO.TAKEOFF");
-    response->success = true;
-    response->message = "Taking off!";
-  } else {
-    response->success = false;
-    response->message = "Cannot take off: not in Idle state.";
-  }
-}
-
-void Controller::LandService(
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  if (state_ != ControllerState::Idle && state_ != ControllerState::Landing) {
-    RCLCPP_INFO(this->get_logger(), "Sending land command");
-    ChangePX4State("AUTO.LAND");
-    response->success = true;
-    response->message = "Landing!";
-  } else {
-    RCLCPP_WARN(this->get_logger(), "Failed to send land command");
-    response->success = false;
-    response->message = "Cannot land: not in flight.";
-  }
-}
-
-void Controller::StartTrajectoryService(
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  RCLCPP_ERROR(this->get_logger(), "Following trajectory state?");
-  if (state_ == ControllerState::TakingOff) {
-    state_ = ControllerState::FollowingTrajectory;
-    response->success = true;
-    response->message = "Started following trajectory!";
-  } else {
-    response->success = false;
-    response->message = "Cannot start trajectory: not in TakingOff state.";
-  }
-}
-
 void Controller::Loop() {
+  auto& clk = *this->get_clock();
   auto logger = this->get_logger();
-
-  switch (state_) {
-    case ControllerState::Idle:
-      RCLCPP_INFO(logger, "state: idle");
-      break;
-    case ControllerState::TakingOff:
-      RCLCPP_INFO(logger, "state: taking off");
-      SendTrajectoryMessage();
-      if (num_traj_messages_sent_ > 100 /* && altitude correct */) {
-        // we are done with taking off, move to follow traj
-        ChangePX4State("OFFBOARD");
-      }
-      break;
-    case ControllerState::FollowingTrajectory:
-      RCLCPP_INFO(logger, "state: following trajectory");
-      SendTrajectoryMessage();
-      break;
-    case ControllerState::Landing:
-      RCLCPP_INFO(logger, "state: landing");
-      // stop sending messages
-      // switch mode
-      if (!mavros_state_.armed) {
-        // landing done
-        RCLCPP_INFO(this->get_logger(),
-                    "Landing finished, changing internal state to idle");
-        state_ = ControllerState::Idle;
-        num_traj_messages_sent_ = 0;
-      }
-
-      break;
-  }
-
-  if (state_ != ControllerState::Idle && !mavros_state_.armed) {
-    if (mavros_state_.mode == "OFFBOARD") {
-      // get the system back to idle
-
-      RCLCPP_INFO(logger,
-                  "Transitioning to non-offboad since controller was disarmed");
-      ChangePX4State("AUTO.LOITER");
-    }
+  RCLCPP_INFO_THROTTLE(logger, clk, 1000, "ctrl enabled: %d", enabled_);
+  if (enabled_) {  // and the time of the last received pose plus goal are close
+    SendTrajectoryMessage();
   }
 }
 
@@ -270,91 +186,5 @@ void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
   RCLCPP_INFO(this->get_logger(), "Got mavros state");
   mavros_state_ = msg;
 }
-
-// bool SafetyChecker::RequestStateTransition(DroneState to_state) {
-//   constexpr unsigned int MIN_OFFBOARD_CMDS = 100;
-//   auto logger = this->get_logger();
-//   // if we're flying, requests to go to idle are blocked
-//   if ((drone_state_ == DroneState::Flying ||
-//        drone_state_ == DroneState::TakingOff) &&
-//       to_state == DroneState::Idle) {
-//     RCLCPP_WARN(logger,
-//                 "Tranisition from Flying to Idle received. Forcing a landing
-//                 " "transition state");
-//     to_state = DroneState::Landing;
-//   }
-//
-//   bool inhibit_transition = false;
-//   std::string new_px4_state = "";
-//
-//   switch (to_state) {
-//     case DroneState::Idle:
-//       num_offboard_cmds_ = 0;
-//       // disarm if landed.
-//       break;
-//     case DroneState::TakingOff:
-//       // change to takeoff state
-//       new_px4_state = "AUTO.TAKEOFF";
-//       // arm?
-//       break;
-//     case DroneState::Hold:
-//       if (drone_state_ == DroneState::Idle ||
-//           drone_state_ == DroneState::Landing) {
-//         inhibit_transition = true;
-//         RCLCPP_WARN(logger,
-//                     "Rejecting transition to hold state from Idle or
-//                     Landing!");
-//       } else {
-//         new_px4_state = "AUTO.LOITER";
-//       }
-//     case DroneState::Flying:
-//       // change to offboard
-//       if (num_offboard_cmds_ < MIN_OFFBOARD_CMDS) {
-//         inhibit_transition = true;
-//         RCLCPP_WARN(logger,
-//                     "Got request to switch to offboard, but refused because "
-//                     "not enough offboard commands: %d",
-//                     num_offboard_cmds_);
-//       } else {
-//         new_px4_state = "OFFBOARD";
-//       }
-//       break;
-//     case DroneState::Landing:
-//       // change to landing state
-//       new_px4_state = "AUTO.LAND";
-//       break;
-//     default:
-//       RCLCPP_ERROR(logger, "Requesting switch to nonexistent state!");
-//   }
-//
-//   if (!inhibit_transition) {
-//     mavros_msgs::srv::SetMode::Request set_mode_request;
-//     set_mode_request.custom_mode = new_px4_state;
-//     // call the service to change the px4 state, only change if approved.
-//     if (set_mode_client_->wait_for_service(std::chrono::seconds(1))) {
-//       auto set_mode_future = set_mode_client_->async_send_request(
-//           std::make_shared<mavros_msgs::srv::SetMode::Request>(
-//               set_mode_request),
-//           [this, logger, new_px4_state, to_state](
-//               rclcpp::Client<mavros_msgs::srv::SetMode>::SharedFuture future)
-//               {
-//             auto response = future.get();
-//             if (response->mode_sent) {
-//               RCLCPP_INFO(logger, "PX4 state changed to %s",
-//                           new_px4_state.c_str());
-//               drone_state_ = to_state;
-//             } else {
-//               RCLCPP_ERROR(logger, "Failed to change mode to %s",
-//                            new_px4_state.c_str());
-//             }
-//           });
-//     } else {
-//       RCLCPP_ERROR(logger, "SetMode service not available");
-//       return false;
-//     }
-//   }
-//
-//   return false;
-// }
 
 }  // namespace swarmnxt_controller
