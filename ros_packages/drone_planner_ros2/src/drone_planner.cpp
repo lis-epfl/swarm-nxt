@@ -33,14 +33,16 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
   this->get_parameter("peer_file", peer_file);
 
   std::string ns = this->get_namespace();
+  
+  rclcpp::QoS best_effort_qos =
+    rclcpp::QoS(rclcpp::KeepLast(10))
+        .reliability(rclcpp::ReliabilityPolicy::BestEffort);
 
   goals_sub_ = this->create_subscription<nav_msgs::msg::Goals>(
-      ns + "/goals", 10,
+      ns + "/goals", best_effort_qos,
       std::bind(&DronePlanner::GoalsCallback, this, std::placeholders::_1));
 
-  rclcpp::QoS best_effort_qos =
-      rclcpp::QoS(rclcpp::KeepLast(10))
-          .reliability(rclcpp::ReliabilityPolicy::BestEffort);
+ 
 
   mavros_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
       ns + "/mavros/local_position/pose", best_effort_qos,
