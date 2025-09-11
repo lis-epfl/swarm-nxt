@@ -32,7 +32,7 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
       ns + "/mavros/local_position/pose", best_effort_qos,
       std::bind(&SafetyChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
-                
+
   command_sub_ = create_subscription<swarmnxt_msgs::msg::ControllerCommand>(
       ns + "/controller/cmd", 10,
       std::bind(&SafetyChecker::HandleControllerCommand, this,
@@ -202,6 +202,7 @@ bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
                  plane.normal.z * point.z - plane.offset;
 
     if (val > 0) {
+      RCLCPP_INFO(this->get_logger(), "Failed on plane [%5.2f, %5.2f, %5.2f, %5.2f]", plane.normal.x, plane.normal.y, plane.normal.z, plane.offset);
       return false;
     }
   }
