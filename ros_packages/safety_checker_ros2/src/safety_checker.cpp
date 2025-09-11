@@ -168,6 +168,9 @@ void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
     double d = arr[3].get<double>();
 
    
+     RCLCPP_INFO(logger, "Plane elements: %5.2f, %5.2f, %5.2f, %5.2f", a, b, c,
+                d);
+                
     if (plane_offset_ < std::abs(d)) {
       d = std::signbit(d) * (std::abs(d) - plane_offset_);
     } else {
@@ -175,7 +178,7 @@ void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
                   "Plane offset was too high, this facet did not get scaled!");
     }
 
-     RCLCPP_INFO(logger, "Plane elements: %5.2f, %5.2f, %5.2f, %5.2f", a, b, c,
+     RCLCPP_INFO(logger, "Plane elements (scaled): %5.2f, %5.2f, %5.2f, %5.2f", a, b, c,
                 d);
 
     normal.set__x(a);
