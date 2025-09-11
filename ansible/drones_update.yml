@@ -4,7 +4,14 @@
   become: false
   
   tasks:
+  - name: Does the service exist?
+    shell: systemctl --user list-unit-files --type=service | grep -q "^ros_packages.service"
+    failed_when: false
+    changed_when: false
+    register: ros_package_service_exists
+
   - name: Stop ros_packages if its on
+    when: ros_package_service_exists.rc == 0
     ansible.builtin.systemd: 
       name: ros_packages
       state: stopped

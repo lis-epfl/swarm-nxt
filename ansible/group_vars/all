@@ -17,10 +17,10 @@ drone_fcu_url: /dev/ttyTHS1:921600
 # Advanced Settings
 chrony_minpoll: 2
 chrony_maxpoll: 3
-
-
-host_hostname: lisB108931
-host_base_path: "/home/toumieh/data"
+chrony_allowed_subnets: 
+  - "192.168.194.1/24"
+host_hostname: adminlis-Precision-3571
+host_base_path: "/home/adminlis/data"
 host_ros_path: "{{ host_base_path }}/ros2_swarmnxt_ws"
 host_fc_path: "{{ host_base_path }}/nxt_flight_controller"
 

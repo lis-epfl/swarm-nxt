@@ -10,18 +10,18 @@
       ansible.builtin.file: 
         path: "{{ host_base_path }}"
         state: directory
-    - name: Add WiFi
-      become: yes
-      community.general.nmcli: 
-        type: wifi
-        conn_name: default_drones
-        ifname: "{{ host_wifi_interface }}"
-        ssid: "{{ wifi_ssid }}"
-        wifi_sec: 
-          key-mgmt: wpa-psk
-          psk: "{{ wifi_password }}"
-        autoconnect: true
-        state: present
+#    - name: Add WiFi
+#      become: yes
+#      community.general.nmcli: 
+#        type: wifi
+#        conn_name: default_drones
+#        ifname: "{{ host_wifi_interface }}"
+#        ssid: "{{ wifi_ssid }}"
+#        wifi_sec: 
+#          key-mgmt: wpa-psk
+#          psk: "{{ wifi_password }}"
+#        autoconnect: true
+#        state: present
         
     - name: Setup ROS
       become: yes
@@ -92,20 +92,20 @@
             path: /etc/chrony/chrony.conf
             regexp: "^((pool)|(sourcedir))"
             replace: "# \\1"
-        # - name: Set allowed subnets
-        #   ansible.builtin.blockinfile:
-        #     path: /etc/chrony/chrony.conf
-        #     marker: "# {mark} ANSIBLE MANAGED BLOCK"
-        #     block: | # change the allowed subnets in ansible/group_vars/all
-        #       {% for subnet in chrony_allowed_subnets %}
-        #       allow {{ subnet }}
-        #       {% endfor %}
-        #   register: chrony_conf
-        # - name: Restart the service
-        #   when: chrony_conf.changed
-        #   ansible.builtin.systemd_service:
-        #     name: chronyd
-        #     state: restarted
+        - name: Set allowed subnets
+          ansible.builtin.blockinfile:
+            path: /etc/chrony/chrony.conf
+            marker: "# {mark} ANSIBLE MANAGED BLOCK"
+            block: | # change the allowed subnets in ansible/group_vars/all
+              {% for subnet in chrony_allowed_subnets %}
+              allow {{ subnet }}
+              {% endfor %}
+          register: chrony_conf
+        - name: Restart the service
+          when: chrony_conf.changed
+          ansible.builtin.systemd_service:
+            name: chronyd
+            state: restarted
     - name: Optitrack Packages
       become: false
       block: 

@@ -74,13 +74,6 @@
     gcs_url: "{{ host_hostname }}.local" 
 
   tasks:
-    - name: Stop ros_packages service
-      ansible.builtin.systemd: 
-        name: ros_packages
-        state: stopped
-        enabled: false
-        daemon_reload: true
-        scope: user
 
     - name: Chrony Stuff
       become: yes
