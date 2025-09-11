@@ -32,12 +32,7 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
       ns + "/mavros/local_position/pose", best_effort_qos,
       std::bind(&SafetyChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
-
-  trajectory_sub_ = create_subscription<nav_msgs::msg::Path>(
-      ns + "/trajectory", 10,
-      std::bind(&SafetyChecker::HandleTrajectoryMessage, this,
-                std::placeholders::_1));
-
+                
   command_sub_ = create_subscription<swarmnxt_msgs::msg::ControllerCommand>(
       ns + "/controller/cmd", 10,
       std::bind(&SafetyChecker::HandleControllerCommand, this,

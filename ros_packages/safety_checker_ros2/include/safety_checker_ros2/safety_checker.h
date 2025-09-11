@@ -44,7 +44,7 @@ class SafetyChecker : public ::rclcpp::Node {
   geometry_msgs::msg::Point ProjectPointToClosestPlane(
       const geometry_msgs::msg::Point &point);
   void ClearPlanes();
-
+  
   std::vector<swarmnxt_msgs::msg::Plane> GetPlanes();
 
  private:
