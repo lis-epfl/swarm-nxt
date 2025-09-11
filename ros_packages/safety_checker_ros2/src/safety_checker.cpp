@@ -22,6 +22,8 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
     plane_offset_ = 0.0f;
   }
 
+  RCLCPP_INFO("Using plane offset: %5.2f", plane_offset_);
+
   LoadHullFromFile(filepath);
 
   rclcpp::QoS best_effort_qos =
@@ -170,7 +172,7 @@ void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
    
      RCLCPP_INFO(logger, "Plane elements: %5.2f, %5.2f, %5.2f, %5.2f", a, b, c,
                 d);
-                
+
     if (plane_offset_ < std::abs(d)) {
       d = std::signbit(d) * (std::abs(d) - plane_offset_);
     } else {
