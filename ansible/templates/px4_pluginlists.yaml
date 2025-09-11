@@ -20,4 +20,7 @@
       - local*
       - global_position
       - home_position
+      - setpoint_*
+      - actuator_control
+
 
