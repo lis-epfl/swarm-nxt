@@ -16,4 +16,7 @@ topics:
   /global/arm:
     type: swarmnxt_msgs/msg/Trigger
     to_domain: {{ num }}
+  /nxt{{ num }}/goals:
+    type: nav_msgs/msg/Goals
+    to_domain: {{ num }}
 {% endfor %}
