@@ -174,7 +174,11 @@ void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
                 d);
 
     if (plane_offset_ < std::abs(d)) {
-      d = std::signbit(d) * (std::abs(d) - plane_offset_);
+      if (d < 0) {
+        d = d + plane_offset_;
+      } else {
+        d = d - plane_offset_;
+      }
     } else {
       RCLCPP_WARN(logger,
                   "Plane offset was too high, this facet did not get scaled!");
