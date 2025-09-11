@@ -84,7 +84,6 @@ void Controller::SendTrajectoryMessage() {
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
 
-  float distance = tf2::tf2Distance(cur_pos, cur_target_);
   const unsigned int num_traj_points = cur_traj.poses.size();
 
   if (num_traj_points == 0) {
@@ -148,6 +147,8 @@ void Controller::SendTrajectoryMessage() {
                          "Set target from waypoint %u: [%5.2f, %5.2f, %5.2f]",
                          cur_traj_index_, cur_target_.x(), cur_target_.y(),
                          cur_target_.z());
+  } else {
+    RCLCPP_ERROR(this->get_logger(), "Did not set any setpoint!");
   }
 
   RCLCPP_INFO(this->get_logger(),
