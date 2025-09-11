@@ -22,7 +22,7 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
     plane_offset_ = 0.0f;
   }
 
-  RCLCPP_INFO("Using plane offset: %5.2f", plane_offset_);
+  RCLCPP_INFO(this->get_logger(), "Using plane offset: %5.2f", plane_offset_);
 
   LoadHullFromFile(filepath);
 
