@@ -65,7 +65,7 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
 void SafetyChecker::HandleControllerCommand(
     const swarmnxt_msgs::msg::ControllerCommand &msg) {
   auto cmd = msg;
-  auto cur_time = rclcpp::Clock(RCL_SYSTEM_TIME).now();
+  auto cur_time = this->now();
   auto cmd_age = cur_time - cmd.header.stamp;
   // make sure the command isn't stale
   if (cmd_age.nanoseconds() > 20E6) {
