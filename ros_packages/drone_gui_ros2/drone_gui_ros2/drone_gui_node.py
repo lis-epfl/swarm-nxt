@@ -58,12 +58,18 @@ class DroneGUINode(Node):
         self.global_arm_pub = self.create_publisher(
             Trigger, "/global/arm", reliable_qos
         )
+        
+        # Controller enable/disable publishers for each drone
+        self.controller_enable_pubs = {}
 
         # Subscribe to drone states
         self.setup_drone_subscriptions()
 
         # Individual drone service clients
         self.setup_drone_services()
+        
+        # Set up controller enable/disable publishers
+        self.setup_controller_publishers()
 
         # Timer for periodic updates
         self.timer = self.create_timer(0.5, self.update_gui)
@@ -146,6 +152,14 @@ class DroneGUINode(Node):
                 CommandTOL, f"/{drone}/mavros/cmd/land"
             )
 
+    def setup_controller_publishers(self):
+        reliable_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
+        
+        for drone in self.drone_list:
+            self.controller_enable_pubs[drone] = self.create_publisher(
+                Trigger, f"/{drone}/controller/enable", reliable_qos
+            )
+
     def mavros_state_callback(self, msg: State, drone_name: str):
         self.drone_mavros_states[drone_name] = {
             "armed": msg.armed,
@@ -200,8 +214,24 @@ class DroneGUINode(Node):
         elif command == "disarm":
             msg.enable = False
             self.global_arm_pub.publish(msg)
+        elif command == "controller_enable":
+            self.publish_controller_command(True)
+        elif command == "controller_disable":
+            self.publish_controller_command(False)
 
         self.get_logger().info(f"Published global {command} command")
+
+    def publish_controller_command(self, enable: bool):
+        msg = Trigger()
+        msg.stamp = self.get_clock().now().to_msg()
+        msg.enable = enable
+        
+        for drone in self.drone_list:
+            if drone in self.controller_enable_pubs:
+                self.controller_enable_pubs[drone].publish(msg)
+        
+        action = "enabled" if enable else "disabled"
+        self.get_logger().info(f"Controllers {action} for all drones")
 
     def call_individual_service(self, drone: str, command: str):
         try:

@@ -211,7 +211,12 @@ class DroneGUI {
         this.showNotification(`Global ${command} command sent`);
         
         // Temporarily disable the button
-        const buttonId = `global-${command}`;
+        let buttonId;
+        if (command === 'controller_enable' || command === 'controller_disable') {
+            buttonId = `global-${command.replace('_', '-')}`;
+        } else {
+            buttonId = `global-${command}`;
+        }
         const button = document.getElementById(buttonId);
         if (button) {
             button.disabled = true;

@@ -128,6 +128,20 @@ def generate_launch_description():
         output="log",
     )
 
+    swarmnxt_controller = Node(
+        package="swarmnxt_controller_ros2",
+        executable="swarmnxt_controller_node",
+        namespace="{{ ns }}",
+        output="log",
+    )
+
+    drone_planner = Node(
+        package="drone_planner_ros2",
+        executable="drone_planner_node",
+        namespace="{{ ns }}",
+        output="log",
+    )
+
 
     return LaunchDescription(
         [
@@ -139,5 +153,7 @@ def generate_launch_description():
             latency_checker,
             safety_checker,
             drone_state_manager,
+            swarmnxt_controller,
+            drone_planner,
         ]
     )
