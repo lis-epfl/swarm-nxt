@@ -72,8 +72,11 @@ void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg) {
   // right now this just sets the current goal to the first goal in the vec.
   // Later, this can use the whole list so the drone can be more autonomous
   auto logger = this->get_logger();
+  RCLCPP_INFO(logger, "Got a goal!");
+
   if (msg.goals.size() > 0) {
     auto goal = msg.goals.at(0);
+    RCLCPP_INFO(logger, "x: %5.2f, y: %5.2f, z: %5.2f", goal.pose.x, goal.pose.y, goal.pose.z);
     if (goal.pose != current_goal_.pose) {
       current_goal_ = goal;
       new_goal_ = true;
