@@ -76,7 +76,7 @@ void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg) {
 
   if (msg.goals.size() > 0) {
     auto goal = msg.goals.at(0);
-    RCLCPP_INFO(logger, "x: %5.2f, y: %5.2f, z: %5.2f", goal.pose.x, goal.pose.y, goal.pose.z);
+    RCLCPP_INFO(logger, "x: %5.2f, y: %5.2f, z: %5.2f", goal.pose.position.x, goal.pose.position.y, goal.pose.position.z);
     if (goal.pose != current_goal_.pose) {
       current_goal_ = goal;
       new_goal_ = true;
