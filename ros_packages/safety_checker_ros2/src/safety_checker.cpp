@@ -123,7 +123,7 @@ void SafetyChecker::SetModeForwarder(
 }
 
 void SafetyChecker::LandNow() {
-  mavros_msgs::srv::CommandTOL::Request::SharedPtr req;
+  auto req = std::make_shared<mavros_msgs::srv::CommandTOL::Request>();
   // do we have to send any position or something?
   auto land_future = land_client_->async_send_request(
       req,
