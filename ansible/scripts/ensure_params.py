@@ -156,7 +156,7 @@ def get_and_check_params(conn, wanted_params, change_enabled):
             logger.error(f"Failed to read param {k}")
             shutdown_event.set()
         
-        return mismatch
+    return mismatch
 
 conn = mavutil.mavlink_connection("/dev/ttyTHS1", baud=921600)
 with open("{{ drone_ros_path }}/config/params.yml", "r") as f:
