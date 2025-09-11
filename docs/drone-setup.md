@@ -251,7 +251,7 @@ Go to the home screen of QGroundControl, and click on the Q button in the top le
 In the console, run the following commands: 
 ```
 cd fs/microsd
-mkdir etc/
+mkdir etc
 cd etc
 echo "mavlink stream -d /dev/ttyS3 -s HIGHRES_IMU -r 1000" > extras.txt
 ```
