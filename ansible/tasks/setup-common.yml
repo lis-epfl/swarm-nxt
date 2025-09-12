@@ -31,16 +31,6 @@
     enabled: true
     daemon_reload: true
 
-- name: Set max power mode 
-  ansible.builtin.command: nvpmodel -m 0 --force
-  async: 1
-  poll: 0 # skip to next task 
-  ignore_errors: true # TODO: make this less fragile
-
-- name: Wait for the system to come back up
-  ansible.builtin.wait_for_connection:
-    delay: 10
-    timeout: 360 
 
 - name: Update WiFi power save configuration
   become: yes
@@ -252,6 +242,12 @@
       psk: "{{ wifi_password }}"
     autoconnect: true
     state: present
+
+- name: Set max power mode 
+  ansible.builtin.command: nvpmodel -m 0 
+  async: 1
+  poll: 0 # skip to next task 
+  ignore_errors: true # TODO: make this less fragile
 
 - name: Reboot system and wait for it to come back
   ansible.builtin.reboot:
