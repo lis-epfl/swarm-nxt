@@ -50,6 +50,12 @@
         dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
         version: "niel/fix-check-launch" # TODO: temp
         force: yes 
+    
+    - name: Get OAK Driver
+      ansible.builtin.git: 
+        repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2"
+        dest: "{{ drone_ros_path }}/src/oak_ffc_4p_driver_ros2"
+        
     - name: SwarmNXT Nodes
       block: 
         - name: Get repository 

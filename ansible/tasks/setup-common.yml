@@ -1,8 +1,38 @@
 - name: Check kernel, patch if needed
   ansible.builtin.include_tasks: "patch-kernel.yml"       
-- name: Perform an upgrade # installs new packages if needed
-  ansible.builtin.apt:
-    update_cache: yes
+
+- name: Add Docker apt repository
+  block:
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+        update_cache: yes
+    
+    - name: Create keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+    
+    - name: Download Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+    
+    - name: Add Docker repository
+      ansible.builtin.lineinfile:
+        path: /etc/apt/sources.list.d/docker.list
+        line: "deb [arch=arm64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        create: yes
+    
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
 - name: Ensure apt packages are installed
   ansible.builtin.apt: 
     name: 
@@ -12,7 +42,12 @@
       - htop 
       - sysstat
       - chrony
-    state: latest
+      - docker-ce=5:27.5*
+      - docker-ce-cli=5:27.5*
+      - libopencv-dev
+      - libusb-1.0-0-dev
+      
+    state: present
 
 - name: Jetson Stats
   ansible.builtin.pip:
@@ -206,7 +241,68 @@
         dest: /usr/bin/
         remote_src: true
 
- 
+
+- name: Camera prereqs
+  block:
+    - name: Ensure Movidius udev rule exists
+      ansible.builtin.copy:
+        content: 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"'
+        dest: /etc/udev/rules.d/80-movidius.rules
+        mode: '0644'
+      register: udev_rule_result
+
+    - name: Reload udev rules if changed
+      ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+      when: udev_rule_result.changed
+
+    - name: Check if depthai zip exists
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/build_artifacts/depthai-v2.29.0-build.zip"
+        checksum_algorithm: sha256
+        get_checksum: yes
+      register: depthai_zip
+      delegate_to: localhost
+      become: false
+
+    - name: Extract zip
+      when: depthai_zip.stat.exists and depthai_zip.stat.checksum == '67e655426e5f7a26197c71c922df6c4351634397991c7c042bab129af9e3bf8b' 
+      ansible.builtin.unarchive: 
+        src: "{{ playbook_dir }}/build_artifacts/depthai-v2.29.0-build.zip"
+        dest: /tmp 
+
+    - name: Manually download and build depthai
+      when: not depthai_zip.stat.exists or depthai_zip.stat.checksum != '67e655426e5f7a26197c71c922df6c4351634397991c7c042bab129af9e3bf8b' 
+      block:
+      - name: Download depthai-core
+        ansible.builtin.get_url:
+          url: https://github.com/luxonis/depthai-core/releases/download/v2.29.0/depthai-core-v2.29.0.tar.gz
+          dest: /tmp/depthai-core-v2.29.0.tar.gz
+      
+      - name: Extract depthai-core
+        ansible.builtin.unarchive:
+          src: /tmp/depthai-core-v2.29.0.tar.gz
+          dest: /tmp
+          remote_src: true
+      
+      - name: Build depthai-core
+        ansible.builtin.shell:
+          cmd: cmake -B build && cmake --build build --parallel $(nproc) && cmake --install build
+          chdir: /tmp/depthai-core-v2.29.0
+      
+    - name: Copy depthai headers to system location
+      ansible.builtin.copy:
+        src: /tmp/depthai-core-v2.29.0/build/install/include/
+        dest: /usr/local/include/
+        remote_src: true
+        mode: preserve
+
+    - name: Copy depthai libraries to system location
+      ansible.builtin.copy:
+        src: /tmp/depthai-core-v2.29.0/build/install/lib/
+        dest: /usr/local/lib/
+        remote_src: true
+        mode: preserve
+
 - name: NXT compatability
   block: 
     - name: Allow rootless access to flight controller
@@ -249,7 +345,7 @@
   poll: 0 # skip to next task 
   ignore_errors: true # TODO: make this less fragile
 
-- name: Reboot system and wait for it to come back
-  ansible.builtin.reboot:
-    reboot_timeout: 600        
-    test_command: whoami
+# - name: Reboot system and wait for it to come back
+#   ansible.builtin.reboot:
+#     reboot_timeout: 600        
+#     test_command: whoami
