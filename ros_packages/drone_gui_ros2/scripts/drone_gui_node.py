@@ -134,7 +134,7 @@ class DroneGUINode(Node):
         self.arm_services = {}
         self.takeoff_services = {}
         self.land_services = {}
-
+        self.controller_enable_topics = {}
         for drone in self.drone_list:
             self.arm_services[drone] = self.create_client(
                 CommandBool, f"/{drone}/mavros/cmd/arming"
@@ -144,6 +144,9 @@ class DroneGUINode(Node):
             )
             self.land_services[drone] = self.create_client(
                 CommandTOL, f"/{drone}/mavros/cmd/land"
+            )
+            self.controller_enable_topics[drone] = self.create_publisher(
+                Trigger, f"/{drone}/controller/enable", 10
             )
 
     def mavros_state_callback(self, msg: State, drone_name: str):
@@ -200,7 +203,11 @@ class DroneGUINode(Node):
         elif command == "disarm":
             msg.enable = False
             self.global_arm_pub.publish(msg)
-
+        elif command.startswith("controller"):
+            for drone in self.drone_list: 
+                self.call_individual_service(drone, command)
+        else:
+            raise ValueError(f"Could not find command {command}")
         self.get_logger().info(f"Published global {command} command")
 
     def call_individual_service(self, drone: str, command: str):
@@ -232,6 +239,15 @@ class DroneGUINode(Node):
                     req = CommandTOL.Request()
                     service.call_async(req)
 
+            elif command.startswith("controller"):
+                msg = Trigger()
+                msg.stamp = self.get_clock().now().to_msg()
+                msg.enable = False
+                if command.endswith("enable"):
+                    msg.enable = True
+                topic = self.controller_enable_topics.get(drone)
+                topic.publish(msg)
+                
             self.get_logger().info(f"Called {command} service for {drone}")
 
         except Exception as e:
