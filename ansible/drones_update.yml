@@ -55,6 +55,22 @@
       ansible.builtin.git: 
         repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2"
         dest: "{{ drone_ros_path }}/src/oak_ffc_4p_driver_ros2"
+        force: yes
+
+    - name: Copy SSH key 
+      ansible.builtin.copy:
+        src: secrets/git_key
+        dest: /tmp/git_key
+        mode: 0600
+
+    - name: Get HDSM package
+      ansible.builtin.git: 
+        repo: git@github.com:ctoumieh/multi_agent_pkgs/
+        dest: "{{ drone_ros_path }}/multi_agent_pkgs"
+        key_file: /tmp/git_key
+        force: yes
+        accept_hostkey: yes
+
         
     - name: SwarmNXT Nodes
       block: 
@@ -100,7 +116,13 @@
         - "{{ drone_ros_path }}/install"
     
     - name: Build ros packages
-      ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build  
+      ansible.builtin.shell: | 
+        . /opt/ros/humble/setup.sh && \
+        colcon build --base-paths src && \
+        colcon build --base-paths multi_agent_pkgs --packages-select jps3d decomp_util convex_decomp_util path_finding_util voxel_grid_util decomp_ros_msgs decomp_ros_utils && \
+        . install/setup.sh && \
+        colcon build --base-paths multi_agent_pkgs --packages-select env_builder_msgs env_builder mapping_util multi_agent_planner_msgs multi_agent_planner
+        
       args:
         chdir: "{{ drone_ros_path }}"
       async: 2400
