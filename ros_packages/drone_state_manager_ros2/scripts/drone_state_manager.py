@@ -5,8 +5,9 @@ import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from swarmnxt_msgs.msg import Trigger, ControllerCommand, DroneState
-from mavros_msgs.srv import CommandTOL, CommandBool, SetMode
+from mavros_msgs.srv import CommandTOL, CommandBool, SetMode, ParamGet
 from mavros_msgs.msg import State
+from geometry_msgs.msg import PoseStamped
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
 
@@ -24,6 +25,8 @@ class DroneStateManager(Node):
         # Initialize drone state and MAVROS state
         self.mode = make_drone_state(DroneState.IDLE)
         self.mavros_state = None
+        self.current_pose = None
+        self.takeoff_altitude = None
 
         self.loop_timer = self.create_timer(0.1, self.loop_cb)
 
@@ -45,6 +48,10 @@ class DroneStateManager(Node):
         self.mavros_state_client_ = self.create_subscription(
             State, namespace + "/mavros/state", self.mavros_state_cb, 10
         )
+        
+        self.pose_sub_ = self.create_subscription(
+            PoseStamped, namespace + "/mavros/local_position/pose", self.pose_cb, 10
+        )
 
         self.set_mode_client_ = self.create_client(
             SetMode, namespace + "/mavros/set_mode"
@@ -58,6 +65,10 @@ class DroneStateManager(Node):
         )
         self.local_arm_client_ = self.create_client(
             CommandBool, namespace + "/mavros/cmd/arming"
+        )
+        
+        self.param_get_client_ = self.create_client(
+            ParamGet, namespace + "/mavros/param/get"
         )
 
         self.drone_state_pub_ = self.create_publisher(
@@ -152,6 +163,9 @@ class DroneStateManager(Node):
     def mavros_state_cb(self, msg: State):
         self.mavros_state = msg
 
+    def pose_cb(self, msg: PoseStamped):
+        self.current_pose = msg
+
     def control_cmd_cb(self, msg):
         self.control_msgs += 1
 
@@ -162,8 +176,9 @@ class DroneStateManager(Node):
 
         if self.mode.state == DroneState.TAKING_OFF:
             # check if the takeoff is finished.
-            # px4 mode changes?
-            if self.mavros_state.mode == "AUTO.LOITER":
+            # px4 mode changes or altitude reached?
+            if (self.mavros_state.mode == "AUTO.LOITER" or 
+                (self.current_pose is not None and self.current_pose.pose.position.z >= 1.0)):
                 # we've finished takeoff...
                 self.set_mode(make_drone_state(DroneState.HOVERING))
         elif self.mode.state == DroneState.HOVERING:
