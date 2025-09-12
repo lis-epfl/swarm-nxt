@@ -303,6 +303,9 @@
         remote_src: true
         mode: preserve
 
+- name: Gurobi 
+  ansible.builtin.include_tasks: install-gurobi.yml
+  
 - name: NXT compatability
   block: 
     - name: Allow rootless access to flight controller
@@ -345,7 +348,7 @@
   poll: 0 # skip to next task 
   ignore_errors: true # TODO: make this less fragile
 
-- name: Reboot system and wait for it to come back
-  ansible.builtin.reboot:
-    reboot_timeout: 600        
-    test_command: whoami
+# - name: Reboot system and wait for it to come back
+#   ansible.builtin.reboot:
+#     reboot_timeout: 600        
+#     test_command: whoami
