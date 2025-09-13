@@ -70,7 +70,7 @@
         key_file: /tmp/git_key
         force: yes
         accept_hostkey: yes
-        version: dyn-env
+        version: niel/frames_everywhere
 
         
     - name: SwarmNXT Nodes
