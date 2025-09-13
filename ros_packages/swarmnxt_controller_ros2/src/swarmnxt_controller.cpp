@@ -37,7 +37,7 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   done_pub_ = this->create_publisher<std_msgs::msg::Bool>(
       ns + "/controller/reached_destination", 10);
 
-  loop_timer_ = this->create_wall_timer(std::chrono::milliseconds(30),
+  loop_timer_ = this->create_wall_timer(std::chrono::milliseconds(10),
                                         std::bind(&Controller::Loop, this));
 }
 nav_msgs::msg::Path Controller::GetTrajectoryCopy() {
