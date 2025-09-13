@@ -165,7 +165,7 @@ def generate_launch_description():
             )
         ),
         launch_arguments={
-            "rob_id": "{{ drone_num - 1 }}",
+            "rob_id": "{{ (drone_num | int) - 1 }}",
             "n_rob": "{{ groups['drones'] | length }}",
         }.items(),
     )
