@@ -142,6 +142,34 @@ def generate_launch_description():
         output="log",
     )
 
+    env_builder_include = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("env_builder"),
+                    "launch",
+                    "env_builder_empty.launch.py",
+                ]
+            )
+        ),
+    )
+
+    multi_agent_planner_include = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("multi_agent_planner"),
+                    "launch",
+                    "omninxt_planner.launch.py",
+                ]
+            )
+        ),
+        launch_arguments={
+            "rob_id": "{{ drone_num - 1 }}",
+            "n_rob": "{{ groups['drones'] | length }}",
+        }.items(),
+    )
+
 
     return LaunchDescription(
         [
@@ -155,5 +183,7 @@ def generate_launch_description():
             drone_state_manager,
             swarmnxt_controller,
             drone_planner,
+            env_builder_include,
+            multi_agent_planner_include,
         ]
     )
