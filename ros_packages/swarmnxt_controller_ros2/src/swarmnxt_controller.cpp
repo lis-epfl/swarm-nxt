@@ -115,7 +115,8 @@ void Controller::SendTrajectoryMessage() {
   bool found_future_waypoint = false;
   for (unsigned int i = cur_traj_index_; i < num_traj_points; i++) {
     rclcpp::Time traj_point_time(cur_traj.poses[i].header.stamp);
-    if (traj_point_time > current_time) {
+    auto lookahead_time = rclcpp::Duration::from_nanoseconds(100000000);
+    if (traj_point_time > current_time + lookahead_time) {
       cur_traj_index_ = i;
       found_future_waypoint = true;
       RCLCPP_INFO(this->get_logger(), 
