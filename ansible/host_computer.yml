@@ -160,11 +160,7 @@
         rosdep install --from-paths src --ignore-src -r -y
 
     - name: Build ROS Packages
-      ansible.builtin.shell: | 
-        cd {{ host_ros_path }} && \ 
-        . /opt/ros/humble/setup.sh && \
-        colcon build --base-paths src && \
-        colcon build --base-paths multi_agent_pkgs --packages-select multi_agent_planner_msgs 
+      ansible.builtin.include_tasks: tasks/local-build.yml
 
     - name: Make path
       ansible.builtin.file: 

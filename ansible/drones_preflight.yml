@@ -9,10 +9,8 @@
       delegate_to: 127.0.0.1
       connection: local
       block:
-      - name: Build local packages
-        ansible.builtin.shell: ". /opt/ros/humble/setup.sh && colcon build"
-        args:
-          chdir: "{{ host_ros_path }}"
+      - name: Build Local Packages
+        ansible.builtin.include_tasks: tasks/local-build.yml
 
       - name: Create local launch file
         ansible.builtin.template: 
