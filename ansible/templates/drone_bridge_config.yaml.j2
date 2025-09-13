@@ -1,3 +1,4 @@
+{% set current_drone_idx = groups['drones'].index(inventory_hostname) %}
 name: domain_bridge
 from_domain: {{ drone_num }}
 to_domain: 0 
@@ -12,7 +13,16 @@ topics:
     type: nav_msgs/msg/Path
   {{ns}}/mavros/setpoint_position/local:
     type: geometry_msgs/msg/PoseStamped
-  agent_{{ groups['drones'].index(inventory_hostname) }}/traj_full: 
+  agent_{{ current_drone_idx }}/traj_full: 
     type: multi_agent_planner_msgs/msg/Trajectory
-  agent_{{ groups['drones'].index(inventory_hostname) }}/traj:
+  agent_{{ current_drone_idx }}/traj:
     type: nav_msgs/msg/Path
+{% for drone in groups['drones'] %}
+{% set drone_num_id = drone | regex_replace('\.local', '') | regex_search('[0-9]+$') %}
+{% set drone_idx = loop.index0 %}
+{% if drone_idx != current_drone_idx %}
+  agent_{{ current_drone_idx }}/traj_full:
+    type: multi_agent_planner_msgs/msg/Trajectory
+    to_domain: {{ drone_num_id }}
+{% endif %}
+{% endfor %}
