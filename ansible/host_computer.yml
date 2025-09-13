@@ -118,6 +118,16 @@
             repo: https://github.com/lis-epfl/optitrack_packages_ros2/
             dest: "{{ host_ros_path }}/src/optitrack_packages_ros2"
             force: yes
+    - name: HDSM Planner Messages 
+      become: false
+      block:
+        - name: Get Planner
+          ansible.builtin.git:
+            repo: git@github.com:ctoumieh/multi_agent_pkgs
+            dest: "{{ host_ros_path }}/multi_agent_pkgs"
+            force: yes
+
+        
 
     
     - name: Swarm Nodes
@@ -150,7 +160,11 @@
         rosdep install --from-paths src --ignore-src -r -y
 
     - name: Build ROS Packages
-      ansible.builtin.shell: "cd {{ host_ros_path }} && . /opt/ros/humble/setup.sh && colcon build"
+      ansible.builtin.shell: | 
+        cd {{ host_ros_path }} && \ 
+        . /opt/ros/humble/setup.sh && \
+        colcon build --base-paths src && \
+        colcon build --base-paths multi_agent_pkgs --packages-select multi_agent_planner_msgs 
 
     - name: Make path
       ansible.builtin.file: 
