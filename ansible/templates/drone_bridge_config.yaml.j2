@@ -12,3 +12,7 @@ topics:
     type: nav_msgs/msg/Path
   {{ns}}/mavros/setpoint_position/local:
     type: geometry_msgs/msg/PoseStamped
+  agent_{{ groups['drones'].index(inventory_hostname) }}/traj_full: 
+    type: multi_agent_planner_msgs/msg/Trajectory
+  agent_{{ groups['drones'].index(inventory_hostname) }}/traj:
+    type: nav_msgs/msg/Path
