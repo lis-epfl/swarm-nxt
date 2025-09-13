@@ -104,8 +104,8 @@ void Controller::SendTrajectoryMessage() {
   auto& clk = *this->get_clock();
   auto current_time = this->now();
 
-  RCLCPP_INFO_THROTTLE(
-      this->get_logger(), clk, 500,
+  RCLCPP_INFO(
+      this->get_logger(), 
       "Before timestamp search - cur_pos: [%5.2f, %5.2f, %5.2f], cur_target_: "
       "[%5.2f, %5.2f, %5.2f], traj_index: %u, num_points: %u",
       cur_pos.x(), cur_pos.y(), cur_pos.z(), cur_target_.x(), cur_target_.y(),
@@ -118,7 +118,7 @@ void Controller::SendTrajectoryMessage() {
     if (traj_point_time > current_time) {
       cur_traj_index_ = i;
       found_future_waypoint = true;
-      RCLCPP_INFO_THROTTLE(this->get_logger(), clk, 500,
+      RCLCPP_INFO(this->get_logger(), 
                            "Found future waypoint at index %u",
                            cur_traj_index_);
       break;
@@ -129,13 +129,13 @@ void Controller::SendTrajectoryMessage() {
     // All waypoints are in the past, use the last one or mark as done
     if (num_traj_points > 0) {
       cur_traj_index_ = num_traj_points - 1;
-      RCLCPP_INFO_THROTTLE(
-          this->get_logger(), clk, 500,
+      RCLCPP_INFO(
+          this->get_logger(), 
           "No future waypoints, using last waypoint at index %u",
           cur_traj_index_);
     } else {
       reached_dest_ = true;
-      RCLCPP_INFO_THROTTLE(this->get_logger(), clk, 500,
+      RCLCPP_INFO(this->get_logger(), 
                            "No waypoints available, marking as done");
     }
   }
@@ -143,7 +143,7 @@ void Controller::SendTrajectoryMessage() {
   // Set the current target from the selected waypoint
   if (cur_traj_index_ < num_traj_points) {
     tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position, cur_target_);
-    RCLCPP_INFO_THROTTLE(this->get_logger(), clk, 500,
+    RCLCPP_INFO(this->get_logger(), 
                          "Set target from waypoint %u: [%5.2f, %5.2f, %5.2f]",
                          cur_traj_index_, cur_target_.x(), cur_target_.y(),
                          cur_target_.z());
