@@ -101,7 +101,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
       1.0 * 2 * M_PI;  // if the angle is within 1 degree, we are there.
 
   nav_msgs::msg::Path trajectory = nav_msgs::msg::Path();
-  trajectory.header.frame_id = "map";
+  trajectory.header.frame_id = "world";
 
   geometry_msgs::msg::Pose current_goal_unstamped;
   geometry_msgs::msg::Pose current_position_unstamped;
@@ -168,7 +168,7 @@ nav_msgs::msg::Path DronePlanner::GenerateTrajectory() {
     tf2::Quaternion interp_quat = start_quaternion.slerp(goal_quaternion, t);
 
     pose.pose.orientation = tf2::toMsg(interp_quat);
-    pose.header.frame_id = "map";
+    pose.header.frame_id = "world";
     pose.header.stamp =
         this->now() + rclcpp::Duration::from_seconds(t * traj_time);
     trajectory.poses.push_back(pose);

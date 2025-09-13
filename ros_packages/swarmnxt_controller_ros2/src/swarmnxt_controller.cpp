@@ -103,14 +103,14 @@ void Controller::UpdateTrajectoryHDSMType(
     nav_msgs::msg::Path new_traj_path = nav_msgs::msg::Path();
     new_traj_path.header.stamp =
         rclcpp::Time(static_cast<int64_t>(new_traj.planning_start_time * 1e9));
-    new_traj_path.header.frame_id = "map";
+    new_traj_path.header.frame_id = "world";
     size_t i = 0;
     for (const auto& state : new_traj.states) {
       geometry_msgs::msg::PoseStamped pose;
       pose.header.stamp = rclcpp::Time(new_traj_path.header.stamp) +
                           rclcpp::Duration::from_nanoseconds(
                               static_cast<int64_t>(i * new_traj.dt * 1e9));
-      pose.header.frame_id = "map";
+      pose.header.frame_id = "world";
       pose.pose.position.x = state.position[0];
       pose.pose.position.y = state.position[1];
       pose.pose.position.z = state.position[2];
@@ -133,9 +133,9 @@ void Controller::SendTrajectoryMessage() {
   auto cur_pos = GetPositionCopy();
   swarmnxt_msgs::msg::ControllerCommand msg;
   msg.header.stamp = this->now();
-  msg.header.frame_id = "map";
+  msg.header.frame_id = "world";
   msg.pose_cmd.header.stamp = this->now();
-  msg.pose_cmd.header.frame_id = "map";
+  msg.pose_cmd.header.frame_id = "world";
   msg.command_type_mask =
       swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
   std_msgs::msg::Bool done_msg;
