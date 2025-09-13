@@ -10,6 +10,7 @@
   <depend>geometry_msgs</depend>
   <depend>mavros_msgs</depend>
   <depend>swarmnxt_msgs</depend> 
+  <depend>multi_agent_planner_msgs</depend>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

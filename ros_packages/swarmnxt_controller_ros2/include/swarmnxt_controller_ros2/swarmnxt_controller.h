@@ -5,6 +5,8 @@
 #include <mavros_msgs/srv/command_bool.hpp>
 #include <mavros_msgs/srv/command_tol.hpp>
 #include <mavros_msgs/srv/set_mode.hpp>
+#include <multi_agent_planner_msgs/msg/state.hpp>
+#include <multi_agent_planner_msgs/msg/trajectory.hpp>
 #include <mutex>
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -16,6 +18,12 @@
 
 namespace swarmnxt_controller {
 
+typedef enum {
+  TRAJ_TYPE_UNKNOWN,
+  TRAJ_TYPE_POSE,
+  TRAJ_TYPE_HDSM
+} TrajectoryType;
+
 class Controller : public rclcpp::Node {
  public:
   Controller();
@@ -25,7 +33,8 @@ class Controller : public rclcpp::Node {
   std::mutex traj_mutex_;
   std::mutex pos_mutex_;
   nav_msgs::msg::Path traj_;
-  unsigned int cur_traj_index_;
+  TrajectoryType traj_type_ = TRAJ_TYPE_UNKNOWN;
+  int cur_traj_index_;
   bool reached_dest_ = false;
   bool enabled_ = false;
 
@@ -39,7 +48,9 @@ class Controller : public rclcpp::Node {
   // Subscribers
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
       drone_pos_sub_;
-  rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr traj_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr pose_type_traj_sub_;
+  rclcpp::Subscription<multi_agent_planner_msgs::msg::Trajectory>::SharedPtr
+      hdsm_type_traj_sub_;
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   rclcpp::Subscription<swarmnxt_msgs::msg::Trigger>::SharedPtr enable_sub_;
 
@@ -53,7 +64,9 @@ class Controller : public rclcpp::Node {
   void SendTrajectoryMessage();
   nav_msgs::msg::Path GetTrajectoryCopy();
   tf2::Vector3 GetPositionCopy();
-  void UpdateTrajectory(const nav_msgs::msg::Path new_traj);
+  void UpdateTrajectoryPoseType(const nav_msgs::msg::Path new_traj);
+  void UpdateTrajectoryHDSMType(
+      const multi_agent_planner_msgs::msg::Trajectory new_traj);
 
   // Timer
   rclcpp::TimerBase::SharedPtr loop_timer_;
@@ -62,7 +75,9 @@ class Controller : public rclcpp::Node {
   void MavrosPoseCallback(const geometry_msgs::msg::PoseStamped& msg);
   void EnableCallback(const swarmnxt_msgs::msg::Trigger& msg);
   void MavrosStateCallback(const mavros_msgs::msg::State& msg);
-  void TrajectoryCallback(const nav_msgs::msg::Path& msg);
+  void PoseTypeTrajectoryCallback(const nav_msgs::msg::Path& msg);
+  void HDSMTypeTrajectoryCallback(
+      const multi_agent_planner_msgs::msg::Trajectory& msg);
 };
 
 }  // namespace swarmnxt_controller

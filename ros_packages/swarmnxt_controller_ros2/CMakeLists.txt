@@ -18,6 +18,7 @@ find_package(mavros_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(swarmnxt_msgs REQUIRED)
+find_package(multi_agent_planner_msgs REQUIRED)
 
 set(DEPENDENCIES
   rclcpp
@@ -30,6 +31,7 @@ set(DEPENDENCIES
   tf2_geometry_msgs
   std_msgs
   swarmnxt_msgs
+  multi_agent_planner_msgs
 )
 
 include_directories(
