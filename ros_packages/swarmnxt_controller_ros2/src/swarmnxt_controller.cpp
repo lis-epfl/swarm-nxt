@@ -76,9 +76,9 @@ void Controller::SendTrajectoryMessage() {
   auto cur_pos = GetPositionCopy();
   swarmnxt_msgs::msg::ControllerCommand msg;
   msg.header.stamp = this->now();
-  msg.header.frame_id = "world";
+  msg.header.frame_id = "map";
   msg.pose_cmd.header.stamp = this->now();
-  msg.pose_cmd.header.frame_id = "world";
+  msg.pose_cmd.header.frame_id = "map";
   msg.command_type_mask =
       swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
   std_msgs::msg::Bool done_msg;
@@ -116,7 +116,7 @@ void Controller::SendTrajectoryMessage() {
   bool found_future_waypoint = false;
   for (unsigned int i = cur_traj_index_; i < num_traj_points; i++) {
     rclcpp::Time traj_point_time(cur_traj.poses[i].header.stamp);
-    auto lookahead_time = rclcpp::Duration::from_nanoseconds(300000000);
+    auto lookahead_time = rclcpp::Duration::from_nanoseconds(50000000);
     if (traj_point_time > current_time + lookahead_time) {
       // Only allow forward progress or staying at current index
       if (i >= cur_traj_index_) {
