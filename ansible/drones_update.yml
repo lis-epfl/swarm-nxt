@@ -70,6 +70,7 @@
         key_file: /tmp/git_key
         force: yes
         accept_hostkey: yes
+        version: dyn-env
 
         
     - name: SwarmNXT Nodes
@@ -104,7 +105,7 @@
         . /opt/ros/humble/setup.sh
         rosdep init
         rosdep update
-        rosdep install --from-paths {{ drone_ros_path }}/src -y --ignore-src -r
+        rosdep install --from-paths {{ drone_ros_path }}/src --from-paths {{ drone_ros_path }}/multi_agent_pkgs -y --ignore-src -r --rosdistro humble
              
     - name: Clean previous build
       when: clean_build | default(false) | bool
@@ -114,9 +115,11 @@
       loop:
         - "{{ drone_ros_path }}/build"
         - "{{ drone_ros_path }}/install"
-    
+
+
     - name: Build ros packages
-      ansible.builtin.shell: | 
+      ansible.builtin.shell: |
+        source /home/lis/.bashrc && \
         . /opt/ros/humble/setup.sh && \
         colcon build --base-paths src && \
         colcon build --base-paths multi_agent_pkgs --packages-select jps3d decomp_util convex_decomp_util path_finding_util voxel_grid_util decomp_ros_msgs decomp_ros_utils && \
@@ -125,6 +128,7 @@
         
       args:
         chdir: "{{ drone_ros_path }}"
+        executable: /bin/bash
       async: 2400
       poll: 0
       register: ros_build_async
