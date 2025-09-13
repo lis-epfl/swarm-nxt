@@ -76,9 +76,9 @@ void Controller::SendTrajectoryMessage() {
   auto cur_pos = GetPositionCopy();
   swarmnxt_msgs::msg::ControllerCommand msg;
   msg.header.stamp = this->now();
-  msg.header.frame_id = "map";
+  msg.header.frame_id = "world";
   msg.pose_cmd.header.stamp = this->now();
-  msg.pose_cmd.header.frame_id = "map";
+  msg.pose_cmd.header.frame_id = "world";
   msg.command_type_mask =
       swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
   std_msgs::msg::Bool done_msg;
@@ -105,23 +105,26 @@ void Controller::SendTrajectoryMessage() {
   auto current_time = this->now();
 
   RCLCPP_INFO(
-      this->get_logger(), 
+      this->get_logger(),
       "Before timestamp search - cur_pos: [%5.2f, %5.2f, %5.2f], cur_target_: "
       "[%5.2f, %5.2f, %5.2f], traj_index: %u, num_points: %u",
       cur_pos.x(), cur_pos.y(), cur_pos.z(), cur_target_.x(), cur_target_.y(),
       cur_target_.z(), cur_traj_index_, num_traj_points);
 
   // Find the first waypoint that's in the future
+  // Constrain to only increment index to prevent backward jumps
   bool found_future_waypoint = false;
   for (unsigned int i = cur_traj_index_; i < num_traj_points; i++) {
     rclcpp::Time traj_point_time(cur_traj.poses[i].header.stamp);
-    auto lookahead_time = rclcpp::Duration::from_nanoseconds(100000000);
+    auto lookahead_time = rclcpp::Duration::from_nanoseconds(300000000);
     if (traj_point_time > current_time + lookahead_time) {
-      cur_traj_index_ = i;
-      found_future_waypoint = true;
-      RCLCPP_INFO(this->get_logger(), 
-                           "Found future waypoint at index %u",
-                           cur_traj_index_);
+      // Only allow forward progress or staying at current index
+      if (i >= cur_traj_index_) {
+        cur_traj_index_ = i;
+        found_future_waypoint = true;
+        RCLCPP_INFO(this->get_logger(), "Found future waypoint at index %u",
+                    cur_traj_index_);
+      }
       break;
     }
   }
@@ -130,24 +133,23 @@ void Controller::SendTrajectoryMessage() {
     // All waypoints are in the past, use the last one or mark as done
     if (num_traj_points > 0) {
       cur_traj_index_ = num_traj_points - 1;
-      RCLCPP_INFO(
-          this->get_logger(), 
-          "No future waypoints, using last waypoint at index %u",
-          cur_traj_index_);
+      RCLCPP_INFO(this->get_logger(),
+                  "No future waypoints, using last waypoint at index %u",
+                  cur_traj_index_);
     } else {
       reached_dest_ = true;
-      RCLCPP_INFO(this->get_logger(), 
-                           "No waypoints available, marking as done");
+      RCLCPP_INFO(this->get_logger(),
+                  "No waypoints available, marking as done");
     }
   }
 
   // Set the current target from the selected waypoint
   if (cur_traj_index_ < num_traj_points) {
     tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position, cur_target_);
-    RCLCPP_INFO(this->get_logger(), 
-                         "Set target from waypoint %u: [%5.2f, %5.2f, %5.2f]",
-                         cur_traj_index_, cur_target_.x(), cur_target_.y(),
-                         cur_target_.z());
+    RCLCPP_INFO(this->get_logger(),
+                "Set target from waypoint %u: [%5.2f, %5.2f, %5.2f]",
+                cur_traj_index_, cur_target_.x(), cur_target_.y(),
+                cur_target_.z());
   } else {
     RCLCPP_ERROR(this->get_logger(), "Did not set any setpoint!");
   }
