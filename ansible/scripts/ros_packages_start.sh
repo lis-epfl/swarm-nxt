@@ -26,6 +26,10 @@ cd {{ ros_path }}
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 
+GUROBI_HOME=/opt/gurobi1003/armlinux64
+PATH=$PATH:$GUROBI_HOME/bin
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GUROBI_HOME/lib
+
 # Calculate dynamic sleep time based on drone position in sorted order
 DRONE_NUM={{ drone_num | int }}
 # All drone numbers in the group, sorted
