@@ -17,7 +17,7 @@ import os
 
 
 def generate_launch_description():
-    hdsm_idx = {{ groups['drones'].index(inventory_hostname) - 1 }}
+    hdsm_idx = {{ groups['drones'].index(inventory_hostname) }}
 
     bridge_node = Node(
         package="domain_bridge",
