@@ -1,7 +1,10 @@
-- name: Build local packages
-  ansible.builtin.shell: | 
-    . /opt/ros/humble/setup.sh && \
-        colcon build --base-paths src && \
-        colcon build --base-paths multi_agent_pkgs --packages-select multi_agent_planner_msgs 
+- name: Copy build script
+  ansible.builtin.template:
+    src: templates/local_build.sh
+    dest: "{{ host_ros_path }}/local_build.sh"
+    mode: "755"
+
+- name: Execute build script
+  ansible.builtin.shell: ./local_build.sh
   args:
     chdir: "{{ host_ros_path }}"
