@@ -24,7 +24,7 @@ from swarmnxt_msgs.msg import Trigger, DroneState
 from geometry_msgs.msg import PoseStamped, Point
 from ament_index_python.packages import get_package_share_directory
 
-from multi_agent_planner_msgs.srv import StartPlanning, StopPlanning
+from multi_agent_planner_msgs.msg import StartPlanning, StopPlanning
 
 
 class DroneGUINode(Node):
@@ -74,9 +74,9 @@ class DroneGUINode(Node):
         # Controller enable/disable publishers for each drone
         self.controller_enable_pubs = {}
         
-        # Planning service clients
-        self.planning_start_services = {}
-        self.planning_stop_services = {}
+        # Planning topic publishers
+        self.planning_start_publishers = {}
+        self.planning_stop_publishers = {}
 
         # Subscribe to drone states
         self.setup_drone_subscriptions()
@@ -87,8 +87,8 @@ class DroneGUINode(Node):
         # Set up controller enable/disable publishers
         self.setup_controller_publishers()
         
-        # Set up planning service clients
-        self.setup_planning_services()
+        # Set up planning topic publishers
+        self.setup_planning_publishers()
 
         # Timer for periodic updates
         self.timer = self.create_timer(0.5, self.update_gui)
@@ -202,23 +202,23 @@ class DroneGUINode(Node):
                 Trigger, f"/{drone}/controller/enable", reliable_qos
             )
     
-    def setup_planning_services(self):
-        """Set up planning service clients for each agent node"""
+    def setup_planning_publishers(self):
+        """Set up planning topic publishers for each agent node"""
         for drone in self.drone_list:
             # Extract drone number to map to agent node
             drone_num = int(''.join(filter(str.isdigit, drone)))
             if drone_num in self.hdsm_mapping:
                 agent_idx = self.hdsm_mapping[drone_num]
                 
-                # Create service clients for the corresponding agent node
-                self.planning_start_services[drone] = self.create_client(
-                    StartPlanning, f"/agent_node_{agent_idx}/start_planning"
+                # Create topic publishers for the corresponding agent node
+                self.planning_start_publishers[drone] = self.create_publisher(
+                    StartPlanning, f"/agent_node_{agent_idx}/start_planning", 10
                 )
-                self.planning_stop_services[drone] = self.create_client(
-                    StopPlanning, f"/agent_node_{agent_idx}/stop_planning"
+                self.planning_stop_publishers[drone] = self.create_publisher(
+                    StopPlanning, f"/agent_node_{agent_idx}/stop_planning", 10
                 )
                 
-                self.get_logger().info(f"Set up planning services for {drone} -> agent_node_{agent_idx}")
+                self.get_logger().info(f"Set up planning publishers for {drone} -> agent_node_{agent_idx}")
             else:
                 self.get_logger().warn(f"No HDSM mapping found for drone {drone} (num: {drone_num})")
 
@@ -321,39 +321,39 @@ class DroneGUINode(Node):
         self.get_logger().info("Stopped planning for all drones")
     
     def call_planning_service(self, drone: str, command: str):
-        """Call planning service for a specific drone"""
+        """Publish planning messages for a specific drone"""
         try:
             if command == "start":
-                service = self.planning_start_services.get(drone)
-                if service and service.wait_for_service(timeout_sec=1.0):
-                    req = StartPlanning.Request()
+                publisher = self.planning_start_publishers.get(drone)
+                if publisher:
+                    msg = StartPlanning()
                     
                     # Get current position for initial state
                     pos = self.drone_positions.get(drone, Point(x=0.0, y=0.0, z=0.0))
                     
                     # Fill initial_state: [x, y, z, vx, vy, vz, ax, ay, az]
-                    req.initial_state = [
+                    msg.initial_state = [
                         float(pos.x), float(pos.y), float(pos.z),  # position
                         0.0, 0.0, 0.0,  # velocity (zeros as requested)
                         0.0, 0.0, 0.0   # acceleration (zeros as requested)
                     ]
                     
-                    future = service.call_async(req)
-                    self.get_logger().info(f"Called start planning for {drone} with initial state: {req.initial_state}")
+                    publisher.publish(msg)
+                    self.get_logger().info(f"Published start planning for {drone} with initial state: {msg.initial_state}")
                 else:
-                    self.get_logger().error(f"Start planning service not available for {drone}")
+                    self.get_logger().error(f"Start planning publisher not available for {drone}")
                     
             elif command == "stop":
-                service = self.planning_stop_services.get(drone)
-                if service and service.wait_for_service(timeout_sec=1.0):
-                    req = StopPlanning.Request()
-                    future = service.call_async(req)
-                    self.get_logger().info(f"Called stop planning for {drone}")
+                publisher = self.planning_stop_publishers.get(drone)
+                if publisher:
+                    msg = StopPlanning()
+                    publisher.publish(msg)
+                    self.get_logger().info(f"Published stop planning for {drone}")
                 else:
-                    self.get_logger().error(f"Stop planning service not available for {drone}")
+                    self.get_logger().error(f"Stop planning publisher not available for {drone}")
                     
         except Exception as e:
-            self.get_logger().error(f"Error calling planning service for {drone}: {e}")
+            self.get_logger().error(f"Error publishing planning message for {drone}: {e}")
 
     def call_individual_service(self, drone: str, command: str):
         try:
