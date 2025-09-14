@@ -154,6 +154,7 @@ void SafetyChecker::LandNow() {
           RCLCPP_INFO(get_logger(),
                       "Successfully changed mode to land. SafetyFlag Code: %d",
                       safety_flags_);
+          safety_flags_ &= (~SafetyStatus::UNSAFE_COMMAND_SEND_RATE);
         }
       });
 }
