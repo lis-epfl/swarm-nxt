@@ -212,13 +212,13 @@ class DroneGUINode(Node):
                 
                 # Create topic publishers for the corresponding agent node
                 self.planning_start_publishers[drone] = self.create_publisher(
-                    StartPlanning, f"/agent_node_{agent_idx}/start_planning", 10
+                    StartPlanning, f"/agent_{agent_idx}/start_planning", 10
                 )
                 self.planning_stop_publishers[drone] = self.create_publisher(
-                    StopPlanning, f"/agent_node_{agent_idx}/stop_planning", 10
+                    StopPlanning, f"/agent_{agent_idx}/stop_planning", 10
                 )
                 
-                self.get_logger().info(f"Set up planning publishers for {drone} -> agent_node_{agent_idx}")
+                self.get_logger().info(f"Set up planning publishers for {drone} -> agent_{agent_idx}")
             else:
                 self.get_logger().warn(f"No HDSM mapping found for drone {drone} (num: {drone_num})")
 
