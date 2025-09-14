@@ -26,3 +26,12 @@ topics:
     to_domain: {{ drone_num_id }}
 {% endif %}
 {% endfor %}
+services:
+  agent_{{ current_drone_idx }}/start_planning:
+    type: multi_agent_planner_msgs/srv/StartPlanning
+    from_domain: 0
+    to_domain: {{ drone_num }}
+  agent_{{ current_drone_idx }}/stop_planning:
+    type: multi_agent_planner_msgs/srv/StopPlanning
+    from_domain: 0
+    to_domain: {{ drone_num }}
