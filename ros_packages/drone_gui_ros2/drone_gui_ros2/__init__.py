@@ -1,1 +1,0 @@
-# drone_gui_ros2 package
