@@ -206,7 +206,7 @@ class DroneGUINode(Node):
         """Set up planning service clients for each agent node"""
         for drone in self.drone_list:
             # Extract drone number to map to agent node
-            drone_num = ''.join(filter(str.isdigit, drone))
+            drone_num = int(''.join(filter(str.isdigit, drone)))
             if drone_num in self.hdsm_mapping:
                 agent_idx = self.hdsm_mapping[drone_num]
                 
@@ -255,7 +255,7 @@ class DroneGUINode(Node):
             drone_state = self.drone_states.get(drone, {})
             
             # Get agent ID from HDSM mapping
-            drone_num = ''.join(filter(str.isdigit, drone))
+            drone_num = int(''.join(filter(str.isdigit, drone)))
             agent_id = self.hdsm_mapping.get(drone_num, "N/A") if drone_num else "N/A"
 
             gui_data[drone] = {
