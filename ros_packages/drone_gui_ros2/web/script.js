@@ -93,7 +93,7 @@ class DroneGUI {
         
         card.innerHTML = `
             <div class="drone-header">
-                <div class="drone-name">${drone.name.toUpperCase()}</div>
+                <div class="drone-name">${drone.name.toUpperCase()} (Agent ${drone.agent_id})</div>
                 <div class="drone-status">
                     <span class="status-badge ${drone.connected ? 'status-connected' : 'status-disconnected'}">
                         ${drone.connected ? 'ONLINE' : 'OFFLINE'}

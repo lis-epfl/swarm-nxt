@@ -40,7 +40,7 @@
         loop:
           - { src: "templates/peer_list.yaml.j2", dest: "{{ host_ros_path }}/config/peer_list.yaml" }
           - { src: "templates/host_bridge_config.yaml.j2", dest: "{{ host_ros_path }}/config/bridge_config.yaml" }
-          - { src: "templates/hdsm_planner_map.json.j2", dest: "{{ host_ros_path }}/config/hdsm_planner_map.json" }
+          - { src: "templates/hdsm_planner_map.yaml.j2", dest: "{{ host_ros_path }}/config/hdsm_planner_map.yaml" }
         vars:
           peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
 

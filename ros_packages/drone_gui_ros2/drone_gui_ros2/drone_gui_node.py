@@ -40,7 +40,7 @@ class DroneGUINode(Node):
         # Declare parameters
         self.declare_parameter("port", 8080)
         self.declare_parameter("peers_file", "~/ros/config/peers.yaml")
-        self.declare_parameter("hdsm_mapping_file", "~/ros/config/hdsm_planner_map.json")
+        self.declare_parameter("hdsm_mapping_file", "~/ros/config/hdsm_planner_map.yaml")
 
         # Get parameter values
         self.port = self.get_parameter("port").get_parameter_value().integer_value
@@ -130,12 +130,12 @@ class DroneGUINode(Node):
                 raise RuntimeError("Could not load drone list")
     
     def load_hdsm_mapping(self):
-        """Load the HDSM planner mapping from JSON file"""
+        """Load the HDSM planner mapping from YAML file"""
         mapping_path = os.path.expanduser(self.hdsm_mapping_file)
         try:
             if os.path.exists(mapping_path):
                 with open(mapping_path, 'r') as f:
-                    self.hdsm_mapping = json.load(f)
+                    self.hdsm_mapping = yaml.safe_load(f)
                 self.get_logger().info(f"Loaded HDSM mapping: {self.hdsm_mapping}")
             else:
                 raise RuntimeError(f"HDSM mapping file not found at {mapping_path}!")
@@ -253,9 +253,14 @@ class DroneGUINode(Node):
         for drone in self.drone_list:
             mavros_state = self.drone_mavros_states.get(drone, {})
             drone_state = self.drone_states.get(drone, {})
+            
+            # Get agent ID from HDSM mapping
+            drone_num = ''.join(filter(str.isdigit, drone))
+            agent_id = self.hdsm_mapping.get(drone_num, "N/A") if drone_num else "N/A"
 
             gui_data[drone] = {
                 "name": drone,
+                "agent_id": agent_id,
                 "armed": mavros_state.get("armed", False),
                 "connected": mavros_state.get("connected", False),
                 "mode": mavros_state.get("mode", "UNKNOWN"),

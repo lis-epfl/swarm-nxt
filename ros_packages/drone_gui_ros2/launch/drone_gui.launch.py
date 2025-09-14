@@ -21,7 +21,7 @@ def generate_launch_description():
     
     hdsm_mapping_file_arg = DeclareLaunchArgument(
         'hdsm_mapping_file',
-        default_value='~/data/ros2_swarmnxt_ws/config/hdsm_planner_map.json',
+        default_value='~/data/ros2_swarmnxt_ws/config/hdsm_planner_map.yaml',
         description='Path to the HDSM planner mapping JSON file'
     )
     
