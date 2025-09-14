@@ -32,19 +32,17 @@
           state: directory
           mode: "755"
     
-      - name: Copy peer list
-        ansible.builtin.template: 
-          src: templates/peer_list.yaml.j2
-          dest: "{{ host_ros_path }}/config/peer_list.yaml"
+      - name: Send configuration files
+        ansible.builtin.template:
+          src: "{{ item.src }}"
+          dest: "{{ item.dest }}"
           mode: "644"
+        loop:
+          - { src: "templates/peer_list.yaml.j2", dest: "{{ host_ros_path }}/config/peer_list.yaml" }
+          - { src: "templates/host_bridge_config.yaml.j2", dest: "{{ host_ros_path }}/config/bridge_config.yaml" }
+          - { src: "templates/hdsm_planner_map.json.j2", dest: "{{ host_ros_path }}/config/hdsm_planner_map.json" }
         vars:
           peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
-      
-      - name: Send bridge configuration 
-        ansible.builtin.template: 
-          src: templates/host_bridge_config.yaml.j2
-          dest: "{{ host_ros_path }}/config/bridge_config.yaml"
-          mode: "644"
 
       - name: Create local systemd folder
         ansible.builtin.file:
