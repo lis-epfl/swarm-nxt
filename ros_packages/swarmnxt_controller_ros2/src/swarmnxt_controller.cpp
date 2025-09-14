@@ -148,16 +148,6 @@ void Controller::SendTrajectoryMessage() {
     return;
   }
 
-  // get distance from current target
-  if (reached_dest_) {
-    RCLCPP_INFO(this->get_logger(), "Reached destination, so not advancing");
-    tf2::toMsg(cur_pos, msg.pose_cmd.pose.position);
-    command_pub_->publish(msg);
-    done_msg.data = true;
-    done_pub_->publish(done_msg);
-    return;
-  }
-
   auto current_time = this->now();
 
   RCLCPP_INFO(
