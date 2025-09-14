@@ -48,7 +48,7 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   done_pub_ = this->create_publisher<std_msgs::msg::Bool>(
       ns + "/controller/reached_destination", 10);
 
-  loop_timer_ = this->create_wall_timer(std::chrono::milliseconds(10),
+  loop_timer_ = this->create_wall_timer(std::chrono::milliseconds(5),
                                         std::bind(&Controller::Loop, this));
 }
 nav_msgs::msg::Path Controller::GetTrajectoryCopy() {
@@ -102,7 +102,7 @@ void Controller::UpdateTrajectoryHDSMType(
   if (traj_type_ == TrajectoryType::TRAJ_TYPE_HDSM) {
     // Store the original HDSM trajectory for velocity and acceleration access
     hdsm_traj_ = new_traj;
-    
+
     nav_msgs::msg::Path new_traj_path = nav_msgs::msg::Path();
     new_traj_path.header.stamp =
         rclcpp::Time(static_cast<int64_t>(new_traj.planning_start_time * 1e9));
@@ -138,12 +138,13 @@ void Controller::SendTrajectoryMessage() {
   swarmnxt_msgs::msg::ControllerCommand msg;
   msg.header.stamp = this->now();
   msg.header.frame_id = "world";
-  
+
   // Determine command type based on trajectory type
   if (traj_type_ == TrajectoryType::TRAJ_TYPE_HDSM) {
     msg.command_type_mask = swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT;
   } else {
-    msg.command_type_mask = swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
+    msg.command_type_mask =
+        swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
     msg.pose_cmd.header.stamp = this->now();
     msg.pose_cmd.header.frame_id = "world";
   }
@@ -213,27 +214,30 @@ void Controller::SendTrajectoryMessage() {
               "Setting target: x: %5.2f, y: %5.2f, z: %5.2f", cur_target_.x(),
               cur_target_.y(), cur_target_.z());
 
-  if (msg.command_type_mask == swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT) {
+  if (msg.command_type_mask ==
+      swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT) {
     // Use HDSM trajectory data for position, velocity, acceleration
     if (cur_traj_index_ < hdsm_traj_.states.size()) {
       const auto& state = hdsm_traj_.states[cur_traj_index_];
-      
+
       // Create PositionTarget message
       msg.raw_cmd.header.stamp = this->now();
       msg.raw_cmd.header.frame_id = "world";
-      msg.raw_cmd.coordinate_frame = mavros_msgs::msg::PositionTarget::FRAME_LOCAL_NED;
-      msg.raw_cmd.type_mask = 0; // Use all fields (position, velocity, acceleration)
-      
+      msg.raw_cmd.coordinate_frame =
+          mavros_msgs::msg::PositionTarget::FRAME_LOCAL_NED;
+      msg.raw_cmd.type_mask =
+          0;  // Use all fields (position, velocity, acceleration)
+
       // Position
       msg.raw_cmd.position.x = state.position[0];
       msg.raw_cmd.position.y = state.position[1];
       msg.raw_cmd.position.z = state.position[2];
-      
+
       // Velocity
       msg.raw_cmd.velocity.x = state.velocity[0];
       msg.raw_cmd.velocity.y = state.velocity[1];
       msg.raw_cmd.velocity.z = state.velocity[2];
-      
+
       // Acceleration
       msg.raw_cmd.acceleration_or_force.x = state.acceleration[0];
       msg.raw_cmd.acceleration_or_force.y = state.acceleration[1];
