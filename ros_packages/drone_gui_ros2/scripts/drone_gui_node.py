@@ -21,7 +21,10 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandTOL, CommandBool
 from swarmnxt_msgs.msg import Trigger, DroneState
+from geometry_msgs.msg import PoseStamped, Point
 from ament_index_python.packages import get_package_share_directory
+
+from multi_agent_planner_msgs.msg import StartPlanning, StopPlanning
 
 
 class DroneGUINode(Node):
@@ -30,20 +33,29 @@ class DroneGUINode(Node):
         self.socketio = socketio
         self.drone_states = {}
         self.drone_mavros_states = {}
+        self.drone_positions = {}
         self.drone_list = []
+        self.hdsm_mapping = {}
 
         # Declare parameters
         self.declare_parameter("port", 8080)
         self.declare_parameter("peers_file", "~/ros/config/peers.yaml")
+        self.declare_parameter("hdsm_mapping_file", "~/ros/config/hdsm_planner_map.yaml")
 
         # Get parameter values
         self.port = self.get_parameter("port").get_parameter_value().integer_value
         self.peers_file = (
             self.get_parameter("peers_file").get_parameter_value().string_value
         )
+        self.hdsm_mapping_file = (
+            self.get_parameter("hdsm_mapping_file").get_parameter_value().string_value
+        )
 
         # Load drone list from peers.yaml
         self.load_drone_list()
+        
+        # Load HDSM mapping
+        self.load_hdsm_mapping()
 
         # Set up QoS
         reliable_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
@@ -58,12 +70,25 @@ class DroneGUINode(Node):
         self.global_arm_pub = self.create_publisher(
             Trigger, "/global/arm", reliable_qos
         )
+        
+        # Controller enable/disable publishers for each drone
+        self.controller_enable_pubs = {}
+        
+        # Planning topic publishers
+        self.planning_start_publishers = {}
+        self.planning_stop_publishers = {}
 
         # Subscribe to drone states
         self.setup_drone_subscriptions()
 
         # Individual drone service clients
         self.setup_drone_services()
+        
+        # Set up controller enable/disable publishers
+        self.setup_controller_publishers()
+        
+        # Set up planning topic publishers
+        self.setup_planning_publishers()
 
         # Timer for periodic updates
         self.timer = self.create_timer(0.5, self.update_gui)
@@ -103,8 +128,25 @@ class DroneGUINode(Node):
             if not self.drone_list:
                 # If we couldn't parse, use default
                 raise RuntimeError("Could not load drone list")
+    
+    def load_hdsm_mapping(self):
+        """Load the HDSM planner mapping from YAML file"""
+        mapping_path = os.path.expanduser(self.hdsm_mapping_file)
+        try:
+            if os.path.exists(mapping_path):
+                with open(mapping_path, 'r') as f:
+                    self.hdsm_mapping = yaml.safe_load(f)
+                self.get_logger().info(f"Loaded HDSM mapping: {self.hdsm_mapping}")
+            else:
+                raise RuntimeError(f"HDSM mapping file not found at {mapping_path}!")
+        except Exception as e:
+            self.get_logger().error(f"Error loading HDSM mapping: {e}")
+            raise
 
     def setup_drone_subscriptions(self):
+        # Set up QoS profile for MAVROS position (uses best effort)
+        best_effort_qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, depth=10)
+        
         for drone in self.drone_list:
             # Subscribe to MAVROS state
             self.create_subscription(
@@ -121,6 +163,14 @@ class DroneGUINode(Node):
                 lambda msg, d=drone: self.drone_state_callback(msg, d),
                 10,
             )
+            
+            # Subscribe to position for planning initial state (MAVROS uses best effort QoS)
+            self.create_subscription(
+                PoseStamped,
+                f"/{drone}/mavros/local_position/pose",
+                lambda msg, d=drone: self.position_callback(msg, d),
+                best_effort_qos,
+            )
 
             # Initialize states
             self.drone_states[drone] = {"state": "UNKNOWN", "timestamp": 0}
@@ -129,12 +179,13 @@ class DroneGUINode(Node):
                 "connected": False,
                 "mode": "UNKNOWN",
             }
+            self.drone_positions[drone] = Point(x=0.0, y=0.0, z=0.0)
 
     def setup_drone_services(self):
         self.arm_services = {}
         self.takeoff_services = {}
         self.land_services = {}
-        self.controller_enable_topics = {}
+
         for drone in self.drone_list:
             self.arm_services[drone] = self.create_client(
                 CommandBool, f"/{drone}/mavros/cmd/arming"
@@ -145,9 +196,34 @@ class DroneGUINode(Node):
             self.land_services[drone] = self.create_client(
                 CommandTOL, f"/{drone}/mavros/cmd/land"
             )
-            self.controller_enable_topics[drone] = self.create_publisher(
-                Trigger, f"/{drone}/controller/enable", 10
+
+    def setup_controller_publishers(self):
+        reliable_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
+        
+        for drone in self.drone_list:
+            self.controller_enable_pubs[drone] = self.create_publisher(
+                Trigger, f"/{drone}/controller/enable", reliable_qos
             )
+    
+    def setup_planning_publishers(self):
+        """Set up planning topic publishers for each agent node"""
+        for drone in self.drone_list:
+            # Extract drone number to map to agent node
+            drone_num = int(''.join(filter(str.isdigit, drone)))
+            if drone_num in self.hdsm_mapping:
+                agent_idx = self.hdsm_mapping[drone_num]
+                
+                # Create topic publishers for the corresponding agent node
+                self.planning_start_publishers[drone] = self.create_publisher(
+                    StartPlanning, f"/agent_{agent_idx}/start_planning", 10
+                )
+                self.planning_stop_publishers[drone] = self.create_publisher(
+                    StopPlanning, f"/agent_{agent_idx}/stop_planning", 10
+                )
+                
+                self.get_logger().info(f"Set up planning publishers for {drone} -> agent_{agent_idx}")
+            else:
+                self.get_logger().warn(f"No HDSM mapping found for drone {drone} (num: {drone_num})")
 
     def mavros_state_callback(self, msg: State, drone_name: str):
         self.drone_mavros_states[drone_name] = {
@@ -169,6 +245,10 @@ class DroneGUINode(Node):
             "state": state_map.get(msg.state, "UNKNOWN"),
             "timestamp": self.get_clock().now().nanoseconds,
         }
+    
+    def position_callback(self, msg: PoseStamped, drone_name: str):
+        """Update drone position for planning initial state"""
+        self.drone_positions[drone_name] = msg.pose.position
 
     def update_gui(self):
         # Prepare data for web interface
@@ -176,9 +256,14 @@ class DroneGUINode(Node):
         for drone in self.drone_list:
             mavros_state = self.drone_mavros_states.get(drone, {})
             drone_state = self.drone_states.get(drone, {})
+            
+            # Get agent ID from HDSM mapping
+            drone_num = int(''.join(filter(str.isdigit, drone)))
+            agent_id = self.hdsm_mapping.get(drone_num, "N/A") if drone_num else "N/A"
 
             gui_data[drone] = {
                 "name": drone,
+                "agent_id": agent_id,
                 "armed": mavros_state.get("armed", False),
                 "connected": mavros_state.get("connected", False),
                 "mode": mavros_state.get("mode", "UNKNOWN"),
@@ -203,12 +288,75 @@ class DroneGUINode(Node):
         elif command == "disarm":
             msg.enable = False
             self.global_arm_pub.publish(msg)
-        elif command.startswith("controller"):
-            for drone in self.drone_list: 
-                self.call_individual_service(drone, command)
-        else:
-            raise ValueError(f"Could not find command {command}")
+        elif command == "controller_enable":
+            self.publish_controller_command(True)
+        elif command == "controller_disable":
+            self.publish_controller_command(False)
+        elif command == "planning_start":
+            self.start_planning_all()
+        elif command == "planning_stop":
+            self.stop_planning_all()
+
         self.get_logger().info(f"Published global {command} command")
+
+    def publish_controller_command(self, enable: bool):
+        msg = Trigger()
+        msg.stamp = self.get_clock().now().to_msg()
+        msg.enable = enable
+        
+        for drone in self.drone_list:
+            if drone in self.controller_enable_pubs:
+                self.controller_enable_pubs[drone].publish(msg)
+        
+        action = "enabled" if enable else "disabled"
+        self.get_logger().info(f"Controllers {action} for all drones")
+    
+    def start_planning_all(self):
+        """Start planning for all drones"""
+        for drone in self.drone_list:
+            self.call_planning_service(drone, "start")
+        self.get_logger().info("Started planning for all drones")
+    
+    def stop_planning_all(self):
+        """Stop planning for all drones"""
+        for drone in self.drone_list:
+            self.call_planning_service(drone, "stop")
+        self.get_logger().info("Stopped planning for all drones")
+    
+    def call_planning_service(self, drone: str, command: str):
+        """Publish planning messages for a specific drone"""
+        try:
+            if command == "start":
+                publisher = self.planning_start_publishers.get(drone)
+                if publisher:
+                    msg = StartPlanning()
+                    
+                    # Get current position for initial state
+                    pos = self.drone_positions.get(drone, Point(x=0.0, y=0.0, z=0.0))
+                    
+                    # Fill initial_state: [x, y, z, vx, vy, vz, ax, ay, az]
+                    msg.initial_state = [
+                        float(pos.x), float(pos.y), float(pos.z),  # position
+                        0.0, 0.0, 0.0,  # velocity (zeros as requested)
+                        0.0, 0.0, 0.0   # acceleration (zeros as requested)
+                    ]
+                    
+                    publisher.publish(msg)
+                    self.get_logger().info(f"Published start planning for {drone} with initial state: {msg.initial_state}")
+                else:
+                    self.get_logger().error(f"Start planning publisher not available for {drone}")
+                    
+            elif command == "stop":
+                publisher = self.planning_stop_publishers.get(drone)
+                if publisher:
+                    msg = StopPlanning()
+                    publisher.publish(msg)
+                    self.get_logger().info(f"Published stop planning for {drone}")
+                else:
+                    self.get_logger().error(f"Stop planning publisher not available for {drone}")
+                    
+        except Exception as e:
+            self.get_logger().error(f"Error publishing planning message for {drone}: {e}")
 
     def call_individual_service(self, drone: str, command: str):
         try:
@@ -238,16 +386,15 @@ class DroneGUINode(Node):
                 if service and service.wait_for_service(timeout_sec=1.0):
                     req = CommandTOL.Request()
                     service.call_async(req)
+            
+            elif command == "planning_start":
+                self.call_planning_service(drone, "start")
+                return  # Return early to avoid duplicate logging
+            
+            elif command == "planning_stop":
+                self.call_planning_service(drone, "stop")
+                return  # Return early to avoid duplicate logging
 
-            elif command.startswith("controller"):
-                msg = Trigger()
-                msg.stamp = self.get_clock().now().to_msg()
-                msg.enable = False
-                if command.endswith("enable"):
-                    msg.enable = True
-                topic = self.controller_enable_topics.get(drone)
-                topic.publish(msg)
-                
             self.get_logger().info(f"Called {command} service for {drone}")
 
         except Exception as e:

@@ -5,6 +5,7 @@
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "mavros_msgs/msg/attitude_target.hpp"
+#include "mavros_msgs/msg/position_target.hpp"
 #include "mavros_msgs/srv/command_tol.hpp"
 #include "mavros_msgs/srv/set_mode.hpp"
 #include "nav_msgs/msg/path.hpp"
@@ -67,7 +68,7 @@ class SafetyChecker : public ::rclcpp::Node {
 
   // publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr safe_trajectory_pub_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr
+  rclcpp::Publisher<mavros_msgs::msg::PositionTarget>::SharedPtr
       position_cmd_pub_;
   rclcpp::Publisher<mavros_msgs::msg::AttitudeTarget>::SharedPtr rate_cmd_pub_;
 

@@ -1,0 +1,6 @@
+{% for drone in groups['drones'] %}
+{% set drone_num = drone | regex_replace('\.local', '') | regex_search('[0-9]+$')  %}
+{% set agent_idx = loop.index0 %}
+{{ drone_num }}: {{ agent_idx }}
+{% endfor %}
+

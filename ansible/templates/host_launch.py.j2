@@ -57,7 +57,8 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {"port": 8080},
-            {"peers_file": "{{ host_ros_path }}/config/peer_list.yaml"}
+            {"peers_file": "{{ host_ros_path }}/config/peer_list.yaml"},
+            {"hdsm_mapping_file": "{{ host_ros_path }}/config/hdsm_planner_map.yaml"}
         ]
     )
 

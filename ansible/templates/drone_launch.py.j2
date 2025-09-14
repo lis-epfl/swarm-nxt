@@ -17,6 +17,7 @@ import os
 
 
 def generate_launch_description():
+    hdsm_idx = {{ groups['drones'].index(inventory_hostname) }}
 
     bridge_node = Node(
         package="domain_bridge",
@@ -132,6 +133,11 @@ def generate_launch_description():
         package="swarmnxt_controller_ros2",
         executable="swarmnxt_controller_node",
         namespace="{{ ns }}",
+        parameters=[
+            {
+                "hdsm_agent_prefix": "/agent_" + str(hdsm_idx),
+            }
+        ],
         output="log",
     )
 
@@ -140,6 +146,34 @@ def generate_launch_description():
         executable="drone_planner_node",
         namespace="{{ ns }}",
         output="log",
+    )
+
+    env_builder_include = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("env_builder"),
+                    "launch",
+                    "env_builder_empty.launch.py",
+                ]
+            )
+        ),
+    )
+
+    multi_agent_planner_include = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("multi_agent_planner"),
+                    "launch",
+                    "omninxt_planner.launch.py",
+                ]
+            )
+        ),
+        launch_arguments={
+            "id": str(hdsm_idx),
+            "n_rob": "{{ groups['drones'] | length }}",
+        }.items(),
     )
 
 
@@ -154,6 +188,7 @@ def generate_launch_description():
             safety_checker,
             drone_state_manager,
             swarmnxt_controller,
-            drone_planner,
+            env_builder_include,
+            multi_agent_planner_include,
         ]
     )

@@ -26,6 +26,10 @@ cd {{ ros_path }}
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 
+GUROBI_HOME=/opt/gurobi1003/armlinux64
+PATH=$PATH:$GUROBI_HOME/bin
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GUROBI_HOME/lib
+
 # Calculate dynamic sleep time based on drone position in sorted order
 DRONE_NUM={{ drone_num | int }}
 # All drone numbers in the group, sorted
@@ -60,6 +64,8 @@ fi
 
 # Stagger start times based on sorted order
 sleep $SLEEP_TIME
+
+ros2 daemon stop
 
 # Use exec to replace the shell process with ros2 launch
 # This ensures signals (SIGTERM) from systemd are properly forwarded

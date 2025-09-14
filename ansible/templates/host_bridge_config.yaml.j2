@@ -4,6 +4,7 @@ from_domain: 0
 topics:
 {% for drone in groups['drones'] %}
 {% set num = drone | regex_replace('\\.local', '') | regex_search('[0-9]+$') %}
+{% set drone_idx = loop.index0 %}
   /optitrack_multiplexer_node/rigid_body/nxt{{ num }}: 
     type: optitrack_multiplexer_ros2_msgs/msg/RigidBodyStamped
     to_domain: {{ num }}
@@ -21,5 +22,11 @@ topics:
     to_domain: {{ num }}
   /nxt{{ num }}/controller/enable:
     type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
+  /agent_{{ drone_idx }}/start_planning: 
+    type: multi_agent_planner_msgs/msg/StartPlanning
+    to_domain: {{ num }}
+  /agent_{{ drone_idx }}/stop_planning: 
+    type: multi_agent_planner_msgs/msg/StopPlanning
     to_domain: {{ num }}
 {% endfor %}

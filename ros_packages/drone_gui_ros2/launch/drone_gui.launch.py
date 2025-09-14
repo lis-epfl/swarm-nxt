@@ -19,6 +19,12 @@ def generate_launch_description():
         description='Path to the peers.yaml file containing drone list'
     )
     
+    hdsm_mapping_file_arg = DeclareLaunchArgument(
+        'hdsm_mapping_file',
+        default_value='~/data/ros2_swarmnxt_ws/config/hdsm_planner_map.yaml',
+        description='Path to the HDSM planner mapping JSON file'
+    )
+    
     # Create the drone GUI node
     drone_gui_node = Node(
         package='drone_gui_ros2',
@@ -27,12 +33,14 @@ def generate_launch_description():
         output='screen',
         parameters=[
             {'port': LaunchConfiguration('port')},
-            {'peers_file': LaunchConfiguration('peers_file')}
+            {'peers_file': LaunchConfiguration('peers_file')},
+            {'hdsm_mapping_file': LaunchConfiguration('hdsm_mapping_file')}
         ]
     )
     
     return LaunchDescription([
         port_arg,
         peers_file_arg,
+        hdsm_mapping_file_arg,
         drone_gui_node
     ])

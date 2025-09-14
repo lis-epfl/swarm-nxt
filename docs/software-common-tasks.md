@@ -103,11 +103,13 @@ ros_logs --since "1 hour ago"  # Show logs from last hour
 Use the `drones_update.yml` playbook to update and rebuild the ROS packages on drones:
 
 ```bash
+cd ansible/
+
 # Regular update (incremental build)
-ansible-playbook ansible/drones_update.yml
+ansible-playbook -i inventory.ini drones_update.yml
 
 # Clean build (removes build/ and install/ directories first)
-ansible-playbook ansible/drones_update.yml -e clean_build=true
+ansible-playbook -i inventory.ini drones_update.yml -e clean_build=true
 ```
 
 The clean build option is useful when:

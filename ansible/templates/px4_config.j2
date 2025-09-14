@@ -53,13 +53,13 @@
 # global_position
 /**/global_position:
   ros__parameters:
-    frame_id: "map"               # origin frame
+    frame_id: "world"               # origin frame
     child_frame_id: "base_link"   # body-fixed frame
     rot_covariance: 99999.0       # covariance for attitude?
     gps_uere: 1.0                 # User Equivalent Range Error (UERE) of GPS sensor (m)
     use_relative_alt: true        # use relative altitude for local coordinates
     tf.send: false                # send TF?
-    tf.frame_id: "map"            # TF frame_id
+    tf.frame_id: "world"            # TF frame_id
     tf.global_frame_id: "earth"   # TF earth frame_id
     tf.child_frame_id: "base_link"  # TF child_frame_id
 
@@ -76,9 +76,9 @@
 # local_position
 /**/local_position:
   ros__parameters:
-    frame_id: "map"
+    frame_id: "world"
     tf.send: false
-    tf.frame_id: "map"
+    tf.frame_id: "world"
     tf.child_frame_id: "base_link"
     tf.send_fcu: false
 
@@ -99,7 +99,7 @@
     reverse_thrust: false       # allow reversed thrust
     use_quaternion: false       # enable PoseStamped topic subscriber
     tf.listen: false            # enable tf listener (disable topic subscribers)
-    tf.frame_id: "map"
+    tf.frame_id: "world"
     tf.child_frame_id: "target_attitude"
     tf.rate_limit: 50.0
 
@@ -114,7 +114,7 @@
 /**/setpoint_position:
   ros__parameters:
     tf.listen: false            # enable tf listener (disable topic subscribers)
-    tf.frame_id: "map"
+    tf.frame_id: "world"
     tf.child_frame_id: "target_position"
     tf.rate_limit: 50.0
     mav_frame: LOCAL_NED
@@ -123,7 +123,7 @@
 /**/guided_target:
   ros__parameters:
     tf.listen: false           # enable tf listener (disable topic subscribers)
-    tf.frame_id: "map"
+    tf.frame_id: "world"
     tf.child_frame_id: "target_position"
     tf.rate_limit: 50.0
 
@@ -208,7 +208,7 @@
     fix_type: 3             # type of GPS fix (default: 3D)
     tf.listen: false
     tf.send: false           # send TF?
-    tf.frame_id: "map"       # TF frame_id
+    tf.frame_id: "world"       # TF frame_id
     tf.child_frame_id: "fix" # TF child_frame_id
     tf.rate_limit: 10.0      # TF rate
     gps_rate: 5.0           # GPS data publishing rate
@@ -249,7 +249,7 @@
 # odom
 /**/odometry:
   ros__parameters:
-    fcu.odom_parent_id_des: "map"   # desired parent frame rotation of the FCU's odometry
+    fcu.odom_parent_id_des: "world"   # desired parent frame rotation of the FCU's odometry
     fcu.odom_child_id_des: "base_link"    # desired child frame rotation of the FCU's odometry
 
 # px4flow
