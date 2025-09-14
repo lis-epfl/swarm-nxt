@@ -27,13 +27,12 @@ services:
 {% for drone in groups['drones'] %}
 {% set num = drone | regex_replace('\\.local', '') | regex_search('[0-9]+$') %}
 {% set drone_idx = loop.index0 %}
-services:
   agent_node_{{ drone_idx }}/start_planning:
     type: multi_agent_planner_msgs/srv/StartPlanning
-    from_domain: 0
-    to_domain: {{ num }}
+    from_domain: {{ num }}
+    to_domain: 0
   agent_node_{{ drone_idx }}/stop_planning:
     type: multi_agent_planner_msgs/srv/StopPlanning
-    from_domain: 0
-    to_domain: {{ num }}
+    from_domain: {{ num }}
+    to_domain: 0
 {% endfor %}
