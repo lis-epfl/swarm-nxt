@@ -104,7 +104,7 @@ void Controller::UpdateTrajectoryHDSMType(
     new_traj_path.header.stamp =
         rclcpp::Time(static_cast<int64_t>(new_traj.planning_start_time * 1e9));
     new_traj_path.header.frame_id = "world";
-    size_t i = 0;
+    size_t i = 1;
     for (const auto& state : new_traj.states) {
       geometry_msgs::msg::PoseStamped pose;
       pose.header.stamp = rclcpp::Time(new_traj_path.header.stamp) +
