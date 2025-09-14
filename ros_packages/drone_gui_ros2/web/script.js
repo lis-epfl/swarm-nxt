@@ -141,6 +141,19 @@ class DroneGUI {
                     🛬 Land
                 </button>
             </div>
+            
+            <div class="drone-controls">
+                <button class="btn btn-info btn-small" 
+                        onclick="gui.sendIndividualCommand('${drone.name}', 'planning_start')"
+                        ${!drone.connected ? 'disabled' : ''}>
+                    🧠 Start Planning
+                </button>
+                <button class="btn btn-secondary btn-small" 
+                        onclick="gui.sendIndividualCommand('${drone.name}', 'planning_stop')"
+                        ${!drone.connected ? 'disabled' : ''}>
+                    🛑 Stop Planning
+                </button>
+            </div>
         `;
         
         return card;
@@ -213,6 +226,8 @@ class DroneGUI {
         // Temporarily disable the button
         let buttonId;
         if (command === 'controller_enable' || command === 'controller_disable') {
+            buttonId = `global-${command.replace('_', '-')}`;
+        } else if (command === 'planning_start' || command === 'planning_stop') {
             buttonId = `global-${command.replace('_', '-')}`;
         } else {
             buttonId = `global-${command}`;
