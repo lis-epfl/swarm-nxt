@@ -1,6 +1,7 @@
 #pragma once
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <mavros_msgs/msg/position_target.hpp>
 #include <mavros_msgs/msg/state.hpp>
 #include <mavros_msgs/srv/command_bool.hpp>
 #include <mavros_msgs/srv/command_tol.hpp>
@@ -33,6 +34,7 @@ class Controller : public rclcpp::Node {
   std::mutex traj_mutex_;
   std::mutex pos_mutex_;
   nav_msgs::msg::Path traj_;
+  multi_agent_planner_msgs::msg::Trajectory hdsm_traj_;
   TrajectoryType traj_type_ = TRAJ_TYPE_UNKNOWN;
   int cur_traj_index_;
   bool reached_dest_ = false;
@@ -40,6 +42,8 @@ class Controller : public rclcpp::Node {
 
   tf2::Vector3 cur_target_;
   tf2::Vector3 cur_pos_;
+  tf2::Vector3 cur_velocity_;
+  tf2::Vector3 cur_acceleration_;
 
   mavros_msgs::msg::State mavros_state_;
 

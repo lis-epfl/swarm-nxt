@@ -44,8 +44,8 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   safe_trajectory_pub_ =
       create_publisher<nav_msgs::msg::Path>(ns + "/trajectory_safe", 10);
 
-  position_cmd_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
-      ns + "/mavros/setpoint_position/local", 10);
+  position_cmd_pub_ = create_publisher<mavros_msgs::msg::PositionTarget>(
+      ns + "/mavros/setpoint_raw/local", 10);
 
   rate_cmd_pub_ = create_publisher<mavros_msgs::msg::AttitudeTarget>(
       ns + "/mavros/setpoint_raw/attitude", 10);
@@ -76,11 +76,29 @@ void SafetyChecker::HandleControllerCommand(
 
   if (safety_flags_ == SafetyStatus::SAFE) {
     switch (cmd.command_type_mask) {
-      case swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT:
-        position_cmd_pub_->publish(cmd.pose_cmd);
+      case swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT: {
+        // Convert PoseStamped to PositionTarget for backward compatibility
+        mavros_msgs::msg::PositionTarget pos_target;
+        pos_target.header = cmd.pose_cmd.header;
+        pos_target.coordinate_frame = mavros_msgs::msg::PositionTarget::FRAME_LOCAL_NED;
+        pos_target.type_mask = mavros_msgs::msg::PositionTarget::IGNORE_VX |
+                               mavros_msgs::msg::PositionTarget::IGNORE_VY |
+                               mavros_msgs::msg::PositionTarget::IGNORE_VZ |
+                               mavros_msgs::msg::PositionTarget::IGNORE_AFX |
+                               mavros_msgs::msg::PositionTarget::IGNORE_AFY |
+                               mavros_msgs::msg::PositionTarget::IGNORE_AFZ |
+                               mavros_msgs::msg::PositionTarget::IGNORE_YAW_RATE;
+        pos_target.position.x = cmd.pose_cmd.pose.position.x;
+        pos_target.position.y = cmd.pose_cmd.pose.position.y;
+        pos_target.position.z = cmd.pose_cmd.pose.position.z;
+        position_cmd_pub_->publish(pos_target);
         break;
+      }
       case swarmnxt_msgs::msg::ControllerCommand::RATE_SETPOINT:
         rate_cmd_pub_->publish(cmd.rate_cmd);
+        break;
+      case swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT:
+        position_cmd_pub_->publish(cmd.raw_cmd);
         break;
       default:
         RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",

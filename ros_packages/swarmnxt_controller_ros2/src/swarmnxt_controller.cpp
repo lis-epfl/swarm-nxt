@@ -100,6 +100,9 @@ void Controller::UpdateTrajectoryHDSMType(
   }
 
   if (traj_type_ == TrajectoryType::TRAJ_TYPE_HDSM) {
+    // Store the original HDSM trajectory for velocity and acceleration access
+    hdsm_traj_ = new_traj;
+    
     nav_msgs::msg::Path new_traj_path = nav_msgs::msg::Path();
     new_traj_path.header.stamp =
         rclcpp::Time(static_cast<int64_t>(new_traj.planning_start_time * 1e9));
@@ -111,6 +114,7 @@ void Controller::UpdateTrajectoryHDSMType(
                           rclcpp::Duration::from_nanoseconds(
                               static_cast<int64_t>(i * new_traj.dt * 1e9));
       pose.header.frame_id = "world";
+      // Extract position (indices 0-2)
       pose.pose.position.x = state.position[0];
       pose.pose.position.y = state.position[1];
       pose.pose.position.z = state.position[2];
@@ -134,10 +138,15 @@ void Controller::SendTrajectoryMessage() {
   swarmnxt_msgs::msg::ControllerCommand msg;
   msg.header.stamp = this->now();
   msg.header.frame_id = "world";
-  msg.pose_cmd.header.stamp = this->now();
-  msg.pose_cmd.header.frame_id = "world";
-  msg.command_type_mask =
-      swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
+  
+  // Determine command type based on trajectory type
+  if (traj_type_ == TrajectoryType::TRAJ_TYPE_HDSM) {
+    msg.command_type_mask = swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT;
+  } else {
+    msg.command_type_mask = swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
+    msg.pose_cmd.header.stamp = this->now();
+    msg.pose_cmd.header.frame_id = "world";
+  }
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;
 
@@ -203,7 +212,38 @@ void Controller::SendTrajectoryMessage() {
   RCLCPP_INFO(this->get_logger(),
               "Setting target: x: %5.2f, y: %5.2f, z: %5.2f", cur_target_.x(),
               cur_target_.y(), cur_target_.z());
-  tf2::toMsg(cur_target_, msg.pose_cmd.pose.position);
+
+  if (msg.command_type_mask == swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT) {
+    // Use HDSM trajectory data for position, velocity, acceleration
+    if (cur_traj_index_ < hdsm_traj_.states.size()) {
+      const auto& state = hdsm_traj_.states[cur_traj_index_];
+      
+      // Create PositionTarget message
+      msg.raw_cmd.header.stamp = this->now();
+      msg.raw_cmd.header.frame_id = "world";
+      msg.raw_cmd.coordinate_frame = mavros_msgs::msg::PositionTarget::FRAME_LOCAL_NED;
+      msg.raw_cmd.type_mask = 0; // Use all fields (position, velocity, acceleration)
+      
+      // Position
+      msg.raw_cmd.position.x = state.position[0];
+      msg.raw_cmd.position.y = state.position[1];
+      msg.raw_cmd.position.z = state.position[2];
+      
+      // Velocity
+      msg.raw_cmd.velocity.x = state.velocity[0];
+      msg.raw_cmd.velocity.y = state.velocity[1];
+      msg.raw_cmd.velocity.z = state.velocity[2];
+      
+      // Acceleration
+      msg.raw_cmd.acceleration_or_force.x = state.acceleration[0];
+      msg.raw_cmd.acceleration_or_force.y = state.acceleration[1];
+      msg.raw_cmd.acceleration_or_force.z = state.acceleration[2];
+    }
+  } else {
+    // Traditional position-only command
+    tf2::toMsg(cur_target_, msg.pose_cmd.pose.position);
+  }
+
   done_pub_->publish(done_msg);
   command_pub_->publish(msg);
 }

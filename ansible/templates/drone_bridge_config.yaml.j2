@@ -9,8 +9,8 @@ topics:
     type: geometry_msgs/msg/PoseStamped
   {{ns}}/manager/state:
     type: swarmnxt_msgs/msg/DroneState
-  {{ns}}/mavros/setpoint_position/local:
-    type: geometry_msgs/msg/PoseStamped
+  {{ns}}/mavros/setpoint_raw/local:
+    type: mavros_msgs/msg/PositionTarget
   agent_{{ current_drone_idx }}/traj_full: 
     type: multi_agent_planner_msgs/msg/Trajectory
   agent_{{ current_drone_idx }}/traj:
