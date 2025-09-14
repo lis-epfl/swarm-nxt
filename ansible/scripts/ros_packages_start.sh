@@ -65,6 +65,8 @@ fi
 # Stagger start times based on sorted order
 sleep $SLEEP_TIME
 
+ros2 daemon stop
+
 # Use exec to replace the shell process with ros2 launch
 # This ensures signals (SIGTERM) from systemd are properly forwarded
 exec ros2 launch {{ base_path }}/launch.py 
