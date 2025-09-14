@@ -144,6 +144,9 @@ class DroneGUINode(Node):
             raise
 
     def setup_drone_subscriptions(self):
+        # Set up QoS profile for MAVROS position (uses best effort)
+        best_effort_qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, depth=10)
+        
         for drone in self.drone_list:
             # Subscribe to MAVROS state
             self.create_subscription(
@@ -161,12 +164,12 @@ class DroneGUINode(Node):
                 10,
             )
             
-            # Subscribe to position for planning initial state
+            # Subscribe to position for planning initial state (MAVROS uses best effort QoS)
             self.create_subscription(
                 PoseStamped,
                 f"/{drone}/mavros/local_position/pose",
                 lambda msg, d=drone: self.position_callback(msg, d),
-                10,
+                best_effort_qos,
             )
 
             # Initialize states
