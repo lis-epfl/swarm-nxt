@@ -137,18 +137,23 @@
             repo: https://github.com/lis-epfl/swarm-nxt
             dest: "{{ host_base_path }}/repos/swarm-nxt"
             force: yes
-            version: devel
-        - name: Link latency to ros_ws
-          ansible.builtin.file: 
-            src: "{{ host_base_path }}/repos/swarm-nxt/ros_packages/latency_checker_ros2"
-            dest: "{{ host_ros_path }}/src/latency_checker_ros2"
-            state: link
+            version: niel/updates
+            
+        - name: List ros_packages directories
+          ansible.builtin.find:
+            paths: "{{ playbook_dir }}/../ros_packages"
+            file_type: directory
+            recurse: false
+          register: ros_packages_reg
+        
 
-        - name: Link messages to ros_ws
-          ansible.builtin.file: 
-            src: "{{ host_base_path }}/repos/swarm-nxt/ros_packages/swarmnxt_msgs"
-            dest: "{{ host_ros_path }}/src/swarmnxt_msgs"
+        - name: Link ros_packages directories to src
+          ansible.builtin.file:
+            src: "{{ item.path }}"
+            dest: "{{ host_ros_path }}/src/{{ item.path | basename }}"
             state: link
+            force: true
+          loop: "{{ ros_packages_reg.files }}"
     
     - name: Run rosdep
       become: yes
