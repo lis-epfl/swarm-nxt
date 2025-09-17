@@ -24,7 +24,7 @@ class GoalGiver(Node):
 
     def point_cb(self, msg: PointStamped):
         point = msg
-        point.z = 1
+        point.point.z = 1
 
         for i in range(5): 
 
