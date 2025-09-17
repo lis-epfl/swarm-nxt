@@ -469,7 +469,6 @@ class DroneGUINode(Node):
             
             elif command == "planning_start":
                 self.call_planning_service(drone, "start")
-                self.
                 return  # Return early to avoid duplicate logging
             
             elif command == "planning_stop":
