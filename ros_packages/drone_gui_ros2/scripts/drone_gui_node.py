@@ -21,7 +21,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandTOL, CommandBool
 from swarmnxt_msgs.msg import Trigger, DroneState
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Point, PointStamped
 from ament_index_python.packages import get_package_share_directory
 
 from multi_agent_planner_msgs.msg import StartPlanning, StopPlanning
@@ -78,6 +78,9 @@ class DroneGUINode(Node):
         self.planning_start_publishers = {}
         self.planning_stop_publishers = {}
 
+        # Goal setpoint publishers for position swapping
+        self.goal_publishers = {}
+
         # Subscribe to drone states
         self.setup_drone_subscriptions()
 
@@ -89,6 +92,9 @@ class DroneGUINode(Node):
         
         # Set up planning topic publishers
         self.setup_planning_publishers()
+
+        # Set up goal publishers for position swapping
+        self.setup_goal_publishers()
 
         # Timer for periodic updates
         self.timer = self.create_timer(0.5, self.update_gui)
@@ -225,6 +231,23 @@ class DroneGUINode(Node):
             else:
                 self.get_logger().warn(f"No HDSM mapping found for drone {drone} (num: {drone_num})")
 
+    def setup_goal_publishers(self):
+        """Set up goal publishers for position swapping"""
+        for drone in self.drone_list:
+            # Extract drone number to map to agent node
+            drone_num = int(''.join(filter(str.isdigit, drone)))
+            if drone_num in self.hdsm_mapping:
+                agent_idx = self.hdsm_mapping[drone_num]
+
+                # Create goal publisher for the corresponding agent node
+                self.goal_publishers[drone] = self.create_publisher(
+                    PointStamped, f"/agent_{agent_idx}/goal", 10
+                )
+
+                self.get_logger().info(f"Set up goal publisher for {drone} -> agent_{agent_idx}")
+            else:
+                self.get_logger().warn(f"No HDSM mapping found for drone {drone} (num: {drone_num}) for goal publisher")
+
     def mavros_state_callback(self, msg: State, drone_name: str):
         self.drone_mavros_states[drone_name] = {
             "armed": msg.armed,
@@ -296,6 +319,8 @@ class DroneGUINode(Node):
             self.start_planning_all()
         elif command == "planning_stop":
             self.stop_planning_all()
+        elif command == "swap_positions":
+            self.swap_positions()
 
         self.get_logger().info(f"Published global {command} command")
 
@@ -357,6 +382,60 @@ class DroneGUINode(Node):
                     
         except Exception as e:
             self.get_logger().error(f"Error publishing planning message for {drone}: {e}")
+
+    def swap_positions(self):
+        """Swap positions between exactly 2 drones"""
+        import time
+
+        # Check if we have exactly 2 drones
+        if len(self.drone_list) != 2:
+            self.get_logger().error(f"Swap positions requires exactly 2 drones, but found {len(self.drone_list)} drones")
+            return
+
+        drone1, drone2 = self.drone_list[0], self.drone_list[1]
+
+        # Get current positions
+        pos1 = self.drone_positions.get(drone1)
+        pos2 = self.drone_positions.get(drone2)
+
+        if pos1 is None or pos2 is None:
+            self.get_logger().error("Could not get current positions for both drones")
+            return
+
+        # Get publishers for both drones
+        pub1 = self.goal_publishers.get(drone1)
+        pub2 = self.goal_publishers.get(drone2)
+
+        if pub1 is None or pub2 is None:
+            self.get_logger().error("Goal publishers not available for both drones")
+            return
+
+        # Create PointStamped messages for swapped positions
+        # Drone 1 gets drone 2's xy position (keeping its own z)
+        goal1 = PointStamped()
+        goal1.header.stamp = self.get_clock().now().to_msg()
+        goal1.header.frame_id = "world"  # or whatever frame you're using
+        goal1.point.x = pos2.x
+        goal1.point.y = pos2.y
+        goal1.point.z = pos1.z  # Keep original z
+
+        # Drone 2 gets drone 1's xy position (keeping its own z)
+        goal2 = PointStamped()
+        goal2.header.stamp = self.get_clock().now().to_msg()
+        goal2.header.frame_id = "world"
+        goal2.point.x = pos1.x
+        goal2.point.y = pos1.y
+        goal2.point.z = pos2.z  # Keep original z
+
+        # Publish 5 times with 0.1s delay between messages
+        for i in range(5):
+            pub1.publish(goal1)
+            pub2.publish(goal2)
+            self.get_logger().info(f"Published swap goals (iteration {i+1}/5): {drone1} -> ({goal1.point.x:.2f}, {goal1.point.y:.2f}, {goal1.point.z:.2f}), {drone2} -> ({goal2.point.x:.2f}, {goal2.point.y:.2f}, {goal2.point.z:.2f})")
+            if i < 4:  # Don't sleep after the last iteration
+                time.sleep(0.1)
+
+        self.get_logger().info(f"Successfully swapped positions between {drone1} and {drone2}")
 
     def call_individual_service(self, drone: str, command: str):
         try:
