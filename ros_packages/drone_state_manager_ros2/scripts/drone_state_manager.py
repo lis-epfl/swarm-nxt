@@ -178,7 +178,7 @@ class DroneStateManager(Node):
             # check if the takeoff is finished.
             # px4 mode changes or altitude reached?
             if (self.mavros_state.mode == "AUTO.LOITER" or 
-                (self.current_pose is not None and self.current_pose.pose.position.z >= 1.0)):
+                (self.current_pose is not None and self.current_pose.pose.position.z >= 0.8)):
                 # we've finished takeoff...
                 self.set_mode(make_drone_state(DroneState.HOVERING))
         elif self.mode.state == DroneState.HOVERING:
