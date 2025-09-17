@@ -29,4 +29,7 @@ topics:
   /agent_{{ drone_idx }}/stop_planning: 
     type: multi_agent_planner_msgs/msg/StopPlanning
     to_domain: {{ num }}
+  /agent_{{ drone_idx }}/goal:
+    type: geometry_msgs/msg/PointStamped
+    to_domain: {{ num }}
 {% endfor %}
