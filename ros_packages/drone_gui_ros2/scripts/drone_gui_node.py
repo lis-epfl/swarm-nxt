@@ -317,6 +317,7 @@ class DroneGUINode(Node):
             self.publish_controller_command(False)
         elif command == "planning_start":
             self.start_planning_all()
+            self.publish_controller_command(True)
         elif command == "planning_stop":
             self.stop_planning_all()
         elif command == "swap_positions":
@@ -468,6 +469,7 @@ class DroneGUINode(Node):
             
             elif command == "planning_start":
                 self.call_planning_service(drone, "start")
+                self.
                 return  # Return early to avoid duplicate logging
             
             elif command == "planning_stop":
