@@ -155,6 +155,8 @@ def get_and_check_params(conn, wanted_params, change_enabled):
         if not found and not shutdown_event.is_set():
             logger.error(f"Failed to read param {k}")
             shutdown_event.set()
+            listener_thread.join()
+            exit(1)
         
     return mismatch
 
