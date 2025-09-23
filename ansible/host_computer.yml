@@ -118,6 +118,7 @@
             repo: https://github.com/lis-epfl/optitrack_packages_ros2/
             dest: "{{ host_ros_path }}/src/optitrack_packages_ros2"
             force: yes
+            version: master
     - name: HDSM Planner Messages 
       become: false
       block:

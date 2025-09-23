@@ -33,6 +33,7 @@
         repo: https://github.com/lis-epfl/optitrack_packages_ros2/
         dest: "{{ drone_ros_path }}/src/optitrack_packages_ros2"
         force: yes
+        version: master
 
     - name: Remove multiplexer
       ansible.builtin.file: 
@@ -70,7 +71,7 @@
         key_file: /tmp/git_key
         force: yes
         accept_hostkey: yes
-        version: niel/frames_everywhere
+        version: niel/chill-dynamics
 
         
     - name: SwarmNXT Nodes
