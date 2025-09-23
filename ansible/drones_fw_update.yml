@@ -2,13 +2,9 @@
 - name: Build PX4 Firmware Locally
   hosts: localhost
   connection: local
-  vars_prompt:
-    - name: firmware_version
-      prompt: "What PX4 firmware version/tag do you want to build and deploy?"
-      private: false
   vars:
     px4_repo_path: "/tmp/PX4-Autopilot-{{ firmware_version }}"
-    firmware_file: "{{ px4_repo_path }}/build/hkust_nxt-dual/hkust_nxt-dual.px4"
+    firmware_file: "{{ px4_repo_path }}/build/hkust_nxt-dual_default/hkust_nxt-dual_default.px4"
     uploader_script: "{{ px4_repo_path }}/Tools/px_uploader.py"
 
   tasks:
@@ -65,7 +61,7 @@
   vars:
     firmware_version: "{{ hostvars['localhost']['firmware_version'] }}"
     px4_repo_path: "/tmp/PX4-Autopilot-{{ firmware_version }}"
-    firmware_file: "{{ px4_repo_path }}/build/hkust_nxt-dual/hkust_nxt-dual.px4"
+    firmware_file: "{{ px4_repo_path }}/build/hkust_nxt-dual_default/hkust_nxt-dual_default.px4"
     uploader_script: "{{ px4_repo_path }}/Tools/px_uploader.py"
     remote_firmware_file: "/tmp/hkust_nxt-dual.px4"
     remote_uploader_script: "/tmp/px_uploader.py"
