@@ -17,6 +17,9 @@ topics:
   /global/arm:
     type: swarmnxt_msgs/msg/Trigger
     to_domain: {{ num }}
+  /tf:
+    type: tf2_msgs/msg/TFMessage
+    to_domain: {{ num }}
   /nxt{{ num }}/goals:
     type: nav_msgs/msg/Goals
     to_domain: {{ num }}
