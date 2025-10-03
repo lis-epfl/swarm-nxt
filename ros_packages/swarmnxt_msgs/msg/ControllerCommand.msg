@@ -8,8 +8,8 @@ uint8 PVA_SETPOINT = 3
 # Position Command
 geometry_msgs/PoseStamped pose_cmd
 
-# Rate Command
-mavros_msgs/AttitudeTarget rate_cmd
+# Rate Command (attitude setpoint)
+px4_msgs/VehicleAttitudeSetpoint rate_cmd
 
-# Position, Velocity, Acceleration Command
-mavros_msgs/PositionTarget raw_cmd
+# Position, Velocity, Acceleration Command (trajectory setpoint)
+px4_msgs/TrajectorySetpoint raw_cmd

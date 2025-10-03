@@ -11,7 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
-find_package(mavros_msgs REQUIRED)
+find_package(px4_msgs REQUIRED)
 find_package(swarmnxt_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -24,10 +24,10 @@ set(DEPENDENCIES
   geometry_msgs
   std_srvs
   nav_msgs
-  mavros_msgs
+  px4_msgs
   swarmnxt_msgs
   nlohmann_json
-  swarmnxt_controller_ros2 
+  swarmnxt_controller_ros2
 )
 
 include_directories(

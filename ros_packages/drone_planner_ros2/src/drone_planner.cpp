@@ -44,9 +44,9 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
 
  
 
-  mavros_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/mavros/local_position/pose", best_effort_qos,
-      std::bind(&DronePlanner::MavrosPoseCallback, this,
+  vehicle_local_position_sub_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>(
+      ns + "/fmu/out/vehicle_local_position", best_effort_qos,
+      std::bind(&DronePlanner::VehicleLocalPositionCallback, this,
                 std::placeholders::_1));
   // for the future: subscribe to all the peers' paths to avoid them.
   // for (const auto& peer_id : peer_ids_) {
@@ -186,10 +186,15 @@ void DronePlanner::PublishTrajectory() {
   desired_traj_pub_->publish(trajectory_);
 }
 
-void DronePlanner::MavrosPoseCallback(
-    const geometry_msgs::msg::PoseStamped& msg) {
+void DronePlanner::VehicleLocalPositionCallback(
+    const px4_msgs::msg::VehicleLocalPosition& msg) {
   RCLCPP_INFO(this->get_logger(), "Got a new position");
-  current_position_ = msg;
+  // Convert NED to ENU and store as PoseStamped
+  current_position_.pose.position.x = msg.x;
+  current_position_.pose.position.y = msg.y;
+  current_position_.pose.position.z = -msg.z;  // NED to ENU
+  current_position_.header.stamp = rclcpp::Time(msg.timestamp * 1000);  // microseconds to nanoseconds
+  current_position_.header.frame_id = "world";
 }
 
 }  // namespace drone_planner

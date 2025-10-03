@@ -18,8 +18,7 @@ except ImportError:
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
-from mavros_msgs.msg import State
-from mavros_msgs.srv import CommandTOL, CommandBool
+from px4_msgs.msg import VehicleStatus, VehicleCommand, VehicleLocalPosition
 from swarmnxt_msgs.msg import Trigger, DroneState
 from geometry_msgs.msg import PoseStamped, Point, PointStamped
 from ament_index_python.packages import get_package_share_directory
@@ -32,7 +31,7 @@ class DroneGUINode(Node):
         super().__init__("drone_gui_node")
         self.socketio = socketio
         self.drone_states = {}
-        self.drone_mavros_states = {}
+        self.drone_vehicle_statuses = {}
         self.drone_positions = {}
         self.drone_list = []
         self.hdsm_mapping = {}
@@ -154,12 +153,12 @@ class DroneGUINode(Node):
         best_effort_qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, depth=10)
         
         for drone in self.drone_list:
-            # Subscribe to MAVROS state
+            # Subscribe to PX4 vehicle status
             self.create_subscription(
-                State,
-                f"/{drone}/mavros/state",
-                lambda msg, d=drone: self.mavros_state_callback(msg, d),
-                10,
+                VehicleStatus,
+                f"/{drone}/fmu/out/vehicle_status",
+                lambda msg, d=drone: self.vehicle_status_callback(msg, d),
+                best_effort_qos,
             )
 
             # Subscribe to custom drone state
@@ -169,38 +168,31 @@ class DroneGUINode(Node):
                 lambda msg, d=drone: self.drone_state_callback(msg, d),
                 10,
             )
-            
-            # Subscribe to position for planning initial state (MAVROS uses best effort QoS)
+
+            # Subscribe to position for planning initial state
             self.create_subscription(
-                PoseStamped,
-                f"/{drone}/mavros/local_position/pose",
-                lambda msg, d=drone: self.position_callback(msg, d),
+                VehicleLocalPosition,
+                f"/{drone}/fmu/out/vehicle_local_position",
+                lambda msg, d=drone: self.vehicle_local_position_callback(msg, d),
                 best_effort_qos,
             )
 
             # Initialize states
             self.drone_states[drone] = {"state": "UNKNOWN", "timestamp": 0}
-            self.drone_mavros_states[drone] = {
+            self.drone_vehicle_statuses[drone] = {
                 "armed": False,
                 "connected": False,
-                "mode": "UNKNOWN",
+                "nav_state": 0,
             }
             self.drone_positions[drone] = Point(x=0.0, y=0.0, z=0.0)
 
     def setup_drone_services(self):
-        self.arm_services = {}
-        self.takeoff_services = {}
-        self.land_services = {}
+        # Replace service clients with publishers for PX4
+        self.vehicle_command_pubs = {}
 
         for drone in self.drone_list:
-            self.arm_services[drone] = self.create_client(
-                CommandBool, f"/{drone}/mavros/cmd/arming"
-            )
-            self.takeoff_services[drone] = self.create_client(
-                CommandTOL, f"/{drone}/mavros/cmd/takeoff"
-            )
-            self.land_services[drone] = self.create_client(
-                CommandTOL, f"/{drone}/mavros/cmd/land"
+            self.vehicle_command_pubs[drone] = self.create_publisher(
+                VehicleCommand, f"/{drone}/fmu/in/vehicle_command", 10
             )
 
     def setup_controller_publishers(self):
@@ -248,11 +240,11 @@ class DroneGUINode(Node):
             else:
                 self.get_logger().warn(f"No HDSM mapping found for drone {drone} (num: {drone_num}) for goal publisher")
 
-    def mavros_state_callback(self, msg: State, drone_name: str):
-        self.drone_mavros_states[drone_name] = {
-            "armed": msg.armed,
-            "connected": msg.connected,
-            "mode": msg.mode,
+    def vehicle_status_callback(self, msg: VehicleStatus, drone_name: str):
+        self.drone_vehicle_statuses[drone_name] = {
+            "armed": msg.arming_state == VehicleStatus.ARMING_STATE_ARMED,
+            "connected": True,  # If we're getting messages, we're connected
+            "nav_state": msg.nav_state,
         }
 
     def drone_state_callback(self, msg: DroneState, drone_name: str):
@@ -268,28 +260,39 @@ class DroneGUINode(Node):
             "state": state_map.get(msg.state, "UNKNOWN"),
             "timestamp": self.get_clock().now().nanoseconds,
         }
-    
-    def position_callback(self, msg: PoseStamped, drone_name: str):
+
+    def vehicle_local_position_callback(self, msg: VehicleLocalPosition, drone_name: str):
         """Update drone position for planning initial state"""
-        self.drone_positions[drone_name] = msg.pose.position
+        # Convert NED to ENU
+        self.drone_positions[drone_name].x = msg.x
+        self.drone_positions[drone_name].y = msg.y
+        self.drone_positions[drone_name].z = -msg.z
 
     def update_gui(self):
         # Prepare data for web interface
         gui_data = {}
         for drone in self.drone_list:
-            mavros_state = self.drone_mavros_states.get(drone, {})
+            vehicle_status = self.drone_vehicle_statuses.get(drone, {})
             drone_state = self.drone_states.get(drone, {})
-            
+
             # Get agent ID from HDSM mapping
             drone_num = int(''.join(filter(str.isdigit, drone)))
             agent_id = self.hdsm_mapping.get(drone_num, "N/A") if drone_num else "N/A"
 
+            # Map nav_state to mode string
+            nav_state = vehicle_status.get("nav_state", 0)
+            mode_map = {
+                0: "MANUAL", 1: "ALTCTL", 2: "POSCTL", 3: "MISSION",
+                4: "LOITER", 5: "RTL", 14: "OFFBOARD", 17: "TAKEOFF", 18: "LAND"
+            }
+            mode = mode_map.get(nav_state, f"NAV_{nav_state}")
+
             gui_data[drone] = {
                 "name": drone,
                 "agent_id": agent_id,
-                "armed": mavros_state.get("armed", False),
-                "connected": mavros_state.get("connected", False),
-                "mode": mavros_state.get("mode", "UNKNOWN"),
+                "armed": vehicle_status.get("armed", False),
+                "connected": vehicle_status.get("connected", False),
+                "mode": mode,
                 "state": drone_state.get("state", "UNKNOWN"),
                 "last_update": drone_state.get("timestamp", 0),
             }
@@ -438,47 +441,66 @@ class DroneGUINode(Node):
 
         self.get_logger().info(f"Successfully swapped positions between {drone1} and {drone2}")
 
+    def publish_vehicle_command(self, drone: str, command: int, param1=0.0, param2=0.0):
+        """Helper to publish VehicleCommand for a specific drone"""
+        publisher = self.vehicle_command_pubs.get(drone)
+        if not publisher:
+            self.get_logger().error(f"No vehicle command publisher for {drone}")
+            return
+
+        cmd = VehicleCommand()
+        cmd.timestamp = int(self.get_clock().now().nanoseconds / 1000)
+        cmd.command = command
+        cmd.param1 = float(param1)
+        cmd.param2 = float(param2)
+        cmd.target_system = 1
+        cmd.target_component = 1
+        cmd.source_system = 1
+        cmd.source_component = 1
+        cmd.from_external = True
+        publisher.publish(cmd)
+
     def call_individual_service(self, drone: str, command: str):
         try:
             if command == "arm":
-                service = self.arm_services.get(drone)
-                if service and service.wait_for_service(timeout_sec=1.0):
-                    req = CommandBool.Request()
-                    req.value = True
-                    service.call_async(req)
+                self.publish_vehicle_command(
+                    drone,
+                    VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM,
+                    param1=1.0
+                )
 
             elif command == "disarm":
-                service = self.arm_services.get(drone)
-                if service and service.wait_for_service(timeout_sec=1.0):
-                    req = CommandBool.Request()
-                    req.value = False
-                    service.call_async(req)
+                self.publish_vehicle_command(
+                    drone,
+                    VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM,
+                    param1=0.0
+                )
 
             elif command == "takeoff":
-                service = self.takeoff_services.get(drone)
-                if service and service.wait_for_service(timeout_sec=1.0):
-                    req = CommandTOL.Request()
-                    req.altitude = 2.0  # Default takeoff altitude
-                    service.call_async(req)
+                self.publish_vehicle_command(
+                    drone,
+                    VehicleCommand.VEHICLE_CMD_NAV_TAKEOFF,
+                    param7=2.0  # altitude
+                )
 
             elif command == "land":
-                service = self.land_services.get(drone)
-                if service and service.wait_for_service(timeout_sec=1.0):
-                    req = CommandTOL.Request()
-                    service.call_async(req)
-            
+                self.publish_vehicle_command(
+                    drone,
+                    VehicleCommand.VEHICLE_CMD_NAV_LAND
+                )
+
             elif command == "planning_start":
                 self.call_planning_service(drone, "start")
                 return  # Return early to avoid duplicate logging
-            
+
             elif command == "planning_stop":
                 self.call_planning_service(drone, "stop")
                 return  # Return early to avoid duplicate logging
 
-            self.get_logger().info(f"Called {command} service for {drone}")
+            self.get_logger().info(f"Sent {command} command for {drone}")
 
         except Exception as e:
-            self.get_logger().error(f"Error calling {command} service for {drone}: {e}")
+            self.get_logger().error(f"Error sending {command} command for {drone}: {e}")
 
 
 # Flask web server setup

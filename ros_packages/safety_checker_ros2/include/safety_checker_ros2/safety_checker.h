@@ -4,10 +4,11 @@
 
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "mavros_msgs/msg/attitude_target.hpp"
-#include "mavros_msgs/msg/position_target.hpp"
-#include "mavros_msgs/srv/command_tol.hpp"
-#include "mavros_msgs/srv/set_mode.hpp"
+#include "px4_msgs/msg/vehicle_attitude_setpoint.hpp"
+#include "px4_msgs/msg/trajectory_setpoint.hpp"
+#include "px4_msgs/msg/vehicle_command.hpp"
+#include "px4_msgs/msg/offboard_control_mode.hpp"
+#include "px4_msgs/msg/vehicle_local_position.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nlohmann/json.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -32,14 +33,14 @@ class SafetyChecker : public ::rclcpp::Node {
 
   void LoadHullFromFile(const std::filesystem::path &filepath);
   bool IsPointInHull(const geometry_msgs::msg::Point &point);
-  void HandlePoseMessage(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+  void HandlePoseMessage(const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg);
   void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg);  // deprecated
   void HandleControllerCommand(
       const swarmnxt_msgs::msg::ControllerCommand &msg);
 
   void SetModeForwarder(
-      const std::shared_ptr<mavros_msgs::srv::SetMode::Request> req,
-      std::shared_ptr<mavros_msgs::srv::SetMode::Response> resp);
+      const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+      std::shared_ptr<std_srvs::srv::Trigger::Response> resp);
   void LandNow();
 
   geometry_msgs::msg::Point ProjectPointToClosestPlane(
@@ -60,7 +61,7 @@ class SafetyChecker : public ::rclcpp::Node {
   std::string trajectory_topic_suffix_;
 
   // subscribers
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
+  rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr pose_sub_;
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr
       trajectory_sub_;  // deprecated
   rclcpp::Subscription<swarmnxt_msgs::msg::ControllerCommand>::SharedPtr
@@ -68,17 +69,15 @@ class SafetyChecker : public ::rclcpp::Node {
 
   // publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr safe_trajectory_pub_;
-  rclcpp::Publisher<mavros_msgs::msg::PositionTarget>::SharedPtr
+  rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr
       position_cmd_pub_;
-  rclcpp::Publisher<mavros_msgs::msg::AttitudeTarget>::SharedPtr rate_cmd_pub_;
+  rclcpp::Publisher<px4_msgs::msg::VehicleAttitudeSetpoint>::SharedPtr rate_cmd_pub_;
+  rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr offboard_control_mode_pub_;
+  rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr vehicle_command_pub_;
 
   // servers
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr land_service_;
-  rclcpp::Service<mavros_msgs::srv::SetMode>::SharedPtr set_mode_server_;
-
-  // clients
-  rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr set_mode_client_;
-  rclcpp::Client<mavros_msgs::srv::CommandTOL>::SharedPtr land_client_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr set_mode_server_;
 };
 
 }  // namespace safety_checker

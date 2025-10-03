@@ -6,6 +6,7 @@
 #include "geometry_msgs/msg/point_stamped.hpp"
 #include "nav_msgs/msg/goals.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "px4_msgs/msg/vehicle_local_position.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 
@@ -30,8 +31,8 @@ class DronePlanner : public ::rclcpp::Node {
 
   // subscribers
   rclcpp::Subscription<nav_msgs::msg::Goals>::SharedPtr goals_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
-      mavros_pose_sub_;
+  rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr
+      vehicle_local_position_sub_;
   std::map<std::string, rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr>
       traj_sub_map_;  // for the trajectories of others
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr
@@ -49,6 +50,6 @@ class DronePlanner : public ::rclcpp::Node {
 
   nav_msgs::msg::Path GenerateTrajectory();
   void PublishTrajectory();
-  void MavrosPoseCallback(const geometry_msgs::msg::PoseStamped &msg);
+  void VehicleLocalPositionCallback(const px4_msgs::msg::VehicleLocalPosition &msg);
 };
 }  // namespace drone_planner

@@ -5,8 +5,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from swarmnxt_msgs.msg import Trigger, ControllerCommand, DroneState
-from mavros_msgs.srv import CommandTOL, CommandBool, SetMode, ParamGet
-from mavros_msgs.msg import State
+from px4_msgs.msg import VehicleCommand, VehicleStatus, VehicleLocalPosition, OffboardControlMode
 from geometry_msgs.msg import PoseStamped
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
@@ -22,9 +21,9 @@ class DroneStateManager(Node):
         super().__init__("drone_state_manager")
         self.get_logger().info("DroneStateManager node has been started.")
 
-        # Initialize drone state and MAVROS state
+        # Initialize drone state and vehicle status
         self.mode = make_drone_state(DroneState.IDLE)
-        self.mavros_state = None
+        self.vehicle_status = None
         self.current_pose = None
         self.takeoff_altitude = None
 
@@ -45,30 +44,24 @@ class DroneStateManager(Node):
             Trigger, "/global/arm", self.arm_cb, reliable_qos
         )
 
-        self.mavros_state_client_ = self.create_subscription(
-            State, namespace + "/mavros/state", self.mavros_state_cb, 10
-        )
-        
-        self.pose_sub_ = self.create_subscription(
-            PoseStamped, namespace + "/mavros/local_position/pose", self.pose_cb, 10
+        # Subscribe to PX4 topics
+        best_effort_qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, depth=10)
+
+        self.vehicle_status_sub_ = self.create_subscription(
+            VehicleStatus, namespace + "/fmu/out/vehicle_status", self.vehicle_status_cb, best_effort_qos
         )
 
-        self.set_mode_client_ = self.create_client(
-            SetMode, namespace + "/mavros/set_mode"
+        self.vehicle_local_position_sub_ = self.create_subscription(
+            VehicleLocalPosition, namespace + "/fmu/out/vehicle_local_position", self.vehicle_local_position_cb, best_effort_qos
         )
 
-        self.local_takeoff_client_ = self.create_client(
-            CommandTOL, namespace + "/mavros/cmd/takeoff"
+        # Publishers for PX4 commands
+        self.vehicle_command_pub_ = self.create_publisher(
+            VehicleCommand, namespace + "/fmu/in/vehicle_command", 10
         )
-        self.local_land_client_ = self.create_client(
-            CommandTOL, namespace + "/mavros/cmd/land"
-        )
-        self.local_arm_client_ = self.create_client(
-            CommandBool, namespace + "/mavros/cmd/arming"
-        )
-        
-        self.param_get_client_ = self.create_client(
-            ParamGet, namespace + "/mavros/param/get"
+
+        self.offboard_control_mode_pub_ = self.create_publisher(
+            OffboardControlMode, namespace + "/fmu/in/offboard_control_mode", 10
         )
 
         self.drone_state_pub_ = self.create_publisher(
@@ -85,13 +78,19 @@ class DroneStateManager(Node):
             10,
         )
 
-    def set_mode_future_cb(self, result: Future, mode: DroneState):
-        response = result.result()
-        if response.mode_sent:
-            self.mode = mode
-            self.get_logger().info(f"Mode {mode} sent successfully")
-        else:
-            self.get_logger().warning(f"Mode {mode} not sent!")
+    def publish_vehicle_command(self, command, param1=0.0, param2=0.0):
+        """Helper to publish VehicleCommand messages"""
+        cmd = VehicleCommand()
+        cmd.timestamp = int(self.get_clock().now().nanoseconds / 1000)
+        cmd.command = command
+        cmd.param1 = float(param1)
+        cmd.param2 = float(param2)
+        cmd.target_system = 1
+        cmd.target_component = 1
+        cmd.source_system = 1
+        cmd.source_component = 1
+        cmd.from_external = True
+        self.vehicle_command_pub_.publish(cmd)
 
     def set_mode(self, mode: DroneState):
         if type(mode) != DroneState:
@@ -99,17 +98,18 @@ class DroneStateManager(Node):
             return
         self.get_logger().info(f"Attempting to set the mode to {mode}")
 
+        # Map DroneState to PX4 nav_state
         mode_map = {
-            DroneState.IDLE: "POSCTL",
-            DroneState.TAKING_OFF: "AUTO.TAKEOFF",
-            DroneState.HOVERING: "AUTO.LOITER",
-            DroneState.OFFBOARD: "OFFBOARD",
-            DroneState.LANDING: "AUTO.LAND",
+            DroneState.IDLE: 2,  # NAVIGATION_STATE_POSCTL
+            DroneState.TAKING_OFF: 17,  # NAVIGATION_STATE_AUTO_TAKEOFF
+            DroneState.HOVERING: 4,  # NAVIGATION_STATE_AUTO_LOITER
+            DroneState.OFFBOARD: 14,  # NAVIGATION_STATE_OFFBOARD
+            DroneState.LANDING: 18,  # NAVIGATION_STATE_AUTO_LAND
         }
 
-        px4_mode = mode_map[mode.state]
+        nav_state = mode_map[mode.state]
 
-        if px4_mode == "OFFBOARD":
+        if nav_state == 14:  # OFFBOARD
             if self.control_msgs < 10:
                 self.get_logger().warning(
                     f"Did not switch to offboard mode since there were too few control msgs"
@@ -121,19 +121,26 @@ class DroneStateManager(Node):
                     self.control_cmd_sub_ = None
                 else:
                     self.get_logger().warning("No control cmd subscription to destroy")
-        if px4_mode != "OFFBOARD":
+
+            # Publish offboard control mode before switching
+            offboard_msg = OffboardControlMode()
+            offboard_msg.timestamp = int(self.get_clock().now().nanoseconds / 1000)
+            offboard_msg.position = True
+            offboard_msg.velocity = False
+            offboard_msg.acceleration = False
+            offboard_msg.attitude = False
+            offboard_msg.body_rate = False
+            self.offboard_control_mode_pub_.publish(offboard_msg)
+
+        if nav_state != 14:  # Not OFFBOARD
             self.create_control_cmd_sub()
-        req = SetMode.Request()
-        req.custom_mode = px4_mode
 
-        # Add timeout for service call
-        if not self.set_mode_client_.wait_for_service(timeout_sec=2.0):
-            self.get_logger().warning("Set mode service not available")
-            return
-
-        self.set_mode_client_.call_async(req).add_done_callback(
-            partial(self.set_mode_future_cb, mode=mode)
+        # Send SET_NAV_STATE command
+        self.publish_vehicle_command(
+            VehicleCommand.VEHICLE_CMD_SET_NAV_STATE,
+            param1=float(nav_state)
         )
+        self.mode = mode
 
     def takeoff_cb(self, msg: Trigger):
         if msg.enable:
@@ -147,37 +154,39 @@ class DroneStateManager(Node):
             self.set_mode(make_drone_state(DroneState.LANDING))
 
     def arm_cb(self, msg):
-        # call the local arming service
-        req = CommandBool.Request()
-        req.value = msg.enable
-
-        # Add timeout for service call
-        if not self.local_arm_client_.wait_for_service(timeout_sec=2.0):
-            self.get_logger().warning("Arming service not available")
-            return
-
-        self.local_arm_client_.call_async(req).add_done_callback(
-            lambda res: self.get_logger().info(f"Arm command result: {res.result().success}")
+        # Publish arm/disarm command
+        arm_value = 1.0 if msg.enable else 0.0
+        self.publish_vehicle_command(
+            VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM,
+            param1=arm_value
         )
+        self.get_logger().info(f"Sent arm command: {msg.enable}")
 
-    def mavros_state_cb(self, msg: State):
-        self.mavros_state = msg
+    def vehicle_status_cb(self, msg: VehicleStatus):
+        self.vehicle_status = msg
 
-    def pose_cb(self, msg: PoseStamped):
-        self.current_pose = msg
+    def vehicle_local_position_cb(self, msg: VehicleLocalPosition):
+        # Convert NED to ENU and store as PoseStamped
+        if self.current_pose is None:
+            self.current_pose = PoseStamped()
+        self.current_pose.pose.position.x = msg.x
+        self.current_pose.pose.position.y = msg.y
+        self.current_pose.pose.position.z = -msg.z  # NED to ENU
+        self.current_pose.header.stamp = self.get_clock().now().to_msg()
+        self.current_pose.header.frame_id = "world"
 
     def control_cmd_cb(self, msg):
         self.control_msgs += 1
 
     def loop_cb(self):
-        # Skip state logic if MAVROS state not available yet
-        if self.mavros_state is None:
+        # Skip state logic if vehicle status not available yet
+        if self.vehicle_status is None:
             return
 
         if self.mode.state == DroneState.TAKING_OFF:
             # check if the takeoff is finished.
-            # px4 mode changes or altitude reached?
-            if (self.mavros_state.mode == "AUTO.LOITER" or 
+            # nav_state changes or altitude reached?
+            if (self.vehicle_status.nav_state == VehicleStatus.NAVIGATION_STATE_AUTO_LOITER or
                 (self.current_pose is not None and self.current_pose.pose.position.z >= 0.8)):
                 # we've finished takeoff...
                 self.set_mode(make_drone_state(DroneState.HOVERING))
@@ -189,13 +198,13 @@ class DroneStateManager(Node):
             # nothing to automatically do
             pass
         elif self.mode.state == DroneState.LANDING:
-            # nothign to automatically do
+            # nothing to automatically do
             pass
 
         # if at any point that we think we're flying but we get disarmed, move back to idle.
         if (
             self.mode.state in [DroneState.HOVERING, DroneState.OFFBOARD, DroneState.LANDING]
-            and not self.mavros_state.armed
+            and self.vehicle_status.arming_state != VehicleStatus.ARMING_STATE_ARMED
         ):
             self.get_logger().warning(
                 "Drone got disarmed, switching drone state to idle"

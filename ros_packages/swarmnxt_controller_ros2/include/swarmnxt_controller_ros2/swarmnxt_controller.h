@@ -1,11 +1,9 @@
 #pragma once
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <mavros_msgs/msg/position_target.hpp>
-#include <mavros_msgs/msg/state.hpp>
-#include <mavros_msgs/srv/command_bool.hpp>
-#include <mavros_msgs/srv/command_tol.hpp>
-#include <mavros_msgs/srv/set_mode.hpp>
+#include <px4_msgs/msg/trajectory_setpoint.hpp>
+#include <px4_msgs/msg/vehicle_status.hpp>
+#include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <multi_agent_planner_msgs/msg/state.hpp>
 #include <multi_agent_planner_msgs/msg/trajectory.hpp>
 #include <mutex>
@@ -45,17 +43,17 @@ class Controller : public rclcpp::Node {
   tf2::Vector3 cur_velocity_;
   tf2::Vector3 cur_acceleration_;
 
-  mavros_msgs::msg::State mavros_state_;
+  px4_msgs::msg::VehicleStatus vehicle_status_;
 
   // service callbacks
 
   // Subscribers
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
+  rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr
       drone_pos_sub_;
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr pose_type_traj_sub_;
   rclcpp::Subscription<multi_agent_planner_msgs::msg::Trajectory>::SharedPtr
       hdsm_type_traj_sub_;
-  rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
+  rclcpp::Subscription<px4_msgs::msg::VehicleStatus>::SharedPtr vehicle_status_sub_;
   rclcpp::Subscription<swarmnxt_msgs::msg::Trigger>::SharedPtr enable_sub_;
 
   // Publisher
@@ -76,9 +74,9 @@ class Controller : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr loop_timer_;
 
   // Callbacks
-  void MavrosPoseCallback(const geometry_msgs::msg::PoseStamped& msg);
+  void VehicleLocalPositionCallback(const px4_msgs::msg::VehicleLocalPosition& msg);
   void EnableCallback(const swarmnxt_msgs::msg::Trigger& msg);
-  void MavrosStateCallback(const mavros_msgs::msg::State& msg);
+  void VehicleStatusCallback(const px4_msgs::msg::VehicleStatus& msg);
   void PoseTypeTrajectoryCallback(const nav_msgs::msg::Path& msg);
   void HDSMTypeTrajectoryCallback(
       const multi_agent_planner_msgs::msg::Trajectory& msg);

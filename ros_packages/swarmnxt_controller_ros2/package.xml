@@ -8,7 +8,7 @@
   <license>TODO: License declaration</license>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
-  <depend>mavros_msgs</depend>
+  <depend>px4_msgs</depend>
   <depend>swarmnxt_msgs</depend> 
   <depend>multi_agent_planner_msgs</depend>
   <buildtool_depend>ament_cmake</buildtool_depend>

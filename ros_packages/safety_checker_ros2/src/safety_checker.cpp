@@ -30,8 +30,8 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
       rclcpp::QoS(rclcpp::KeepLast(10))
           .reliability(rclcpp::ReliabilityPolicy::BestEffort);
 
-  pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/mavros/local_position/pose", best_effort_qos,
+  pose_sub_ = create_subscription<px4_msgs::msg::VehicleLocalPosition>(
+      ns + "/fmu/out/vehicle_local_position", best_effort_qos,
       std::bind(&SafetyChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 
@@ -44,22 +44,22 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   safe_trajectory_pub_ =
       create_publisher<nav_msgs::msg::Path>(ns + "/trajectory_safe", 10);
 
-  position_cmd_pub_ = create_publisher<mavros_msgs::msg::PositionTarget>(
-      ns + "/mavros/setpoint_raw/local", 10);
+  position_cmd_pub_ = create_publisher<px4_msgs::msg::TrajectorySetpoint>(
+      ns + "/fmu/in/trajectory_setpoint", 10);
 
-  rate_cmd_pub_ = create_publisher<mavros_msgs::msg::AttitudeTarget>(
-      ns + "/mavros/setpoint_raw/attitude", 10);
+  rate_cmd_pub_ = create_publisher<px4_msgs::msg::VehicleAttitudeSetpoint>(
+      ns + "/fmu/in/vehicle_attitude_setpoint", 10);
 
-  set_mode_server_ = create_service<mavros_msgs::srv::SetMode>(
-      ns + "/safety/mavros/set_mode",
+  offboard_control_mode_pub_ = create_publisher<px4_msgs::msg::OffboardControlMode>(
+      ns + "/fmu/in/offboard_control_mode", 10);
+
+  vehicle_command_pub_ = create_publisher<px4_msgs::msg::VehicleCommand>(
+      ns + "/fmu/in/vehicle_command", 10);
+
+  set_mode_server_ = create_service<std_srvs::srv::Trigger>(
+      ns + "/safety/set_offboard_mode",
       std::bind(&SafetyChecker::SetModeForwarder, this, std::placeholders::_1,
                 std::placeholders::_2));
-
-  set_mode_client_ =
-      create_client<mavros_msgs::srv::SetMode>(ns + "/mavros/set_mode");
-
-  land_client_ = this->create_client<mavros_msgs::srv::CommandTOL>(
-      ns + "/mavros/cmd/land");
 }
 
 void SafetyChecker::HandleControllerCommand(
@@ -75,31 +75,55 @@ void SafetyChecker::HandleControllerCommand(
   }
 
   if (safety_flags_ == SafetyStatus::SAFE) {
+    // Publish offboard control mode
+    px4_msgs::msg::OffboardControlMode offboard_mode{};
+    offboard_mode.timestamp = this->now().nanoseconds() / 1000;
+
     switch (cmd.command_type_mask) {
       case swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT: {
-        // Convert PoseStamped to PositionTarget for backward compatibility
-        mavros_msgs::msg::PositionTarget pos_target;
-        pos_target.header = cmd.pose_cmd.header;
-        pos_target.coordinate_frame =
-            mavros_msgs::msg::PositionTarget::FRAME_LOCAL_NED;
-        pos_target.type_mask =
-            mavros_msgs::msg::PositionTarget::IGNORE_VX |
-            mavros_msgs::msg::PositionTarget::IGNORE_VY |
-            mavros_msgs::msg::PositionTarget::IGNORE_VZ |
-            mavros_msgs::msg::PositionTarget::IGNORE_AFX |
-            mavros_msgs::msg::PositionTarget::IGNORE_AFY |
-            mavros_msgs::msg::PositionTarget::IGNORE_AFZ |
-            mavros_msgs::msg::PositionTarget::IGNORE_YAW_RATE;
-        pos_target.position.x = cmd.pose_cmd.pose.position.x;
-        pos_target.position.y = cmd.pose_cmd.pose.position.y;
-        pos_target.position.z = cmd.pose_cmd.pose.position.z;
-        position_cmd_pub_->publish(pos_target);
+        // Convert PoseStamped to TrajectorySetpoint
+        px4_msgs::msg::TrajectorySetpoint traj_setpoint{};
+        traj_setpoint.timestamp = this->now().nanoseconds() / 1000;
+        traj_setpoint.position[0] = cmd.pose_cmd.pose.position.x;
+        traj_setpoint.position[1] = cmd.pose_cmd.pose.position.y;
+        traj_setpoint.position[2] = -cmd.pose_cmd.pose.position.z; // ENU to NED
+        traj_setpoint.velocity[0] = NAN;
+        traj_setpoint.velocity[1] = NAN;
+        traj_setpoint.velocity[2] = NAN;
+        traj_setpoint.acceleration[0] = NAN;
+        traj_setpoint.acceleration[1] = NAN;
+        traj_setpoint.acceleration[2] = NAN;
+        traj_setpoint.yaw = NAN;
+        traj_setpoint.yawspeed = NAN;
+
+        offboard_mode.position = true;
+        offboard_mode.velocity = false;
+        offboard_mode.acceleration = false;
+        offboard_mode.attitude = false;
+        offboard_mode.body_rate = false;
+
+        offboard_control_mode_pub_->publish(offboard_mode);
+        position_cmd_pub_->publish(traj_setpoint);
         break;
       }
       case swarmnxt_msgs::msg::ControllerCommand::RATE_SETPOINT:
+        offboard_mode.position = false;
+        offboard_mode.velocity = false;
+        offboard_mode.acceleration = false;
+        offboard_mode.attitude = true;
+        offboard_mode.body_rate = false;
+
+        offboard_control_mode_pub_->publish(offboard_mode);
         rate_cmd_pub_->publish(cmd.rate_cmd);
         break;
       case swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT:
+        offboard_mode.position = true;
+        offboard_mode.velocity = true;
+        offboard_mode.acceleration = true;
+        offboard_mode.attitude = false;
+        offboard_mode.body_rate = false;
+
+        offboard_control_mode_pub_->publish(offboard_mode);
         position_cmd_pub_->publish(cmd.raw_cmd);
         break;
       default:
@@ -116,47 +140,61 @@ void SafetyChecker::HandleControllerCommand(
 }
 
 void SafetyChecker::SetModeForwarder(
-    const std::shared_ptr<mavros_msgs::srv::SetMode::Request> req,
-    std::shared_ptr<mavros_msgs::srv::SetMode::Response> resp) {
-  // if its safe, then forward the setmode request. otherwise, send a fail
-  // response.
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> resp) {
+  // if its safe, then switch to offboard mode. otherwise, send a fail response.
   if (safety_flags_ == SafetyStatus::SAFE) {
-    RCLCPP_INFO(get_logger(), "Forwarding SetMode to Mavros");
-    auto set_mode_future = set_mode_client_->async_send_request(
-        req,
-        [resp](rclcpp::Client<mavros_msgs::srv::SetMode>::SharedFuture future) {
-          auto response = future.get();
-          resp->mode_sent = response->mode_sent;
-        });
+    RCLCPP_INFO(get_logger(), "Switching to Offboard mode");
 
+    // Send vehicle command to switch to offboard mode
+    px4_msgs::msg::VehicleCommand cmd{};
+    cmd.timestamp = this->now().nanoseconds() / 1000;
+    cmd.command = px4_msgs::msg::VehicleCommand::VEHICLE_CMD_DO_SET_MODE;
+    cmd.param1 = 1; // MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
+    cmd.param2 = 6; // PX4_CUSTOM_MAIN_MODE_OFFBOARD
+    cmd.target_system = 1;
+    cmd.target_component = 1;
+    cmd.source_system = 1;
+    cmd.source_component = 1;
+    cmd.from_external = true;
+
+    vehicle_command_pub_->publish(cmd);
+    resp->success = true;
+    resp->message = "Offboard mode command sent";
   } else {
     RCLCPP_WARN(
         get_logger(),
-        "Did not forward the mode change request because we are in an unsafe "
+        "Did not switch to offboard mode because we are in an unsafe "
         "state. Unsafe code: %d",
         safety_flags_);
-    resp->mode_sent = false;
+    resp->success = false;
+    resp->message = "Unsafe state, cannot switch to offboard";
   }
 }
 
 void SafetyChecker::LandNow() {
-  auto req = std::make_shared<mavros_msgs::srv::CommandTOL::Request>();
-  // do we have to send any position or something?
-  auto land_future = land_client_->async_send_request(
-      req,
-      [this](
-          rclcpp::Client<mavros_msgs::srv::CommandTOL>::SharedFuture future) {
-        auto response = future.get();
-        if (!response->success) {
-          RCLCPP_ERROR(get_logger(),
-                       "Could not send a land now command to MAVROS!");
-        } else {
-          RCLCPP_INFO(get_logger(),
-                      "Successfully changed mode to land. SafetyFlag Code: %d",
-                      safety_flags_);
-          safety_flags_ &= (~SafetyStatus::UNSAFE_COMMAND_SEND_RATE);
-        }
-      });
+  // Send vehicle command to land
+  px4_msgs::msg::VehicleCommand cmd{};
+  cmd.timestamp = this->now().nanoseconds() / 1000;
+  cmd.command = px4_msgs::msg::VehicleCommand::VEHICLE_CMD_NAV_LAND;
+  cmd.param1 = 0;
+  cmd.param2 = 0;
+  cmd.param3 = 0;
+  cmd.param4 = NAN; // Yaw angle
+  cmd.param5 = NAN; // Latitude
+  cmd.param6 = NAN; // Longitude
+  cmd.param7 = NAN; // Altitude
+  cmd.target_system = 1;
+  cmd.target_component = 1;
+  cmd.source_system = 1;
+  cmd.source_component = 1;
+  cmd.from_external = true;
+
+  vehicle_command_pub_->publish(cmd);
+  RCLCPP_INFO(get_logger(),
+              "Sent land command. SafetyFlag Code: %d",
+              safety_flags_);
+  safety_flags_ &= (~SafetyStatus::UNSAFE_COMMAND_SEND_RATE);
 }
 
 void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
@@ -271,9 +309,14 @@ geometry_msgs::msg::Point SafetyChecker::ProjectPointToClosestPlane(
 }
 
 void SafetyChecker::HandlePoseMessage(
-    const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+    const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg) {
   auto logger = this->get_logger();
-  const auto &position = msg->pose.position;
+
+  // Convert NED to ENU for bounds checking
+  geometry_msgs::msg::Point position;
+  position.x = msg->x;
+  position.y = msg->y;
+  position.z = -msg->z; // NED to ENU
 
   if (IsPointInHull(position)) {
     RCLCPP_DEBUG(logger, "Pose is within bounds.");

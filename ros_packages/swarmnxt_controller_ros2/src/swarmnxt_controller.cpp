@@ -24,9 +24,9 @@ Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
       rclcpp::QoS(rclcpp::KeepLast(10))
           .reliability(rclcpp::ReliabilityPolicy::Reliable);
 
-  drone_pos_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-      ns + "/mavros/local_position/pose", best_effort_qos,
-      std::bind(&Controller::MavrosPoseCallback, this, std::placeholders::_1));
+  drone_pos_sub_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>(
+      ns + "/fmu/out/vehicle_local_position", best_effort_qos,
+      std::bind(&Controller::VehicleLocalPositionCallback, this, std::placeholders::_1));
 
   enable_sub_ = this->create_subscription<swarmnxt_msgs::msg::Trigger>(
       ns + "/controller/enable", reliable_qos,
@@ -63,13 +63,16 @@ tf2::Vector3 Controller::GetPositionCopy() {
   return pos;
 }
 
-void Controller::MavrosPoseCallback(
-    const geometry_msgs::msg::PoseStamped& msg) {
+void Controller::VehicleLocalPositionCallback(
+    const px4_msgs::msg::VehicleLocalPosition& msg) {
   RCLCPP_DEBUG(this->get_logger(),
               "Got a new position. x: %5.2f, y: %5.2f, z: %5.2f",
-              msg.pose.position.x, msg.pose.position.y, msg.pose.position.z);
+              msg.x, msg.y, msg.z);
   std::lock_guard<std::mutex> lock(pos_mutex_);
-  tf2::fromMsg(msg.pose.position, cur_pos_);  // todo: yaw
+  // Convert NED to ENU
+  cur_pos_.setX(msg.x);
+  cur_pos_.setY(msg.y);
+  cur_pos_.setZ(-msg.z);
 }
 
 void Controller::EnableCallback(const swarmnxt_msgs::msg::Trigger& msg) {
@@ -220,28 +223,26 @@ void Controller::SendTrajectoryMessage() {
     if (cur_traj_index_ < hdsm_traj_.states.size()) {
       const auto& state = hdsm_traj_.states[cur_traj_index_];
 
-      // Create PositionTarget message
-      msg.raw_cmd.header.stamp = this->now();
-      msg.raw_cmd.header.frame_id = "world";
-      msg.raw_cmd.coordinate_frame =
-          mavros_msgs::msg::PositionTarget::FRAME_LOCAL_NED;
-      msg.raw_cmd.type_mask =
-          0;  // Use all fields (position, velocity, acceleration)
+      // Create TrajectorySetpoint message (NED frame)
+      msg.raw_cmd.timestamp = this->now().nanoseconds() / 1000;
 
-      // Position
-      msg.raw_cmd.position.x = state.position[0];
-      msg.raw_cmd.position.y = state.position[1];
-      msg.raw_cmd.position.z = state.position[2];
+      // Position (assuming HDSM states are in ENU, convert to NED)
+      msg.raw_cmd.position[0] = state.position[0];
+      msg.raw_cmd.position[1] = state.position[1];
+      msg.raw_cmd.position[2] = -state.position[2];  // ENU to NED
 
-      // Velocity
-      msg.raw_cmd.velocity.x = state.velocity[0];
-      msg.raw_cmd.velocity.y = state.velocity[1];
-      msg.raw_cmd.velocity.z = state.velocity[2];
+      // Velocity (assuming HDSM states are in ENU, convert to NED)
+      msg.raw_cmd.velocity[0] = state.velocity[0];
+      msg.raw_cmd.velocity[1] = state.velocity[1];
+      msg.raw_cmd.velocity[2] = -state.velocity[2];  // ENU to NED
 
-      // Acceleration
-      msg.raw_cmd.acceleration_or_force.x = state.acceleration[0];
-      msg.raw_cmd.acceleration_or_force.y = state.acceleration[1];
-      msg.raw_cmd.acceleration_or_force.z = state.acceleration[2];
+      // Acceleration (assuming HDSM states are in ENU, convert to NED)
+      msg.raw_cmd.acceleration[0] = state.acceleration[0];
+      msg.raw_cmd.acceleration[1] = state.acceleration[1];
+      msg.raw_cmd.acceleration[2] = -state.acceleration[2];  // ENU to NED
+
+      msg.raw_cmd.yaw = NAN;
+      msg.raw_cmd.yawspeed = NAN;
     }
   } else {
     // Traditional position-only command
@@ -276,9 +277,9 @@ void Controller::HDSMTypeTrajectoryCallback(
   UpdateTrajectoryHDSMType(msg);
 }
 
-void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
-  RCLCPP_DEBUG(this->get_logger(), "Got mavros state");
-  mavros_state_ = msg;
+void Controller::VehicleStatusCallback(const px4_msgs::msg::VehicleStatus& msg) {
+  RCLCPP_DEBUG(this->get_logger(), "Got vehicle status");
+  vehicle_status_ = msg;
 }
 
 }  // namespace swarmnxt_controller
