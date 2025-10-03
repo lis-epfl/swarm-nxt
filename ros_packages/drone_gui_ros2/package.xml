@@ -10,6 +10,7 @@
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>px4_msgs</depend>
+  <depend>px4_ros_com</depend>
   <depend>swarmnxt_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>

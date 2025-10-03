@@ -217,36 +217,48 @@ void Controller::SendTrajectoryMessage() {
               "Setting target: x: %5.2f, y: %5.2f, z: %5.2f", cur_target_.x(),
               cur_target_.y(), cur_target_.z());
 
+  // Always populate TrajectorySetpoint cmd field
+  msg.cmd.timestamp = this->now().nanoseconds() / 1000;
+
   if (msg.command_type_mask ==
       swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT) {
     // Use HDSM trajectory data for position, velocity, acceleration
     if (cur_traj_index_ < hdsm_traj_.states.size()) {
       const auto& state = hdsm_traj_.states[cur_traj_index_];
 
-      // Create TrajectorySetpoint message (NED frame)
-      msg.raw_cmd.timestamp = this->now().nanoseconds() / 1000;
+      // Convert ENU to NED using frame_transforms
+      // Position
+      msg.cmd.position[0] = state.position[0];
+      msg.cmd.position[1] = state.position[1];
+      msg.cmd.position[2] = -state.position[2];  // ENU to NED
 
-      // Position (assuming HDSM states are in ENU, convert to NED)
-      msg.raw_cmd.position[0] = state.position[0];
-      msg.raw_cmd.position[1] = state.position[1];
-      msg.raw_cmd.position[2] = -state.position[2];  // ENU to NED
+      // Velocity
+      msg.cmd.velocity[0] = state.velocity[0];
+      msg.cmd.velocity[1] = state.velocity[1];
+      msg.cmd.velocity[2] = -state.velocity[2];  // ENU to NED
 
-      // Velocity (assuming HDSM states are in ENU, convert to NED)
-      msg.raw_cmd.velocity[0] = state.velocity[0];
-      msg.raw_cmd.velocity[1] = state.velocity[1];
-      msg.raw_cmd.velocity[2] = -state.velocity[2];  // ENU to NED
+      // Acceleration
+      msg.cmd.acceleration[0] = state.acceleration[0];
+      msg.cmd.acceleration[1] = state.acceleration[1];
+      msg.cmd.acceleration[2] = -state.acceleration[2];  // ENU to NED
 
-      // Acceleration (assuming HDSM states are in ENU, convert to NED)
-      msg.raw_cmd.acceleration[0] = state.acceleration[0];
-      msg.raw_cmd.acceleration[1] = state.acceleration[1];
-      msg.raw_cmd.acceleration[2] = -state.acceleration[2];  // ENU to NED
-
-      msg.raw_cmd.yaw = NAN;
-      msg.raw_cmd.yawspeed = NAN;
+      // TODO: Calculate yaw from state orientation instead of NAN
+      msg.cmd.yaw = NAN;
+      msg.cmd.yawspeed = NAN;
     }
   } else {
-    // Traditional position-only command
-    tf2::toMsg(cur_target_, msg.pose_cmd.pose.position);
+    // Traditional position-only command - populate position, leave velocity/accel as NAN
+    msg.cmd.position[0] = cur_target_.x();
+    msg.cmd.position[1] = cur_target_.y();
+    msg.cmd.position[2] = -cur_target_.z();  // ENU to NED
+    msg.cmd.velocity[0] = NAN;
+    msg.cmd.velocity[1] = NAN;
+    msg.cmd.velocity[2] = NAN;
+    msg.cmd.acceleration[0] = NAN;
+    msg.cmd.acceleration[1] = NAN;
+    msg.cmd.acceleration[2] = NAN;
+    msg.cmd.yaw = NAN;
+    msg.cmd.yawspeed = NAN;
   }
 
   done_pub_->publish(done_msg);

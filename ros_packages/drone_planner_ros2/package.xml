@@ -8,7 +8,7 @@
   <license>TODO: License declaration</license>
   <member_of_group>rosidl_interface_packages</member_of_group>
   <depend>eigen</depend>
-
+  <depend>px4_ros_com</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

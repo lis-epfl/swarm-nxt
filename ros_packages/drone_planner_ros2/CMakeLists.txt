@@ -11,6 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(px4_ros_com REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -20,7 +21,8 @@ set(DEPENDENCIES
   builtin_interfaces
   geometry_msgs
   sensor_msgs
-  nav_msgs  
+  nav_msgs
+  px4_ros_com
   Eigen3
   tf2_geometry_msgs
 )

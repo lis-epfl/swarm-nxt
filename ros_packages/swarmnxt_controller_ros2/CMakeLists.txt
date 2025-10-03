@@ -15,6 +15,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
+find_package(px4_ros_com REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(swarmnxt_msgs REQUIRED)
@@ -28,6 +29,7 @@ set(DEPENDENCIES
   sensor_msgs
   nav_msgs
   px4_msgs
+  px4_ros_com
   tf2_geometry_msgs
   std_msgs
   swarmnxt_msgs

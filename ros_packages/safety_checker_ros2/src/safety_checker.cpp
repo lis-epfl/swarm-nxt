@@ -47,9 +47,6 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   position_cmd_pub_ = create_publisher<px4_msgs::msg::TrajectorySetpoint>(
       ns + "/fmu/in/trajectory_setpoint", 10);
 
-  rate_cmd_pub_ = create_publisher<px4_msgs::msg::VehicleAttitudeSetpoint>(
-      ns + "/fmu/in/vehicle_attitude_setpoint", 10);
-
   offboard_control_mode_pub_ = create_publisher<px4_msgs::msg::OffboardControlMode>(
       ns + "/fmu/in/offboard_control_mode", 10);
 
@@ -75,46 +72,24 @@ void SafetyChecker::HandleControllerCommand(
   }
 
   if (safety_flags_ == SafetyStatus::SAFE) {
-    // Publish offboard control mode
+    // Set offboard control mode flags based on command type mask
     px4_msgs::msg::OffboardControlMode offboard_mode{};
     offboard_mode.timestamp = this->now().nanoseconds() / 1000;
 
     switch (cmd.command_type_mask) {
-      case swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT: {
-        // Convert PoseStamped to TrajectorySetpoint
-        px4_msgs::msg::TrajectorySetpoint traj_setpoint{};
-        traj_setpoint.timestamp = this->now().nanoseconds() / 1000;
-        traj_setpoint.position[0] = cmd.pose_cmd.pose.position.x;
-        traj_setpoint.position[1] = cmd.pose_cmd.pose.position.y;
-        traj_setpoint.position[2] = -cmd.pose_cmd.pose.position.z; // ENU to NED
-        traj_setpoint.velocity[0] = NAN;
-        traj_setpoint.velocity[1] = NAN;
-        traj_setpoint.velocity[2] = NAN;
-        traj_setpoint.acceleration[0] = NAN;
-        traj_setpoint.acceleration[1] = NAN;
-        traj_setpoint.acceleration[2] = NAN;
-        traj_setpoint.yaw = NAN;
-        traj_setpoint.yawspeed = NAN;
-
+      case swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT:
         offboard_mode.position = true;
         offboard_mode.velocity = false;
         offboard_mode.acceleration = false;
         offboard_mode.attitude = false;
         offboard_mode.body_rate = false;
-
-        offboard_control_mode_pub_->publish(offboard_mode);
-        position_cmd_pub_->publish(traj_setpoint);
         break;
-      }
       case swarmnxt_msgs::msg::ControllerCommand::RATE_SETPOINT:
         offboard_mode.position = false;
         offboard_mode.velocity = false;
         offboard_mode.acceleration = false;
         offboard_mode.attitude = true;
         offboard_mode.body_rate = false;
-
-        offboard_control_mode_pub_->publish(offboard_mode);
-        rate_cmd_pub_->publish(cmd.rate_cmd);
         break;
       case swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT:
         offboard_mode.position = true;
@@ -122,14 +97,16 @@ void SafetyChecker::HandleControllerCommand(
         offboard_mode.acceleration = true;
         offboard_mode.attitude = false;
         offboard_mode.body_rate = false;
-
-        offboard_control_mode_pub_->publish(offboard_mode);
-        position_cmd_pub_->publish(cmd.raw_cmd);
         break;
       default:
         RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",
                      cmd.command_type_mask);
+        return;
     }
+
+    // Publish offboard control mode and trajectory setpoint
+    offboard_control_mode_pub_->publish(offboard_mode);
+    position_cmd_pub_->publish(cmd.cmd);
   } else {
     RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                           "Not sending offboard messages because of "

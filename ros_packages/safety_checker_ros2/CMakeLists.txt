@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
+find_package(px4_ros_com REQUIRED)
 find_package(swarmnxt_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -25,6 +26,7 @@ set(DEPENDENCIES
   std_srvs
   nav_msgs
   px4_msgs
+  px4_ros_com
   swarmnxt_msgs
   nlohmann_json
   swarmnxt_controller_ros2
