@@ -4,13 +4,14 @@
 
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "px4_msgs/msg/vehicle_attitude_setpoint.hpp"
-#include "px4_msgs/msg/trajectory_setpoint.hpp"
-#include "px4_msgs/msg/vehicle_command.hpp"
-#include "px4_msgs/msg/offboard_control_mode.hpp"
-#include "px4_msgs/msg/vehicle_local_position.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nlohmann/json.hpp"
+#include "px4_msgs/msg/offboard_control_mode.hpp"
+#include "px4_msgs/msg/trajectory_setpoint.hpp"
+#include "px4_msgs/msg/vehicle_attitude_setpoint.hpp"
+#include "px4_msgs/msg/vehicle_command.hpp"
+#include "px4_msgs/msg/vehicle_local_position.hpp"
+#include "px4_ros_com/frame_transforms.h"
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "swarmnxt_msgs/msg/controller_command.hpp"
@@ -33,7 +34,8 @@ class SafetyChecker : public ::rclcpp::Node {
 
   void LoadHullFromFile(const std::filesystem::path &filepath);
   bool IsPointInHull(const geometry_msgs::msg::Point &point);
-  void HandlePoseMessage(const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg);
+  void HandlePoseMessage(
+      const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg);
   void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg);  // deprecated
   void HandleControllerCommand(
       const swarmnxt_msgs::msg::ControllerCommand &msg);
@@ -46,7 +48,7 @@ class SafetyChecker : public ::rclcpp::Node {
   geometry_msgs::msg::Point ProjectPointToClosestPlane(
       const geometry_msgs::msg::Point &point);
   void ClearPlanes();
-  
+
   std::vector<swarmnxt_msgs::msg::Plane> GetPlanes();
 
  private:
@@ -61,7 +63,8 @@ class SafetyChecker : public ::rclcpp::Node {
   std::string trajectory_topic_suffix_;
 
   // subscribers
-  rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr pose_sub_;
+  rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr
+      pose_sub_;
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr
       trajectory_sub_;  // deprecated
   rclcpp::Subscription<swarmnxt_msgs::msg::ControllerCommand>::SharedPtr
@@ -71,8 +74,10 @@ class SafetyChecker : public ::rclcpp::Node {
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr safe_trajectory_pub_;
   rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr
       position_cmd_pub_;
-  rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr offboard_control_mode_pub_;
-  rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr vehicle_command_pub_;
+  rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr
+      offboard_control_mode_pub_;
+  rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr
+      vehicle_command_pub_;
 
   // servers
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr land_service_;

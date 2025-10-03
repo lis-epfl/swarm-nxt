@@ -47,8 +47,9 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   position_cmd_pub_ = create_publisher<px4_msgs::msg::TrajectorySetpoint>(
       ns + "/fmu/in/trajectory_setpoint", 10);
 
-  offboard_control_mode_pub_ = create_publisher<px4_msgs::msg::OffboardControlMode>(
-      ns + "/fmu/in/offboard_control_mode", 10);
+  offboard_control_mode_pub_ =
+      create_publisher<px4_msgs::msg::OffboardControlMode>(
+          ns + "/fmu/in/offboard_control_mode", 10);
 
   vehicle_command_pub_ = create_publisher<px4_msgs::msg::VehicleCommand>(
       ns + "/fmu/in/vehicle_command", 10);
@@ -67,7 +68,9 @@ void SafetyChecker::HandleControllerCommand(
   // make sure the command isn't stale
   if (cmd_age.nanoseconds() > 20E6) {
     safety_flags_ |= SafetyStatus::UNSAFE_COMMAND_SEND_RATE;
-    RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping. Age: %5.2fms", cmd_age.nanoseconds()/1e6);
+    RCLCPP_ERROR(this->get_logger(),
+                 "Command was too old, stopping. Age: %5.2fms",
+                 cmd_age.nanoseconds() / 1e6);
     LandNow();
   }
 
@@ -127,8 +130,8 @@ void SafetyChecker::SetModeForwarder(
     px4_msgs::msg::VehicleCommand cmd{};
     cmd.timestamp = this->now().nanoseconds() / 1000;
     cmd.command = px4_msgs::msg::VehicleCommand::VEHICLE_CMD_DO_SET_MODE;
-    cmd.param1 = 1; // MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
-    cmd.param2 = 6; // PX4_CUSTOM_MAIN_MODE_OFFBOARD
+    cmd.param1 = 1;  // MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
+    cmd.param2 = 6;  // PX4_CUSTOM_MAIN_MODE_OFFBOARD
     cmd.target_system = 1;
     cmd.target_component = 1;
     cmd.source_system = 1;
@@ -139,11 +142,10 @@ void SafetyChecker::SetModeForwarder(
     resp->success = true;
     resp->message = "Offboard mode command sent";
   } else {
-    RCLCPP_WARN(
-        get_logger(),
-        "Did not switch to offboard mode because we are in an unsafe "
-        "state. Unsafe code: %d",
-        safety_flags_);
+    RCLCPP_WARN(get_logger(),
+                "Did not switch to offboard mode because we are in an unsafe "
+                "state. Unsafe code: %d",
+                safety_flags_);
     resp->success = false;
     resp->message = "Unsafe state, cannot switch to offboard";
   }
@@ -157,10 +159,10 @@ void SafetyChecker::LandNow() {
   cmd.param1 = 0;
   cmd.param2 = 0;
   cmd.param3 = 0;
-  cmd.param4 = NAN; // Yaw angle
-  cmd.param5 = NAN; // Latitude
-  cmd.param6 = NAN; // Longitude
-  cmd.param7 = NAN; // Altitude
+  cmd.param4 = NAN;  // Yaw angle
+  cmd.param5 = NAN;  // Latitude
+  cmd.param6 = NAN;  // Longitude
+  cmd.param7 = NAN;  // Altitude
   cmd.target_system = 1;
   cmd.target_component = 1;
   cmd.source_system = 1;
@@ -168,8 +170,7 @@ void SafetyChecker::LandNow() {
   cmd.from_external = true;
 
   vehicle_command_pub_->publish(cmd);
-  RCLCPP_INFO(get_logger(),
-              "Sent land command. SafetyFlag Code: %d",
+  RCLCPP_INFO(get_logger(), "Sent land command. SafetyFlag Code: %d",
               safety_flags_);
   safety_flags_ &= (~SafetyStatus::UNSAFE_COMMAND_SEND_RATE);
 }
@@ -289,11 +290,15 @@ void SafetyChecker::HandlePoseMessage(
     const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg) {
   auto logger = this->get_logger();
 
-  // Convert NED to ENU for bounds checking
+  // Convert NED to ENU for bounds checking using frame_transforms
+  Eigen::Vector3d position_ned(msg->x, msg->y, msg->z);
+  Eigen::Vector3d position_enu =
+      px4_ros_com::frame_transforms::ros_(position_ned);
+
   geometry_msgs::msg::Point position;
-  position.x = msg->x;
-  position.y = msg->y;
-  position.z = -msg->z; // NED to ENU
+  position.x = position_enu.x();
+  position.y = position_enu.y();
+  position.z = position_enu.z();
 
   if (IsPointInHull(position)) {
     RCLCPP_DEBUG(logger, "Pose is within bounds.");
