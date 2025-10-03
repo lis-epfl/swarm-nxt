@@ -4,7 +4,7 @@ namespace swarmnxt_controller {
 
 Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {
   auto logger = this->get_logger();
-  RCLCPP_INFO(logger, "Starting the controller node...");
+  RCLCPP_DEBUG(logger, "Starting the controller node...");
 
   std::string hdsm_agent_prefix = "";
 
@@ -65,7 +65,7 @@ tf2::Vector3 Controller::GetPositionCopy() {
 
 void Controller::MavrosPoseCallback(
     const geometry_msgs::msg::PoseStamped& msg) {
-  RCLCPP_INFO(this->get_logger(),
+  RCLCPP_DEBUG(this->get_logger(),
               "Got a new position. x: %5.2f, y: %5.2f, z: %5.2f",
               msg.pose.position.x, msg.pose.position.y, msg.pose.position.z);
   std::lock_guard<std::mutex> lock(pos_mutex_);
@@ -160,7 +160,7 @@ void Controller::SendTrajectoryMessage() {
 
   auto current_time = this->now();
 
-  RCLCPP_INFO(
+  RCLCPP_DEBUG(
       this->get_logger(),
       "Before timestamp search - cur_pos: [%5.2f, %5.2f, %5.2f], cur_target_: "
       "[%5.2f, %5.2f, %5.2f], traj_index: %u, num_points: %u",
@@ -178,7 +178,7 @@ void Controller::SendTrajectoryMessage() {
       if (i >= cur_traj_index_) {
         cur_traj_index_ = i;
         found_future_waypoint = true;
-        RCLCPP_INFO(this->get_logger(), "Found future waypoint at index %u",
+        RCLCPP_DEBUG(this->get_logger(), "Found future waypoint at index %u",
                     cur_traj_index_);
       }
       break;
@@ -189,12 +189,12 @@ void Controller::SendTrajectoryMessage() {
     // All waypoints are in the past, use the last one or mark as done
     if (num_traj_points > 0) {
       cur_traj_index_ = num_traj_points - 1;
-      RCLCPP_INFO(this->get_logger(),
+      RCLCPP_DEBUG(this->get_logger(),
                   "No future waypoints, using last waypoint at index %u",
                   cur_traj_index_);
     } else {
       reached_dest_ = true;
-      RCLCPP_INFO(this->get_logger(),
+      RCLCPP_DEBUG(this->get_logger(),
                   "No waypoints available, marking as done");
     }
   }
@@ -202,7 +202,7 @@ void Controller::SendTrajectoryMessage() {
   // Set the current target from the selected waypoint
   if (cur_traj_index_ < num_traj_points) {
     tf2::fromMsg(cur_traj.poses.at(cur_traj_index_).pose.position, cur_target_);
-    RCLCPP_INFO(this->get_logger(),
+    RCLCPP_DEBUG(this->get_logger(),
                 "Set target from waypoint %u: [%5.2f, %5.2f, %5.2f]",
                 cur_traj_index_, cur_target_.x(), cur_target_.y(),
                 cur_target_.z());
@@ -210,7 +210,7 @@ void Controller::SendTrajectoryMessage() {
     RCLCPP_ERROR(this->get_logger(), "Did not set any setpoint!");
   }
 
-  RCLCPP_INFO(this->get_logger(),
+  RCLCPP_DEBUG(this->get_logger(),
               "Setting target: x: %5.2f, y: %5.2f, z: %5.2f", cur_target_.x(),
               cur_target_.y(), cur_target_.z());
 
@@ -255,7 +255,7 @@ void Controller::SendTrajectoryMessage() {
 void Controller::Loop() {
   auto& clk = *this->get_clock();
   auto logger = this->get_logger();
-  RCLCPP_INFO_THROTTLE(logger, clk, 1000, "ctrl enabled: %d", enabled_);
+  RCLCPP_DEBUG_THROTTLE(logger, clk, 1000, "ctrl enabled: %d", enabled_);
   if (enabled_) {  // and the time of the last received pose plus goal are close
     SendTrajectoryMessage();
 
@@ -277,7 +277,7 @@ void Controller::HDSMTypeTrajectoryCallback(
 }
 
 void Controller::MavrosStateCallback(const mavros_msgs::msg::State& msg) {
-  RCLCPP_INFO(this->get_logger(), "Got mavros state");
+  RCLCPP_DEBUG(this->get_logger(), "Got mavros state");
   mavros_state_ = msg;
 }
 

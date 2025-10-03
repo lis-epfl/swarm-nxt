@@ -70,7 +70,7 @@ void SafetyChecker::HandleControllerCommand(
   // make sure the command isn't stale
   if (cmd_age.nanoseconds() > 20E6) {
     safety_flags_ |= SafetyStatus::UNSAFE_COMMAND_SEND_RATE;
-    RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping...");
+    RCLCPP_ERROR(this->get_logger(), "Command was too old, stopping. Age: %5.2fms", cmd_age.nanoseconds()/1e6);
     LandNow();
   }
 
@@ -276,7 +276,7 @@ void SafetyChecker::HandlePoseMessage(
   const auto &position = msg->pose.position;
 
   if (IsPointInHull(position)) {
-    RCLCPP_INFO(logger, "Pose is within bounds.");
+    RCLCPP_DEBUG(logger, "Pose is within bounds.");
     safety_flags_ &= ~SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
   } else {
     RCLCPP_WARN(logger, "Pose is out of bounds, landing...");
@@ -311,7 +311,7 @@ void SafetyChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
   if (!safe) {
     RCLCPP_WARN(this->get_logger(), "Trajectory was unsafe");
   } else {
-    RCLCPP_INFO(this->get_logger(), "Trajectory was safe");
+    RCLCPP_DEBUG(this->get_logger(), "Trajectory was safe");
   }
 
   safe_trajectory_pub_->publish(safe_traj);

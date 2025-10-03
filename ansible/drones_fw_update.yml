@@ -1,0 +1,104 @@
+---
+- name: Build PX4 Firmware Locally
+  hosts: localhost
+  connection: local
+  vars:
+    px4_repo_path: "/tmp/PX4-Autopilot-{{ firmware_version }}"
+    firmware_file: "{{ px4_repo_path }}/build/hkust_nxt-dual_default/hkust_nxt-dual_default.px4"
+    uploader_script: "{{ px4_repo_path }}/Tools/px_uploader.py"
+
+  tasks:
+    - name: Remove existing PX4 repository if it exists
+      ansible.builtin.file:
+        path: "{{ px4_repo_path }}"
+        state: absent
+
+    - name: Clone PX4 repository with submodules
+      ansible.builtin.git:
+        repo: https://github.com/PX4/PX4-Autopilot.git
+        dest: "{{ px4_repo_path }}"
+        recursive: yes
+        version: "{{ firmware_version }}"
+
+    - name: Update submodules
+      ansible.builtin.command:
+        cmd: git submodule update --init --recursive
+        chdir: "{{ px4_repo_path }}"
+    - name: Ensure Dependencies
+      ansible.builtin.command: 
+        cmd: ./Tools/setup/ubuntu.sh
+        chdir: "{{ px4_repo_path }}"
+    - name: Build firmware with make hkust_nxt-dual
+      ansible.builtin.command:
+        cmd: make hkust_nxt-dual
+        chdir: "{{ px4_repo_path }}"
+      register: build_result
+
+    - name: Check if firmware file was created
+      ansible.builtin.stat:
+        path: "{{ firmware_file }}"
+      register: firmware_stat
+
+    - name: Fail if firmware file not found
+      ansible.builtin.fail:
+        msg: "Firmware file not found at {{ firmware_file }}"
+      when: not firmware_stat.stat.exists
+
+    - name: Check if uploader script exists
+      ansible.builtin.stat:
+        path: "{{ uploader_script }}"
+      register: uploader_stat
+
+    - name: Fail if uploader script not found
+      ansible.builtin.fail:
+        msg: "Uploader script not found at {{ uploader_script }}"
+      when: not uploader_stat.stat.exists
+
+- name: Deploy Firmware to Drones
+  hosts: drones
+  remote_user: lis
+  become: yes
+  vars:
+    firmware_version: "{{ hostvars['localhost']['firmware_version'] }}"
+    px4_repo_path: "/tmp/PX4-Autopilot-{{ firmware_version }}"
+    firmware_file: "{{ px4_repo_path }}/build/hkust_nxt-dual_default/hkust_nxt-dual_default.px4"
+    uploader_script: "{{ px4_repo_path }}/Tools/px_uploader.py"
+    remote_firmware_file: "/tmp/hkust_nxt-dual.px4"
+    remote_uploader_script: "/tmp/px_uploader.py"
+
+  tasks:
+    - name: Copy firmware file to drone
+      ansible.builtin.copy:
+        src: "{{ firmware_file }}"
+        dest: "{{ remote_firmware_file }}"
+        mode: '0644'
+
+    - name: Copy uploader script to drone
+      ansible.builtin.copy:
+        src: "{{ uploader_script }}"
+        dest: "{{ remote_uploader_script }}"
+        mode: '0755'
+
+    - name: Install python3-serial if not present
+      ansible.builtin.package:
+        name: python3-serial
+        state: present
+      
+    - name: Stop ROS if exists
+      ansible.builtin.include_tasks: "tasks/ensure-ros-off.yml"
+    
+
+    - name: Upload firmware using px_uploader.py
+      ansible.builtin.command:
+        cmd: >
+          python3 {{ remote_uploader_script }}
+          --port /dev/ttyTHS1
+          --baud-flightstack 921600
+          --force
+          {{ remote_firmware_file }}
+      register: upload_result
+      failed_when: upload_result.rc != 0
+
+    - name: Display upload result
+      ansible.builtin.debug:
+        var: upload_result.stdout_lines
