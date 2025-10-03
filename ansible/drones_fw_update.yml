@@ -83,6 +83,10 @@
       ansible.builtin.package:
         name: python3-serial
         state: present
+      
+    - name: Stop ROS if exists
+      ansible.builtin.include_tasks: "tasks/ensure-ros-off.yml"
+    
 
     - name: Upload firmware using px_uploader.py
       ansible.builtin.command:

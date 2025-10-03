@@ -4,21 +4,10 @@
   become: false
   
   tasks:
-  - name: Does the service exist?
-    shell: systemctl --user list-unit-files --type=service | grep -q "^ros_packages.service"
-    failed_when: false
-    changed_when: false
-    register: ros_package_service_exists
-
-  - name: Stop ros_packages if its on
-    when: ros_package_service_exists.rc == 0
-    ansible.builtin.systemd: 
-      name: ros_packages
-      state: stopped
-      enabled: false
-      daemon_reload: false
-      scope: user
-
+ 
+  - name: Stop ROS if exists
+    ansible.builtin.include_tasks: "tasks/ensure-ros-off.yml"
+    
   - name: Ensure ros2 ws exists
     ansible.builtin.file:
       path: "{{ drone_ros_path }}/src"
