@@ -1,5 +1,7 @@
 #include "swarmnxt_controller.h"
 
+#include <Eigen/Dense>
+
 namespace swarmnxt_controller {
 
 Controller::Controller() : ::rclcpp::Node("swarmnxt_controller") {

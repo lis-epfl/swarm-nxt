@@ -20,6 +20,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(swarmnxt_msgs REQUIRED)
 find_package(multi_agent_planner_msgs REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 set(DEPENDENCIES
   rclcpp
@@ -47,6 +48,7 @@ target_link_libraries(swarmnxt_controller_node swarmnxt_controller_class)
 ament_target_dependencies(swarmnxt_controller_class
   ${DEPENDENCIES}
 )
+target_link_libraries(swarmnxt_controller_class Eigen3::Eigen)
 
 ament_target_dependencies(swarmnxt_controller_node
 ${DEPENDENCIES})
