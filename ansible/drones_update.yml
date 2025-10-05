@@ -43,7 +43,6 @@
       loop:
         - { repo: "https://github.com/lis-epfl/mocap_to_vision_pose_ros2", name: "mocap_to_vision_pose_ros2", version: "niel/fix-check-launch" }
         - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
-        - { repo: "https://github.com/PX4/px4_msgs", name: "px4_msgs", version: "main"}
         - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
     
     - name: Copy SSH key 
