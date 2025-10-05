@@ -1,5 +1,7 @@
 #include "swarmnxt_controller.h"
 
+#include <px4_ros_com/frame_transforms.h>
+
 #include <Eigen/Dense>
 
 namespace swarmnxt_controller {
@@ -155,8 +157,6 @@ void Controller::SendTrajectoryMessage() {
   } else {
     msg.command_type_mask =
         swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT;
-    msg.pose_cmd.header.stamp = this->now();
-    msg.pose_cmd.header.frame_id = "world";
   }
   std_msgs::msg::Bool done_msg;
   done_msg.data = false;

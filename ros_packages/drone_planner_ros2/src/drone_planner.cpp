@@ -33,21 +33,20 @@ DronePlanner::DronePlanner() : ::rclcpp::Node("drone_planner") {
   this->get_parameter("peer_file", peer_file);
 
   std::string ns = this->get_namespace();
-  
+
   rclcpp::QoS best_effort_qos =
-    rclcpp::QoS(rclcpp::KeepLast(10))
-        .reliability(rclcpp::ReliabilityPolicy::BestEffort);
+      rclcpp::QoS(rclcpp::KeepLast(10))
+          .reliability(rclcpp::ReliabilityPolicy::BestEffort);
 
   goals_sub_ = this->create_subscription<nav_msgs::msg::Goals>(
       ns + "/goals", best_effort_qos,
       std::bind(&DronePlanner::GoalsCallback, this, std::placeholders::_1));
 
- 
-
-  vehicle_local_position_sub_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>(
-      ns + "/fmu/out/vehicle_local_position", best_effort_qos,
-      std::bind(&DronePlanner::VehicleLocalPositionCallback, this,
-                std::placeholders::_1));
+  vehicle_local_position_sub_ =
+      this->create_subscription<px4_msgs::msg::VehicleLocalPosition>(
+          ns + "/fmu/out/vehicle_local_position", best_effort_qos,
+          std::bind(&DronePlanner::VehicleLocalPositionCallback, this,
+                    std::placeholders::_1));
   // for the future: subscribe to all the peers' paths to avoid them.
   // for (const auto& peer_id : peer_ids_) {
   //   traj_sub_map_[peer_id] = this->create_subscription<nav_msgs::msg::Path>(
@@ -78,7 +77,8 @@ void DronePlanner::GoalsCallback(const nav_msgs::msg::Goals& msg) {
 
   if (msg.goals.size() > 0) {
     auto goal = msg.goals.at(0);
-    RCLCPP_INFO(logger, "x: %5.2f, y: %5.2f, z: %5.2f", goal.pose.position.x, goal.pose.position.y, goal.pose.position.z);
+    RCLCPP_INFO(logger, "x: %5.2f, y: %5.2f, z: %5.2f", goal.pose.position.x,
+                goal.pose.position.y, goal.pose.position.z);
     if (goal.pose != current_goal_.pose) {
       current_goal_ = goal;
       new_goal_ = true;
@@ -193,7 +193,8 @@ void DronePlanner::VehicleLocalPositionCallback(
   current_position_.pose.position.x = msg.x;
   current_position_.pose.position.y = msg.y;
   current_position_.pose.position.z = -msg.z;  // NED to ENU
-  current_position_.header.stamp = rclcpp::Time(msg.timestamp * 1000);  // microseconds to nanoseconds
+  current_position_.header.stamp =
+      rclcpp::Time(msg.timestamp * 1000);  // microseconds to nanoseconds
   current_position_.header.frame_id = "world";
 }
 

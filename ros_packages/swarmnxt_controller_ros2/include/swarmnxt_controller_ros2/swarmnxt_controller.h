@@ -1,20 +1,19 @@
 #pragma once
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <px4_msgs/msg/trajectory_setpoint.hpp>
-#include <px4_msgs/msg/vehicle_status.hpp>
-#include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <multi_agent_planner_msgs/msg/state.hpp>
 #include <multi_agent_planner_msgs/msg/trajectory.hpp>
 #include <mutex>
 #include <nav_msgs/msg/path.hpp>
+#include <px4_msgs/msg/trajectory_setpoint.hpp>
+#include <px4_msgs/msg/vehicle_local_position.hpp>
+#include <px4_msgs/msg/vehicle_status.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <swarmnxt_msgs/msg/controller_command.hpp>
 #include <swarmnxt_msgs/msg/trigger.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
 namespace swarmnxt_controller {
 
 typedef enum {
@@ -53,7 +52,8 @@ class Controller : public rclcpp::Node {
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr pose_type_traj_sub_;
   rclcpp::Subscription<multi_agent_planner_msgs::msg::Trajectory>::SharedPtr
       hdsm_type_traj_sub_;
-  rclcpp::Subscription<px4_msgs::msg::VehicleStatus>::SharedPtr vehicle_status_sub_;
+  rclcpp::Subscription<px4_msgs::msg::VehicleStatus>::SharedPtr
+      vehicle_status_sub_;
   rclcpp::Subscription<swarmnxt_msgs::msg::Trigger>::SharedPtr enable_sub_;
 
   // Publisher
@@ -74,7 +74,8 @@ class Controller : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr loop_timer_;
 
   // Callbacks
-  void VehicleLocalPositionCallback(const px4_msgs::msg::VehicleLocalPosition& msg);
+  void VehicleLocalPositionCallback(
+      const px4_msgs::msg::VehicleLocalPosition& msg);
   void EnableCallback(const swarmnxt_msgs::msg::Trigger& msg);
   void VehicleStatusCallback(const px4_msgs::msg::VehicleStatus& msg);
   void PoseTypeTrajectoryCallback(const nav_msgs::msg::Path& msg);

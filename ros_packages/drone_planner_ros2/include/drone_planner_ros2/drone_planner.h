@@ -50,6 +50,7 @@ class DronePlanner : public ::rclcpp::Node {
 
   nav_msgs::msg::Path GenerateTrajectory();
   void PublishTrajectory();
-  void VehicleLocalPositionCallback(const px4_msgs::msg::VehicleLocalPosition &msg);
+  void VehicleLocalPositionCallback(
+      const px4_msgs::msg::VehicleLocalPosition &msg);
 };
 }  // namespace drone_planner

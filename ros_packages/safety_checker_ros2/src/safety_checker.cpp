@@ -293,7 +293,7 @@ void SafetyChecker::HandlePoseMessage(
   // Convert NED to ENU for bounds checking using frame_transforms
   Eigen::Vector3d position_ned(msg->x, msg->y, msg->z);
   Eigen::Vector3d position_enu =
-      px4_ros_com::frame_transforms::ros_(position_ned);
+      px4_ros_com::frame_transforms::ned_to_enu_local_frame(position_ned);
 
   geometry_msgs::msg::Point position;
   position.x = position_enu.x();
