@@ -34,19 +34,18 @@
         path: "{{ drone_ros_path }}/src/optitrack_packages_ros2/optitrack_wrapper_ros2"
         state: absent
     
-    - name: Get mocap to vision package
-      ansible.builtin.git: 
-        repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
-        dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
-        version: "niel/fix-check-launch" # TODO: temp
-        force: yes 
-    
-    - name: Get OAK Driver
-      ansible.builtin.git: 
-        repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2"
-        dest: "{{ drone_ros_path }}/src/oak_ffc_4p_driver_ros2"
+    - name: Get additional packages
+      ansible.builtin.git:
+        repo: "{{ item.repo }}"
+        dest: "{{ drone_ros_path }}/src/{{ item.name }}"
+        version: "{{ item.version }}"
         force: yes
-
+      loop:
+        - { repo: "https://github.com/lis-epfl/mocap_to_vision_pose_ros2", name: "mocap_to_vision_pose_ros2", version: "niel/fix-check-launch" }
+        - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
+        - { repo: "https://github.com/PX4/px4_msgs", name: "px4_msgs", version: "main"}
+        - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
+    
     - name: Copy SSH key 
       ansible.builtin.copy:
         src: secrets/git_key
@@ -69,7 +68,7 @@
           ansible.builtin.git: 
               repo: https://github.com/lis-epfl/swarm-nxt
               dest: "{{ drone_base_path }}/repos/swarm-nxt"
-              version: integrate-hdsm
+              version: dds
               force: yes
           
         - name: List ros_packages directories
