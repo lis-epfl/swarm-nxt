@@ -41,9 +41,10 @@
         version: "{{ item.version }}"
         force: yes
       loop:
-        - { repo: "https://github.com/lis-epfl/mocap_to_vision_pose_ros2", name: "mocap_to_vision_pose_ros2", version: "niel/fix-check-launch" }
+        - { repo: "https://github.com/lis-epfl/mocap_to_vision_pose_ros2", name: "mocap_to_vision_pose_ros2", version: "dds" }
         - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
         - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
+        - { repo: "https://github.com/Auterion/px4-ros2-interface-lib", name: "px4_ros2_interface_lib", version: "1.6.1"}
     
     - name: Copy SSH key 
       ansible.builtin.copy:
