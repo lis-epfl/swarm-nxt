@@ -44,7 +44,7 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   safe_trajectory_pub_ =
       create_publisher<nav_msgs::msg::Path>(ns + "/trajectory_safe", 10);
 
-  position_cmd_pub_ = create_publisher<px4_msgs::msg::TrajectorySetpoint>(
+  traj_cmd_pub_ = create_publisher<px4_msgs::msg::TrajectorySetpoint>(
       ns + "/fmu/in/trajectory_setpoint", 10);
 
   offboard_control_mode_pub_ =
@@ -109,7 +109,7 @@ void SafetyChecker::HandleControllerCommand(
 
     // Publish offboard control mode and trajectory setpoint
     offboard_control_mode_pub_->publish(offboard_mode);
-    position_cmd_pub_->publish(cmd.cmd);
+    traj_cmd_pub_->publish(cmd.cmd);
   } else {
     RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                           "Not sending offboard messages because of "

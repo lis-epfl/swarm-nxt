@@ -72,8 +72,7 @@ class SafetyChecker : public ::rclcpp::Node {
 
   // publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr safe_trajectory_pub_;
-  rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr
-      position_cmd_pub_;
+  rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr traj_cmd_pub_;
   rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr
       offboard_control_mode_pub_;
   rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr
