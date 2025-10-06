@@ -44,45 +44,24 @@ def generate_launch_description():
             "{{ drone_ros_path }}/config/mcap_bag_options.yml"
         ]
     )
-    mavros_include = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [
-                    FindPackageShare("mavros"),
-                    "launch",
-                    "px4.launch",  # works with xml or .py via AnyLaunchDescriptionSource
-                ]
-            )
-        ),
-        launch_arguments={
-            "gcs_url": "udp://@{{ gcs_url }}:14550",
-            "fcu_url": "{{ drone_fcu_url }}",
-            "namespace": "{{ ns }}/mavros",
-            "tgt_system": '{{ ns | regex_search("[0-9]+$") }}',
-        }.items(),
+
+    xrce_agent = ExecuteProcess(
+        cmd=["MicroXRCEAgent", "serial", "--dev", "/dev/ttyTHS1", "-b", "921600"],
+        output='log', 
+        name='microxrce_agent'
     )
 
-    wait_for_mavros = ExecuteProcess(
-        cmd=[
-            "bash",
-            "-lc",
-            f"timeout 20s ros2 topic echo --once /{{ ns }}/mavros/imu/data",
+    mocap_to_vision_pose = Node(
+        package="mocap_to_vision_pose_ros2",
+        executable="mocap_to_vision_pose",
+        namespace="{{ ns }}",
+        parameters=[
+            {
+                "mocap_topic": "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
+                "namespace": "{{ ns }}"
+            }
         ],
-        shell=False,
-        output="screen",
-    )
-
-    mocap_to_vision_pose = ExecuteProcess(
-        cmd=[
-            "ros2",
-            "run",
-            "mocap_to_vision_pose_ros2",
-            "check_and_launch.py",
-            "--namespace",  
-            "{{ ns }}",
-            "--mocap-topic",
-            "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
-        ]
+        output="log",
     )
 
     def _on_wait_exit(event: ProcessExited, *args, **kwargs):
@@ -93,10 +72,6 @@ def generate_launch_description():
                 reason="MAVROS did not start in time (did not publish {{ ns }}/mavros/imu/data)"
             )
         ]
-
-    mocap_to_vision_pose_if_mavros = RegisterEventHandler(
-        OnProcessExit(target_action=wait_for_mavros, on_exit=_on_wait_exit)
-    )
 
     latency_checker = Node(
         package="latency_checker_ros2",
@@ -181,9 +156,8 @@ def generate_launch_description():
         [
             bridge_node,
             rosbag_start,
-            mavros_include,
-            wait_for_mavros,
-            mocap_to_vision_pose_if_mavros,
+            xrce_agent,
+            mocap_to_vision_pose,
             latency_checker,
             safety_checker,
             drone_state_manager,
