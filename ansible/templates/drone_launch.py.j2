@@ -45,12 +45,6 @@ def generate_launch_description():
         ]
     )
 
-    xrce_agent = ExecuteProcess(
-        cmd=["MicroXRCEAgent", "serial", "--dev", "/dev/ttyTHS1", "-b", "921600"],
-        output='log', 
-        name='microxrce_agent'
-    )
-
     mocap_to_vision_pose = Node(
         package="mocap_to_vision_pose_ros2",
         executable="mocap_to_vision_pose_node",
@@ -156,7 +150,6 @@ def generate_launch_description():
         [
             bridge_node,
             rosbag_start,
-            xrce_agent,
             mocap_to_vision_pose,
             latency_checker,
             safety_checker,

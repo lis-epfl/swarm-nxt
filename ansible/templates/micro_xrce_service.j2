@@ -1,0 +1,10 @@
+[Unit]
+Description=MicroXRce
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=MicroXRCEAgent serial --dev /dev/ttyTHS1 -b 921600
+
+[Install]
+WantedBy=multi-user.target
