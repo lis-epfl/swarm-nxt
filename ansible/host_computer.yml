@@ -138,7 +138,18 @@
             repo: https://github.com/lis-epfl/swarm-nxt
             dest: "{{ host_base_path }}/repos/swarm-nxt"
             force: yes
-            version: niel/updates
+            version: dds
+
+        - name: Get px4 package
+          ansible.builtin.git:
+            repo: "{{ item.repo }}"
+            dest: "{{ host_ros_path}}/src/{{ item.name }}"
+            version: "{{ item.version }}"
+            force: yes
+          loop: 
+            - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
+            - { repo: "https://github.com/Auterion/px4-ros2-interface-lib", name: "px4_ros2_interface_lib", version: "1.6.1"}
+    
             
         - name: List ros_packages directories
           ansible.builtin.find:
