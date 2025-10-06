@@ -48,6 +48,7 @@
       - libusb-1.0-0-dev
       
     state: present
+    allow_downgrade: true
 
 - name: Jetson Stats
   ansible.builtin.pip:
