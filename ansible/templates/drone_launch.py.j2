@@ -48,7 +48,6 @@ def generate_launch_description():
     mocap_to_vision_pose = Node(
         package="mocap_to_vision_pose_ros2",
         executable="mocap_to_vision_pose_node",
-        namespace="{{ ns }}",
         parameters=[
             {
                 "mocap_topic": "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
