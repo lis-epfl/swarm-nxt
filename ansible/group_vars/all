@@ -33,4 +33,6 @@ optitrack_server_address: "192.168.194.150"
 drone_rosbag_topics: 
   - "/{{ ns }}/*"
   - "/agent_[0-9]+/*"
+  - "/fmu/*"
+
   
