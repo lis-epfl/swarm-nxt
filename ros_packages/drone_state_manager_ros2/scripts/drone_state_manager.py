@@ -102,7 +102,6 @@ class DroneStateManager(Node):
         mode_map = {
             DroneState.IDLE: 2,  # NAVIGATION_STATE_POSCTL
             DroneState.TAKING_OFF: 17,  # NAVIGATION_STATE_AUTO_TAKEOFF
-            DroneState.HOVERING: 4,  # NAVIGATION_STATE_AUTO_LOITER
             DroneState.OFFBOARD: 14,  # NAVIGATION_STATE_OFFBOARD
             DroneState.LANDING: 18,  # NAVIGATION_STATE_AUTO_LAND
         }
@@ -189,11 +188,9 @@ class DroneStateManager(Node):
             if (self.vehicle_status.nav_state == VehicleStatus.NAVIGATION_STATE_AUTO_LOITER or
                 (self.current_pose is not None and self.current_pose.pose.position.z >= 0.8)):
                 # we've finished takeoff...
-                self.set_mode(make_drone_state(DroneState.HOVERING))
-        elif self.mode.state == DroneState.HOVERING:
-            # wait n seconds and then initiate the switch to offboard mode
-            if self.control_msgs > 50:
-                self.set_mode(make_drone_state(DroneState.OFFBOARD))
+                if self.control_msgs > 50:
+                    self.set_mode(make_drone_state(DroneState.OFFBOARD))
+
         elif self.mode.state == DroneState.OFFBOARD:
             # nothing to automatically do
             pass
@@ -203,7 +200,7 @@ class DroneStateManager(Node):
 
         # if at any point that we think we're flying but we get disarmed, move back to idle.
         if (
-            self.mode.state in [DroneState.HOVERING, DroneState.OFFBOARD, DroneState.LANDING]
+            self.mode.state in [DroneState.OFFBOARD, DroneState.LANDING]
             and self.vehicle_status.arming_state != VehicleStatus.ARMING_STATE_ARMED
         ):
             self.get_logger().warning(
