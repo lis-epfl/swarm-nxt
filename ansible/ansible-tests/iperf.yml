@@ -1,0 +1,24 @@
+---
+- name: iperf
+  hosts: drones
+  remote_user: lis
+  become: yes # runs everything with sudo
+
+  tasks:
+    #- name: Ensure iperf3
+    #  ansible.builtin.apt:
+    #    name: 
+    #      - iperf3
+    #      - stress-ng
+    #    update-cache: yes
+    #    state: latest
+    - name: Send config file
+      ansible.builtin.template: 
+        src: iperf.sh
+        dest: /tmp/iperf.sh
+        mode: '755'
+
+    - name: Run
+      ansible.builtin.command: '/tmp/iperf.sh'
+
+

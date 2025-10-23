@@ -46,12 +46,6 @@
         - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
         - { repo: "https://github.com/Auterion/px4-ros2-interface-lib", name: "px4_ros2_interface_lib", version: "1.6.1"}
     
-    - name: Copy SSH key 
-      ansible.builtin.copy:
-        src: secrets/git_key
-        dest: /tmp/git_key
-        mode: 0600
-
     - name: Get HDSM package
       ansible.builtin.git: 
         repo: git@github.com:ctoumieh/multi_agent_pkgs/
