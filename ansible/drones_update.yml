@@ -34,120 +34,146 @@
         path: "{{ drone_ros_path }}/src/optitrack_packages_ros2/optitrack_wrapper_ros2"
         state: absent
     
-    - name: Get additional packages
-      ansible.builtin.git:
-        repo: "{{ item.repo }}"
-        dest: "{{ drone_ros_path }}/src/{{ item.name }}"
-        version: "{{ item.version }}"
-        force: yes
-      loop:
-        - { repo: "https://github.com/lis-epfl/mocap_to_vision_pose_ros2", name: "mocap_to_vision_pose_ros2", version: "dds" }
-        - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
-        - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
-        - { repo: "https://github.com/Auterion/px4-ros2-interface-lib", name: "px4_ros2_interface_lib", version: "1.6.1"}
+  - name: Get additional packages
+    ansible.builtin.git:
+      repo: "{{ item.repo }}"
+      dest: "{{ drone_ros_path }}/src/{{ item.name }}"
+      version: "{{ item.version }}"
+      force: yes
+    loop:
+      - { repo: "https://github.com/lis-epfl/mocap_to_vision_pose_ros2", name: "mocap_to_vision_pose_ros2", version: "dds" }
+      - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
+      - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
+      - { repo: "https://github.com/Auterion/px4-ros2-interface-lib", name: "px4_ros2_interface_lib", version: "1.6.1"}
     
-    - name: Get HDSM package
-      ansible.builtin.git: 
-        repo: https://github.com/ctoumieh/multi_agent_pkgs/
-        dest: "{{ drone_ros_path }}/multi_agent_pkgs"
-        version: niel/chill-dynamics
+  - name: Get HDSM package
+    ansible.builtin.git: 
+      repo: https://github.com/ctoumieh/multi_agent_pkgs/
+      dest: "{{ drone_ros_path }}/multi_agent_pkgs"
+      force: yes
+      version: niel/chill-dynamics
+
+      
+  - name: SwarmNXT Nodes
+    block: 
+      - name: Get repository 
+        ansible.builtin.git: 
+            repo: https://github.com/lis-epfl/swarm-nxt
+            dest: "{{ drone_base_path }}/repos/swarm-nxt"
+            version: dds
+            force: yes
+        
+      - name: List ros_packages directories
+        ansible.builtin.find:
+          paths: "{{ drone_base_path }}/repos/swarm-nxt/ros_packages"
+          file_type: directory
+          recurse: false
+        register: ros_packages_reg
+      
+
+      - name: Link ros_packages directories to src
+        ansible.builtin.file:
+          src: "{{ item.path }}"
+          dest: "{{ drone_ros_path }}/src/{{ item.path | basename }}"
+          state: link
+          force: true
+        loop: "{{ ros_packages_reg.files }}"
+      
+  - name: MPC controller Task
+    block:
+
+    - name: Clone MPC controller packages
+      git:
+        repo: https://github.com/lis-epfl/mpc_controller_pkgs
+        dest: "{{ drone_ros_path }}/src/mpc_controller_pkgs"
         force: yes
 
-        
-    - name: SwarmNXT Nodes
-      block: 
-        - name: Get repository 
-          ansible.builtin.git: 
-              repo: https://github.com/lis-epfl/swarm-nxt
-              dest: "{{ drone_base_path }}/repos/swarm-nxt"
-              version: dds
-              force: yes
-          
-        - name: List ros_packages directories
-          ansible.builtin.find:
-            paths: "{{ drone_base_path }}/repos/swarm-nxt/ros_packages"
-            file_type: directory
-            recurse: false
-          register: ros_packages_reg
-        
-
-        - name: Link ros_packages directories to src
-          ansible.builtin.file:
-            src: "{{ item.path }}"
-            dest: "{{ drone_ros_path }}/src/{{ item.path | basename }}"
-            state: link
-            force: true
-          loop: "{{ ros_packages_reg.files }}"
-        
-    - name: Install rosdeps
-      become: true
-      ansible.builtin.shell: |
-        cd {{ drone_ros_path }}
-        . /opt/ros/humble/setup.sh
-        rosdep init
-        rosdep update
-        rosdep install --from-paths {{ drone_ros_path }}/src --from-paths {{ drone_ros_path }}/multi_agent_pkgs -y --ignore-src -r --rosdistro humble
-             
-    - name: Clean previous build
-      when: clean_build | default(false) | bool
-      ansible.builtin.file:
-        path: "{{ item }}"
+    - name: Remove unwanted directories from MPC controller packages
+      file:
+        path: "{{ drone_ros_path }}/src/mpc_controller_pkgs/{{ item }}"
         state: absent
       loop:
-        - "{{ drone_ros_path }}/build"
-        - "{{ drone_ros_path }}/install"
+        - dockerfiles
+        - px4_sim_bridge_ros2
 
-
-    - name: Copy drone build script
-      ansible.builtin.template:
-        src: templates/drone_build.sh
-        dest: "{{ drone_ros_path }}/drone_build.sh"
-        mode: "755"
-
-    - name: Execute drone build script
-      ansible.builtin.shell: ./drone_build.sh
+    - name: Generate acados solvers
+      command: "{{ drone_base_path }}/mpc_env/bin/python generate_acados_solvers.py"
       args:
-        chdir: "{{ drone_ros_path }}"
-        executable: /bin/bash
-      async: 2400
-      poll: 0
-      register: ros_build_async
+        chdir: "{{ drone_ros_path }}/src/mpc_controller_pkgs/mpc_controller_ros2/scripts"
+      environment:
+        ACADOS_SOURCE_DIR: "/opt/acados"
+        LD_LIBRARY_PATH: "/opt/acados/lib:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+        PYTHONPATH: "/opt/acados/interfaces/acados_template:{{ ansible_env.PYTHONPATH | default('') }}"
 
-    # TODO: convert these to DDS  
-    # - name: Ensure params
-    #   block: 
-    #     - name: Send script
-    #       ansible.builtin.template:
-    #         src: "scripts/ensure_params.py"
-    #         dest: "/tmp/ensure_params.py"
-    #     - name: Ensure config folder exists
-    #       ansible.builtin.file: 
-    #         path: "{{ drone_ros_path }}/config"
-    #         state: 'directory'
-    #     - name: Send params file
-    #       ansible.builtin.template:
-    #         src: "scripts/params.yml"
-    #         dest: "{{ drone_ros_path }}/config/params.yml"
-    #     - name: Run ensure params script
-    #       ansible.builtin.shell: 
-    #         cmd: python3 /tmp/ensure_params.py
-    #       register: ensure_params_reg
-    #       changed_when: ensure_params_reg.rc == 10
-    #       failed_when: ensure_params_reg.rc != 0 and ensure_params_reg.rc != 10
+  - name: Install rosdeps
+    become: true
+    ansible.builtin.shell: |
+      cd {{ drone_ros_path }}
+      . /opt/ros/humble/setup.sh
+      rosdep init
+      rosdep update
+      rosdep install --from-paths {{ drone_ros_path }}/src --from-paths {{ drone_ros_path }}/multi_agent_pkgs -y --ignore-src -r --rosdistro humble
+            
+  - name: Clean previous build
+    when: clean_build | default(false) | bool
+    ansible.builtin.file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - "{{ drone_ros_path }}/build"
+      - "{{ drone_ros_path }}/install"
 
-    - name: Wait for ros build to finish 
-      ansible.builtin.async_status: 
-        jid: "{{ ros_build_async.ansible_job_id }}"
-      register: build_ros_result
-      until: build_ros_result.finished
-      retries: 100
-      delay: 10
 
-    - name: Cleanup async
-      ansible.builtin.async_status:
-        jid: "{{ ros_build_async.ansible_job_id }}"
-        mode: cleanup
-      changed_when: false
+  - name: Copy drone build script
+    ansible.builtin.template:
+      src: templates/drone_build.sh
+      dest: "{{ drone_ros_path }}/drone_build.sh"
+      mode: "755"
+
+  - name: Execute drone build script
+    ansible.builtin.shell: ./drone_build.sh
+    args:
+      chdir: "{{ drone_ros_path }}"
+      executable: /bin/bash
+    async: 2400
+    poll: 0
+    register: ros_build_async
+
+  # TODO: convert these to DDS  
+  # - name: Ensure params
+  #   block: 
+  #     - name: Send script
+  #       ansible.builtin.template:
+  #         src: "scripts/ensure_params.py"
+  #         dest: "/tmp/ensure_params.py"
+  #     - name: Ensure config folder exists
+  #       ansible.builtin.file: 
+  #         path: "{{ drone_ros_path }}/config"
+  #         state: 'directory'
+  #     - name: Send params file
+  #       ansible.builtin.template:
+  #         src: "scripts/params.yml"
+  #         dest: "{{ drone_ros_path }}/config/params.yml"
+  #     - name: Run ensure params script
+  #       ansible.builtin.shell: 
+  #         cmd: python3 /tmp/ensure_params.py
+  #       register: ensure_params_reg
+  #       changed_when: ensure_params_reg.rc == 10
+  #       failed_when: ensure_params_reg.rc != 0 and ensure_params_reg.rc != 10
+
+  - name: Wait for ros build to finish 
+    ansible.builtin.async_status: 
+      jid: "{{ ros_build_async.ansible_job_id }}"
+    register: build_ros_result
+    until: build_ros_result.finished
+    retries: 100
+    delay: 10
+
+  - name: Cleanup async
+    ansible.builtin.async_status:
+      jid: "{{ ros_build_async.ansible_job_id }}"
+      mode: cleanup
+    changed_when: false
     
 
       

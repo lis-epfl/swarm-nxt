@@ -1,0 +1,191 @@
+# Install system packages
+- name: Install python3-venv package
+  become: yes
+  become_user: root
+  apt:
+    name: python3-venv
+    state: present
+    update_cache: yes
+
+# Create Python virtual environment
+- name: Create Python virtual environment
+  command: python3 -m venv {{ drone_base_path }}/mpc_env
+  args:
+    creates: "{{ drone_base_path }}/mpc_env/bin/activate"
+
+# Clone and setup acados
+- name: Clone acados repository
+  ansible.builtin.git:
+    repo: https://github.com/acados/acados.git
+    dest: "/opt/acados"
+    version: "v0.5.1"
+    recursive: yes
+    force: yes
+
+- name: Update acados submodules
+  become: yes
+  become_user: root
+  command: git submodule update --init --recursive
+  args:
+    chdir: "/opt/acados"
+
+# Build acados
+- name: Create acados build directory
+  become: yes
+  become_user: root
+  file:
+    path: "/opt/acados/build"
+    state: directory
+    mode: '0755'
+
+- name: Configure acados with cmake
+  become: yes
+  become_user: root
+  command: >
+    cmake -DACADOS_WITH_QPOASES=ON
+    -DACADOS_WITH_OSQP=ON
+    -DCMAKE_BUILD_TYPE=Release
+    ..
+  args:
+    chdir: "/opt/acados/build"
+
+- name: Build acados
+  become: yes
+  become_user: root
+  command: make -j{{ ansible_processor_vcpus }}
+  args:
+    chdir: "/opt/acados/build"
+
+- name: Install acados
+  become: yes
+  become_user: root
+  command: make install
+  args:
+    chdir: "/opt/acados/build"
+
+# Configure environment variables in bashrc
+- name: Add ACADOS_SOURCE_DIR to bashrc
+  lineinfile:
+    path: "{{ drone_base_path }}/.bashrc"
+    line: "export ACADOS_SOURCE_DIR=/opt/acados"
+    regexp: "^export ACADOS_SOURCE_DIR="
+    state: present
+
+- name: Add LD_LIBRARY_PATH to bashrc
+  lineinfile:
+    path: "{{ drone_base_path }}/.bashrc"
+    line: "export LD_LIBRARY_PATH=/opt/acados/lib:$LD_LIBRARY_PATH"
+    regexp: "^export LD_LIBRARY_PATH=.*acados.*"
+    state: present
+
+- name: Add PYTHONPATH to bashrc
+  lineinfile:
+    path: "{{ drone_base_path }}/.bashrc"
+    line: "export PYTHONPATH=/opt/acados/interfaces/acados_template:$PYTHONPATH"
+    regexp: "^export PYTHONPATH=.*acados.*"
+    state: present
+
+# Install Python packages in base environment (for initial setup)
+- name: Install Python packages in virtual environment
+  pip:
+    name:
+      - numpy==1.24.4
+      - scipy==1.8.0
+      - matplotlib==3.5.1
+      - pyyaml==5.3.1
+      - pandas==2.0.3
+    virtualenv: "{{ drone_base_path }}/mpc_env"
+    virtualenv_command: python3 -m venv
+
+# Install Rust
+- name: Check if Rust is installed
+  stat:
+    path: "{{ drone_base_path }}/.cargo/bin/rustc"
+  register: rust_installed
+
+- name: Download Rust installer
+  get_url:
+    url: https://sh.rustup.rs
+    dest: /tmp/rustup.sh
+    mode: '0755'
+  when: not rust_installed.stat.exists
+
+- name: Install Rust with default stable toolchain
+  command: /tmp/rustup.sh -y --default-toolchain stable
+  args:
+    creates: "{{ drone_base_path }}/.cargo/bin/rustc"
+  when: not rust_installed.stat.exists
+
+# Build and install t_renderer
+- name: Check if t_renderer is installed
+  stat:
+    path: "/opt/acados/bin/t_renderer"
+  register: t_renderer_installed
+
+- name: Clone tera_renderer repository
+  ansible.builtin.git:
+    repo: https://github.com/acados/tera_renderer.git
+    dest: /tmp/tera_renderer
+    version: "v0.2.0"
+    force: yes
+  when: not t_renderer_installed.stat.exists
+
+- name: Build tera_renderer
+  command: "{{ drone_base_path }}/.cargo/bin/cargo build --release"
+  args:
+    chdir: /tmp/tera_renderer
+  environment:
+    PATH: "{{ drone_base_path }}/.cargo/bin:{{ ansible_env.PATH }}"
+    HOME: "{{ drone_base_path }}"
+    RUSTUP_HOME: "{{ drone_base_path }}/.rustup"
+    CARGO_HOME: "{{ drone_base_path }}/.cargo"
+  when: not t_renderer_installed.stat.exists
+
+- name: Create acados bin directory
+  become: yes
+  become_user: root
+  file:
+    path: "/opt/acados/bin"
+    state: directory
+    mode: '0755'
+  when: not t_renderer_installed.stat.exists
+
+- name: Copy t_renderer binary
+  become: yes
+  become_user: root
+  copy:
+    src: /tmp/tera_renderer/target/release/t_renderer
+    dest: "/opt/acados/bin/t_renderer"
+    mode: '0755'
+    remote_src: yes
+  when: not t_renderer_installed.stat.exists
+
+- name: Clean up tera_renderer build directory
+  file:
+    path: /tmp/tera_renderer
+    state: absent
+  when: not t_renderer_installed.stat.exists
+
+# Change ownership of acados directory
+- name: Get current user and group
+  set_fact:
+    current_user: "lis"
+    current_group: "lis"
+
+- name: Change ownership of acados directory
+  become: yes
+  become_user: root
+  file:
+    path: "/opt/acados"
+    owner: "{{ current_user }}"
+    group: "{{ current_group }}"
+    recurse: yes
+
+# Install acados Python interface in virtual environment
+- name: Install acados Python interface
+  pip:
+    name: "/opt/acados/interfaces/acados_template"
+    editable: yes
+    extra_args: --no-build-isolation
+    virtualenv: "{{drone_base_path}}/mpc_env"
+    virtualenv_command: python3 -m venv

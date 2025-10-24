@@ -307,6 +307,9 @@
 - name: Gurobi 
   ansible.builtin.include_tasks: install-gurobi.yml
   
+- name: Acados 
+  ansible.builtin.include_tasks: install-acados.yml
+
 - name: NXT compatability
   block: 
     - name: Allow rootless access to flight controller
