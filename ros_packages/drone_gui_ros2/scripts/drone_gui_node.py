@@ -200,7 +200,7 @@ class DroneGUINode(Node):
         
         for drone in self.drone_list:
             self.controller_enable_pubs[drone] = self.create_publisher(
-                Trigger, f"/{drone}/controller/enable", reliable_qos
+                Trigger, f"/{drone}/mpc_controller/enable", reliable_qos
             )
     
     def setup_planning_publishers(self):

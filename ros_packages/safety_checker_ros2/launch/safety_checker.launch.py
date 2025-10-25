@@ -8,15 +8,15 @@ def generate_launch_description():
 
     ld = LaunchDescription()
 
-    bounds_checker = Node(
-        package='bounds_checker_ros2',
-        executable='bounds_checker_node',
-        name='bounds_checker_node',
+    safety_checker_node = Node(
+        package='safety_checker_ros2',
+        executable='safety_checker_node',
+        name='safety_checker_node',
         parameters=[],
         # prefix=['xterm -e gdb -ex run --args'],
         output='screen',
         emulate_tty=True
     )
 
-    ld.add_action(bounds_checker)
+    ld.add_action(safety_checker_node)
     return ld

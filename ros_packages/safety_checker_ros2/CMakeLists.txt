@@ -16,7 +16,6 @@ find_package(px4_ros_com REQUIRED)
 find_package(swarmnxt_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(swarmnxt_controller_ros2 REQUIRED)
 
 
 set(DEPENDENCIES
@@ -29,7 +28,6 @@ set(DEPENDENCIES
   px4_ros_com
   swarmnxt_msgs
   nlohmann_json
-  swarmnxt_controller_ros2
 )
 
 include_directories(

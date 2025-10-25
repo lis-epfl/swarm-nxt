@@ -97,17 +97,17 @@ def generate_launch_description():
         output="log",
     )
 
-    swarmnxt_controller = Node(
-        package="swarmnxt_controller_ros2",
-        executable="swarmnxt_controller_node",
-        namespace="{{ ns }}",
-        parameters=[
-            {
-                "hdsm_agent_prefix": "/agent_" + str(hdsm_idx),
-            }
-        ],
-        output="log",
-    )
+    # swarmnxt_controller = Node(
+    #     package="swarmnxt_controller_ros2",
+    #     executable="swarmnxt_controller_node",
+    #     namespace="{{ ns }}",
+    #     parameters=[
+    #         {
+    #             "hdsm_agent_prefix": "/agent_" + str(hdsm_idx),
+    #         }
+    #     ],
+    #     output="log",
+    # )
 
     drone_planner = Node(
         package="drone_planner_ros2",
@@ -153,7 +153,7 @@ def generate_launch_description():
             latency_checker,
             safety_checker,
             drone_state_manager,
-            swarmnxt_controller,
+            # swarmnxt_controller,
             env_builder_include,
             multi_agent_planner_include,
         ]

@@ -10,7 +10,6 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>nlohmann-json-dev</depend>
   <depend>px4_ros_com</depend>
-  <depend>swarmnxt_controller_ros2</depend>
   <depend>swarmnxt_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>

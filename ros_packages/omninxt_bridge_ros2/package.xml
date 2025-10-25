@@ -16,7 +16,7 @@
   <depend>px4_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
-  <depend>mavros_msgs</depend>
+  <depend>message_filters</depend>
 
   <exec_depend>mpc_controller_ros2</exec_depend>
 

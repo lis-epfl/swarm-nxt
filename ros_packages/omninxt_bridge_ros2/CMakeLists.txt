@@ -14,6 +14,7 @@ find_package(swarmnxt_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(message_filters REQUIRED)
 
 # Trajectory Converter Node
 add_executable(trajectory_converter_node
@@ -48,6 +49,7 @@ ament_target_dependencies(command_converter_node
   swarmnxt_msgs
   std_msgs
   geometry_msgs
+  message_filters
 )
 
 # Install executables

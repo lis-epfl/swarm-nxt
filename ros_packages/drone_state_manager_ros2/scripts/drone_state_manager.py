@@ -122,14 +122,14 @@ class DroneStateManager(Node):
                     self.get_logger().warning("No control cmd subscription to destroy")
 
             # Publish offboard control mode before switching
-            offboard_msg = OffboardControlMode()
-            offboard_msg.timestamp = int(self.get_clock().now().nanoseconds / 1000)
-            offboard_msg.position = True
-            offboard_msg.velocity = False
-            offboard_msg.acceleration = False
-            offboard_msg.attitude = False
-            offboard_msg.body_rate = False
-            self.offboard_control_mode_pub_.publish(offboard_msg)
+            # offboard_msg = OffboardControlMode()
+            # offboard_msg.timestamp = int(self.get_clock().now().nanoseconds / 1000)
+            # offboard_msg.position = True
+            # offboard_msg.velocity = False
+            # offboard_msg.acceleration = False
+            # offboard_msg.attitude = False
+            # offboard_msg.body_rate = False
+            # self.offboard_control_mode_pub_.publish(offboard_msg)
 
         if nav_state != 14:  # Not OFFBOARD
             self.create_control_cmd_sub()

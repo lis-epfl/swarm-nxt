@@ -15,7 +15,7 @@ def generate_launch_description():
     config_file = PathJoinSubstitution([
         FindPackageShare('omninxt_bridge_ros2'),
         'config',
-        'bridge_params.yaml'
+        'trajectory_converter_params.yaml'
     ])
     
     # Launch arguments

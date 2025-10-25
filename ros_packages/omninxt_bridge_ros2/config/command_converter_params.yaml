@@ -1,10 +1,7 @@
-trajectory_converter:
-  ros__parameters:
-    input_topic: "/planner/trajectory"
-    output_topic: "/mpc/trajectory"
-
 command_converter:
   ros__parameters:
     rates_input_topic: "/mpc/out/vehicle_rates_setpoint"
+    torque_input_topic: "/mpc/out/vehicle_torque_setpoint"
     motors_input_topic: "/mpc/out/actuator_motors"
     output_topic: "/controller/cmd"
+    sync_tolerance: 0.001 

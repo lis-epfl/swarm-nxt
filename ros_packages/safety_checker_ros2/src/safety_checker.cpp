@@ -6,12 +6,10 @@ namespace safety_checker {
 SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
   std::string filepath;
 
-  std::string ns = this->get_namespace();
-
   this->declare_parameter("plane_file", "/var/opt/config/bounds.json");
   this->get_parameter("plane_file", filepath);
 
-  this->declare_parameter("plane_offset", 0.5f);  // meters
+  this->declare_parameter("plane_offset", 0.5f); // meters
   this->get_parameter("plane_offset", plane_offset_);
 
   if (plane_offset_ < 0) {
@@ -31,31 +29,40 @@ SafetyChecker::SafetyChecker() : ::rclcpp::Node("safety_checker") {
           .reliability(rclcpp::ReliabilityPolicy::BestEffort);
 
   pose_sub_ = create_subscription<px4_msgs::msg::VehicleLocalPosition>(
-      ns + "/fmu/out/vehicle_local_position", best_effort_qos,
+       "/fmu/out/vehicle_local_position", best_effort_qos,
       std::bind(&SafetyChecker::HandlePoseMessage, this,
                 std::placeholders::_1));
 
   command_sub_ = create_subscription<swarmnxt_msgs::msg::ControllerCommand>(
-      ns + "/controller/cmd", 10,
+       "/controller/cmd", 10,
       std::bind(&SafetyChecker::HandleControllerCommand, this,
                 std::placeholders::_1));
 
   // deprecated
   safe_trajectory_pub_ =
-      create_publisher<nav_msgs::msg::Path>(ns + "/trajectory_safe", 10);
+      create_publisher<nav_msgs::msg::Path>( "/trajectory_safe", 10);
 
-  traj_cmd_pub_ = create_publisher<px4_msgs::msg::TrajectorySetpoint>(
-      ns + "/fmu/in/trajectory_setpoint", 10);
+  rates_cmd_pub_ = create_publisher<px4_msgs::msg::VehicleRatesSetpoint>(
+       "/fmu/in/vehicle_rates_setpoint", 10);
+
+  torque_cmd_pub_ = create_publisher<px4_msgs::msg::VehicleTorqueSetpoint>(
+       "/fmu/in/vehicle_torque_setpoint", 10);
+
+  thrust_cmd_pub_ = create_publisher<px4_msgs::msg::VehicleThrustSetpoint>(
+       "/fmu/in/vehicle_thrust_setpoint", 10);
+
+  motors_cmd_pub_ = create_publisher<px4_msgs::msg::ActuatorMotors>(
+       "/fmu/in/actuator_motors", 10);
 
   offboard_control_mode_pub_ =
       create_publisher<px4_msgs::msg::OffboardControlMode>(
-          ns + "/fmu/in/offboard_control_mode", 10);
+           "/fmu/in/offboard_control_mode", 10);
 
   vehicle_command_pub_ = create_publisher<px4_msgs::msg::VehicleCommand>(
-      ns + "/fmu/in/vehicle_command", 10);
+       "/fmu/in/vehicle_command", 10);
 
   set_mode_server_ = create_service<std_srvs::srv::Trigger>(
-      ns + "/safety/set_offboard_mode",
+       "/safety/set_offboard_mode",
       std::bind(&SafetyChecker::SetModeForwarder, this, std::placeholders::_1,
                 std::placeholders::_2));
 }
@@ -79,37 +86,115 @@ void SafetyChecker::HandleControllerCommand(
     px4_msgs::msg::OffboardControlMode offboard_mode{};
     offboard_mode.timestamp = this->now().nanoseconds() / 1000;
 
+    // Initialize all flags to false
+    offboard_mode.position = false;
+    offboard_mode.velocity = false;
+    offboard_mode.acceleration = false;
+    offboard_mode.attitude = false;
+    offboard_mode.body_rate = false;
+    offboard_mode.thrust_and_torque = false;
+    offboard_mode.direct_actuator = false;
+
     switch (cmd.command_type_mask) {
-      case swarmnxt_msgs::msg::ControllerCommand::POSITION_SETPOINT:
-        offboard_mode.position = true;
-        offboard_mode.velocity = false;
-        offboard_mode.acceleration = false;
-        offboard_mode.attitude = false;
-        offboard_mode.body_rate = false;
+      case swarmnxt_msgs::msg::ControllerCommand::RATE_SETPOINT: {
+        // Configure offboard mode for body rate control
+        offboard_mode.body_rate = true;
+
+        // Publish offboard control mode
+        offboard_control_mode_pub_->publish(offboard_mode);
+
+        // Create and publish vehicle rates setpoint
+        px4_msgs::msg::VehicleRatesSetpoint rates_msg{};
+        rates_msg.timestamp = this->now().nanoseconds() / 1000;
+
+        // Assuming rate_cmd has [roll_rate, pitch_rate, yaw_rate] in rad/s
+        if (cmd.rate_cmd.size() >= 3) {
+          rates_msg.roll = cmd.rate_cmd[0];
+          rates_msg.pitch = cmd.rate_cmd[1];
+          rates_msg.yaw = cmd.rate_cmd[2];
+        } else {
+          RCLCPP_WARN(this->get_logger(),
+                      "Rate command has insufficient elements: %zu",
+                      cmd.rate_cmd.size());
+        }
+
+        // Use thrust_cmd for thrust (normalized 0-1)
+        rates_msg.thrust_body[0] = 0.0;  // x thrust
+        rates_msg.thrust_body[1] = 0.0;  // y thrust
+        rates_msg.thrust_body[2] = cmd.thrust_cmd;  // z thrust (negative for upward)
+
+        rates_cmd_pub_->publish(rates_msg);
         break;
-      case swarmnxt_msgs::msg::ControllerCommand::RATE_SETPOINT:
-        offboard_mode.position = false;
-        offboard_mode.velocity = false;
-        offboard_mode.acceleration = false;
-        offboard_mode.attitude = true;
-        offboard_mode.body_rate = false;
+      }
+
+      case swarmnxt_msgs::msg::ControllerCommand::TORQUE_SETPOINT: {
+        // Configure offboard mode for thrust and torque control
+        offboard_mode.thrust_and_torque = true;
+
+        // Publish offboard control mode
+        offboard_control_mode_pub_->publish(offboard_mode);
+
+        // Create and publish vehicle torque setpoint
+        px4_msgs::msg::VehicleTorqueSetpoint torque_msg{};
+        torque_msg.timestamp = this->now().nanoseconds() / 1000;
+
+        // Assuming torque_cmd has [roll_torque, pitch_torque, yaw_torque] in Nm
+        if (cmd.torque_cmd.size() >= 3) {
+          torque_msg.xyz[0] = cmd.torque_cmd[0];  // roll torque
+          torque_msg.xyz[1] = cmd.torque_cmd[1];  // pitch torque
+          torque_msg.xyz[2] = cmd.torque_cmd[2];  // yaw torque
+        } else {
+          RCLCPP_WARN(this->get_logger(),
+                      "Torque command has insufficient elements: %zu",
+                      cmd.torque_cmd.size());
+        }
+
+        torque_cmd_pub_->publish(torque_msg);
+
+        // Create and publish separate vehicle thrust setpoint
+        px4_msgs::msg::VehicleThrustSetpoint thrust_msg{};
+        thrust_msg.timestamp = this->now().nanoseconds() / 1000;
+
+        // Set thrust (normalized 0-1)
+        thrust_msg.xyz[0] = 0.0;  // x thrust
+        thrust_msg.xyz[1] = 0.0;  // y thrust
+        thrust_msg.xyz[2] = cmd.thrust_cmd;  // z thrust (negative for upward)
+
+        thrust_cmd_pub_->publish(thrust_msg);
         break;
-      case swarmnxt_msgs::msg::ControllerCommand::PVA_SETPOINT:
-        offboard_mode.position = true;
-        offboard_mode.velocity = true;
-        offboard_mode.acceleration = true;
-        offboard_mode.attitude = false;
-        offboard_mode.body_rate = false;
+      }
+
+      case swarmnxt_msgs::msg::ControllerCommand::MOTOR_SETPOINT: {
+        // Configure offboard mode for direct actuator control
+        offboard_mode.direct_actuator = true;
+
+        // Publish offboard control mode
+        offboard_control_mode_pub_->publish(offboard_mode);
+
+        // Create and publish actuator motors setpoint
+        px4_msgs::msg::ActuatorMotors motors_msg{};
+        motors_msg.timestamp = this->now().nanoseconds() / 1000;
+
+        // Copy motor commands (up to 12 motors supported by PX4)
+        size_t num_motors = std::min(cmd.motor_cmd.size(), size_t(12));
+        for (size_t i = 0; i < num_motors; ++i) {
+          motors_msg.control[i] = cmd.motor_cmd[i];  // normalized 0-1
+        }
+
+        // Set remaining motors to NaN (disarmed)
+        for (size_t i = num_motors; i < 12; ++i) {
+          motors_msg.control[i] = NAN;
+        }
+
+        motors_cmd_pub_->publish(motors_msg);
         break;
+      }
+
       default:
         RCLCPP_ERROR(this->get_logger(), "Command had an unexpected type: %d",
                      cmd.command_type_mask);
         return;
     }
-
-    // Publish offboard control mode and trajectory setpoint
-    offboard_control_mode_pub_->publish(offboard_mode);
-    traj_cmd_pub_->publish(cmd.cmd);
   } else {
     RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                           "Not sending offboard messages because of "
@@ -130,8 +215,8 @@ void SafetyChecker::SetModeForwarder(
     px4_msgs::msg::VehicleCommand cmd{};
     cmd.timestamp = this->now().nanoseconds() / 1000;
     cmd.command = px4_msgs::msg::VehicleCommand::VEHICLE_CMD_DO_SET_MODE;
-    cmd.param1 = 1;  // MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
-    cmd.param2 = 6;  // PX4_CUSTOM_MAIN_MODE_OFFBOARD
+    cmd.param1 = 1; // MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
+    cmd.param2 = 6; // PX4_CUSTOM_MAIN_MODE_OFFBOARD
     cmd.target_system = 1;
     cmd.target_component = 1;
     cmd.source_system = 1;
@@ -159,10 +244,10 @@ void SafetyChecker::LandNow() {
   cmd.param1 = 0;
   cmd.param2 = 0;
   cmd.param3 = 0;
-  cmd.param4 = NAN;  // Yaw angle
-  cmd.param5 = NAN;  // Latitude
-  cmd.param6 = NAN;  // Longitude
-  cmd.param7 = NAN;  // Altitude
+  cmd.param4 = NAN; // Yaw angle
+  cmd.param5 = NAN; // Latitude
+  cmd.param6 = NAN; // Longitude
+  cmd.param7 = NAN; // Altitude
   cmd.target_system = 1;
   cmd.target_component = 1;
   cmd.source_system = 1;
@@ -350,4 +435,4 @@ void SafetyChecker::ClearPlanes() {
 std::vector<swarmnxt_msgs::msg::Plane> SafetyChecker::GetPlanes() {
   return planes_;
 }
-}  // namespace safety_checker
+} // namespace safety_checker
