@@ -20,6 +20,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 from px4_msgs.msg import VehicleStatus, VehicleCommand, VehicleLocalPosition
 from swarmnxt_msgs.msg import Trigger, DroneState
+from std_msgs.msg import Bool
 from geometry_msgs.msg import PoseStamped, Point, PointStamped
 from ament_index_python.packages import get_package_share_directory
 
@@ -199,8 +200,7 @@ class DroneGUINode(Node):
         reliable_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
         
         for drone in self.drone_list:
-            self.controller_enable_pubs[drone] = self.create_publisher(
-                Trigger, f"/{drone}/mpc_controller/enable", reliable_qos
+            self.controller_enable_pubs[drone] = self.create_publisher(Bool, f"/{drone}/mpc_controller/enable", reliable_qos
             )
     
     def setup_planning_publishers(self):
