@@ -329,14 +329,13 @@ class DroneGUINode(Node):
         self.get_logger().info(f"Published global {command} command")
 
     def publish_controller_command(self, enable: bool):
-        msg = Trigger()
-        msg.stamp = self.get_clock().now().to_msg()
-        msg.enable = enable
-        
+        msg = Bool()
+        msg.data = enable
+
         for drone in self.drone_list:
             if drone in self.controller_enable_pubs:
                 self.controller_enable_pubs[drone].publish(msg)
-        
+
         action = "enabled" if enable else "disabled"
         self.get_logger().info(f"Controllers {action} for all drones")
     
