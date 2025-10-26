@@ -8,8 +8,12 @@
       prompt: "What command do you want to run on all of the drones (WARNING: Runs as sudo!)?"
       private: false  
 
+  # tasks:
+  #   - name: Command
+  #     ansible.builtin.command: '{{ command }}'
+
   tasks:
-    - name: Command
-      ansible.builtin.command: '{{ command }}'
+    - name: "Common Components"
+      ansible.builtin.include_tasks: "tasks/install-acados.yml"
 
 
