@@ -157,7 +157,7 @@ class DroneGUINode(Node):
             # Subscribe to PX4 vehicle status
             self.create_subscription(
                 VehicleStatus,
-                f"/{drone}/fmu/out/vehicle_status",
+                f"/{drone}/fmu/out/vehicle_status_v1",
                 lambda msg, d=drone: self.vehicle_status_callback(msg, d),
                 best_effort_qos,
             )

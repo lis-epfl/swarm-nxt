@@ -50,22 +50,22 @@ class DroneStateManager(Node):
             reliability=QoSReliabilityPolicy.BEST_EFFORT, depth=10)
 
         self.vehicle_status_sub_ = self.create_subscription(
-            VehicleStatus, namespace +
+            VehicleStatus,
             "/fmu/out/vehicle_status", self.vehicle_status_cb, best_effort_qos
         )
 
         self.vehicle_local_position_sub_ = self.create_subscription(
-            VehicleLocalPosition, namespace +
+            VehicleLocalPosition, 
             "/fmu/out/vehicle_local_position", self.vehicle_local_position_cb, best_effort_qos
         )
 
         # Publishers for PX4 commands
         self.vehicle_command_pub_ = self.create_publisher(
-            VehicleCommand, namespace + "/fmu/in/vehicle_command", 10
+            VehicleCommand, "/fmu/in/vehicle_command", 10
         )
 
         self.offboard_control_mode_pub_ = self.create_publisher(
-            OffboardControlMode, namespace + "/fmu/in/offboard_control_mode", 10
+            OffboardControlMode, "/fmu/in/offboard_control_mode", 10
         )
 
         self.drone_state_pub_ = self.create_publisher(
@@ -191,7 +191,7 @@ class DroneStateManager(Node):
             # check if the takeoff is finished.
             # nav_state changes or altitude reached?
             if (self.vehicle_status.nav_state == VehicleStatus.NAVIGATION_STATE_AUTO_LOITER or
-                    (self.current_pose is not None and self.current_pose.pose.position.z >= 0.8)):
+                    (self.current_pose is not None and self.current_pose.pose.position.z >= 0.4)):
                 # we've finished takeoff...
                 if self.control_msgs > 50:
                     self.set_mode(make_drone_state(DroneState.OFFBOARD))

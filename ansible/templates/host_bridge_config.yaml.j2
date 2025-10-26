@@ -23,6 +23,10 @@ topics:
   /nxt{{ num }}/goals:
     type: nav_msgs/msg/Goals
     to_domain: {{ num }}
+  /nxt{{ num }}/fmu/in/vehicle_command:
+    type: px4_msgs/msg/VehicleCommand
+    remap: /fmu/in/vehicle_command
+    to_domain: {{ num }}
   /nxt{{ num }}/mpc_controller/enable:
     type: std_msgs/msg/Bool
     to_domain: {{ num }}

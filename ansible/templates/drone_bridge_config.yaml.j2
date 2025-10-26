@@ -3,14 +3,14 @@ name: domain_bridge
 from_domain: {{ drone_num }}
 to_domain: 0 
 topics: 
-  {{ns}}/mavros/state: 
+  /fmu/out/vehicle_status_v1: 
     type: mavros_msgs/msg/State
-  {{ns}}/mavros/local_position/pose: 
-    type: geometry_msgs/msg/PoseStamped
+    remap: {{ns}}/fmu/out/vehicle_status_v1
+  /fmu/out/vehicle_local_position: 
+    type: px4_msgs/msg/VehicleLocalPosition
+    remap: {{ns}}/fmu/out/vehicle_local_position
   {{ns}}/manager/state:
     type: swarmnxt_msgs/msg/DroneState
-  {{ns}}/mavros/setpoint_raw/local:
-    type: mavros_msgs/msg/PositionTarget
   agent_{{ current_drone_idx }}/traj_full: 
     type: multi_agent_planner_msgs/msg/Trajectory
   agent_{{ current_drone_idx }}/traj:
