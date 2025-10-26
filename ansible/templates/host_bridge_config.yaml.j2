@@ -24,7 +24,7 @@ topics:
     type: nav_msgs/msg/Goals
     to_domain: {{ num }}
   /nxt{{ num }}/mpc_controller/enable:
-    type: swarmnxt_msgs/msg/Trigger
+    type: std_msgs/msg/Bool
     to_domain: {{ num }}
   /agent_{{ drone_idx }}/start_planning: 
     type: multi_agent_planner_msgs/msg/StartPlanning
