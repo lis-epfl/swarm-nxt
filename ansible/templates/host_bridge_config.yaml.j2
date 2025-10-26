@@ -23,7 +23,7 @@ topics:
   /nxt{{ num }}/goals:
     type: nav_msgs/msg/Goals
     to_domain: {{ num }}
-  /nxt{{ num }}/controller/enable:
+  /nxt{{ num }}/mpc_controller/enable:
     type: swarmnxt_msgs/msg/Trigger
     to_domain: {{ num }}
   /agent_{{ drone_idx }}/start_planning: 
