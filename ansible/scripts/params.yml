@@ -1,4 +1,4 @@
 COM_RCL_EXCEPT: 6 # don't freak out when there is an RC Loss if offboard
 MAV_SYS_ID: {{ drone_num }}
-MIS_TAKEOFF_ALT: 1.0
+MIS_TAKEOFF_ALT: 0.5
 BAT1_V_EMPTY: 3.3
