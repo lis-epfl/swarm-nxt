@@ -31,7 +31,8 @@ class DroneStateManager(Node):
 
         self.create_control_cmd_sub()
         namespace = self.get_namespace()
-        reliable_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
+        reliable_qos = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
 
         self.global_takeoff_sub_ = self.create_subscription(
             Trigger, "/global/takeoff", self.takeoff_cb, reliable_qos
@@ -45,14 +46,17 @@ class DroneStateManager(Node):
         )
 
         # Subscribe to PX4 topics
-        best_effort_qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, depth=10)
+        best_effort_qos = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT, depth=10)
 
         self.vehicle_status_sub_ = self.create_subscription(
-            VehicleStatus, namespace + "/fmu/out/vehicle_status", self.vehicle_status_cb, best_effort_qos
+            VehicleStatus, namespace +
+            "/fmu/out/vehicle_status", self.vehicle_status_cb, best_effort_qos
         )
 
         self.vehicle_local_position_sub_ = self.create_subscription(
-            VehicleLocalPosition, namespace + "/fmu/out/vehicle_local_position", self.vehicle_local_position_cb, best_effort_qos
+            VehicleLocalPosition, namespace +
+            "/fmu/out/vehicle_local_position", self.vehicle_local_position_cb, best_effort_qos
         )
 
         # Publishers for PX4 commands
@@ -73,7 +77,7 @@ class DroneStateManager(Node):
         self.control_msgs = 0
         self.control_cmd_sub_ = self.create_subscription(
             ControllerCommand,
-            self.get_namespace() + "/controller/cmd",
+            "/controller/cmd",
             self.control_cmd_cb,
             10,
         )
@@ -94,7 +98,8 @@ class DroneStateManager(Node):
 
     def set_mode(self, mode: DroneState):
         if type(mode) != DroneState:
-            self.get_logger().error(f"Did not get a valid mode to set. Got {mode}")
+            self.get_logger().error(
+                f"Did not get a valid mode to set. Got {mode}")
             return
         self.get_logger().info(f"Attempting to set the mode to {mode}")
 
@@ -186,7 +191,7 @@ class DroneStateManager(Node):
             # check if the takeoff is finished.
             # nav_state changes or altitude reached?
             if (self.vehicle_status.nav_state == VehicleStatus.NAVIGATION_STATE_AUTO_LOITER or
-                (self.current_pose is not None and self.current_pose.pose.position.z >= 0.8)):
+                    (self.current_pose is not None and self.current_pose.pose.position.z >= 0.8)):
                 # we've finished takeoff...
                 if self.control_msgs > 50:
                     self.set_mode(make_drone_state(DroneState.OFFBOARD))
