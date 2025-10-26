@@ -30,6 +30,10 @@ GUROBI_HOME=/opt/gurobi1003/armlinux64
 PATH=$PATH:$GUROBI_HOME/bin
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GUROBI_HOME/lib
 
+export ACADOS_SOURCE_DIR=/opt/acados
+export LD_LIBRARY_PATH=/opt/acados/lib:$LD_LIBRARY_PATH
+export PYTHONPATH=/opt/acados/interfaces/acados_template:$PYTHONPATH
+
 # Calculate dynamic sleep time based on drone position in sorted order
 DRONE_NUM={{ drone_num | int }}
 # All drone numbers in the group, sorted
