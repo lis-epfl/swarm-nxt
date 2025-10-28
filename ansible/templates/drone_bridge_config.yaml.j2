@@ -4,7 +4,7 @@ from_domain: {{ drone_num }}
 to_domain: 0 
 topics: 
   /fmu/out/vehicle_status_v1: 
-    type: mavros_msgs/msg/State
+    type: px4_msgs/msg/VehicleStatus
     remap: {{ns}}/fmu/out/vehicle_status_v1
   /fmu/out/vehicle_local_position: 
     type: px4_msgs/msg/VehicleLocalPosition
