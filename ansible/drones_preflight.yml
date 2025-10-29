@@ -158,7 +158,7 @@
     - name: Start ros_packages service
       ansible.builtin.systemd: 
         name: ros_packages
-        state: started
+        state: restarted
         enabled: false
         daemon_reload: true
         scope: user
