@@ -15,6 +15,8 @@
 #include "px4_msgs/msg/vehicle_thrust_setpoint.hpp"
 #include "px4_msgs/msg/vehicle_torque_setpoint.hpp"
 #include "px4_ros_com/frame_transforms.h"
+#include "px4_msgs/msg/vehicle_status.hpp"
+#include <atomic>
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "swarmnxt_msgs/msg/controller_command.hpp"
@@ -42,6 +44,8 @@ public:
   void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg); // deprecated
   void
   HandleControllerCommand(const swarmnxt_msgs::msg::ControllerCommand &msg);
+  void
+  HandleVehicleStatus(const px4_msgs::msg::VehicleStatus::SharedPtr msg);
 
   void
   SetModeForwarder(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
@@ -55,6 +59,7 @@ public:
   std::vector<swarmnxt_msgs::msg::Plane> GetPlanes();
 
 private:
+  std::atomic<uint8_t> current_nav_state_;
   std::vector<swarmnxt_msgs::msg::Plane> planes_;
 
   bool are_planes_valid_ = false;
@@ -72,6 +77,8 @@ private:
       trajectory_sub_; // deprecated
   rclcpp::Subscription<swarmnxt_msgs::msg::ControllerCommand>::SharedPtr
       command_sub_;
+  rclcpp::Subscription<px4_msgs::msg::VehicleStatus>::SharedPtr
+      vehicle_status_sub_;
 
   // publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr safe_trajectory_pub_;
