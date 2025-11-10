@@ -40,7 +40,7 @@ SafetyChecker::SafetyChecker()
                 std::placeholders::_1));
 
   vehicle_status_sub_ = create_subscription<px4_msgs::msg::VehicleStatus>(
-      "/fmu/out/vehicle_status", best_effort_qos,
+      "/fmu/out/vehicle_status_v1", best_effort_qos,
       std::bind(&SafetyChecker::HandleVehicleStatus, this,
                 std::placeholders::_1));
 
