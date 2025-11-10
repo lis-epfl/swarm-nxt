@@ -2,6 +2,7 @@ command_converter:
   ros__parameters:
     rates_input_topic: "/mpc/out/vehicle_rates_setpoint"
     torque_input_topic: "/mpc/out/vehicle_torque_setpoint"
+    thrust_input_topic: "/mpc/out/vehicle_thrust_setpoint"
     motors_input_topic: "/mpc/out/actuator_motors"
     output_topic: "/controller/cmd"
     sync_tolerance: 0.001 
