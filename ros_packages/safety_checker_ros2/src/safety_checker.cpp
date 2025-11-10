@@ -147,33 +147,36 @@ void SafetyChecker::HandleControllerCommand(
       // Publish offboard control mode
       offboard_control_mode_pub_->publish(offboard_mode);
 
-      // Create and publish vehicle torque setpoint
-      px4_msgs::msg::VehicleTorqueSetpoint torque_msg{};
-      torque_msg.timestamp = this->now().nanoseconds() / 1000;
+      if (current_nav_state_.load() ==
+          px4_msgs::msg::VehicleStatus::NAVIGATION_STATE_OFFBOARD) {
+        // Create and publish vehicle torque setpoint
+        px4_msgs::msg::VehicleTorqueSetpoint torque_msg{};
+        torque_msg.timestamp = this->now().nanoseconds() / 1000;
 
-      // Assuming torque_cmd has [roll_torque, pitch_torque, yaw_torque] in Nm
-      if (cmd.torque_cmd.size() >= 3) {
-        torque_msg.xyz[0] = cmd.torque_cmd[0]; // roll torque
-        torque_msg.xyz[1] = cmd.torque_cmd[1]; // pitch torque
-        torque_msg.xyz[2] = cmd.torque_cmd[2]; // yaw torque
-      } else {
-        RCLCPP_WARN(this->get_logger(),
-                    "Torque command has insufficient elements: %zu",
-                    cmd.torque_cmd.size());
+        // Assuming torque_cmd has [roll_torque, pitch_torque, yaw_torque] in Nm
+        if (cmd.torque_cmd.size() >= 3) {
+          torque_msg.xyz[0] = cmd.torque_cmd[0]; // roll torque
+          torque_msg.xyz[1] = cmd.torque_cmd[1]; // pitch torque
+          torque_msg.xyz[2] = cmd.torque_cmd[2]; // yaw torque
+        } else {
+          RCLCPP_WARN(this->get_logger(),
+                      "Torque command has insufficient elements: %zu",
+                      cmd.torque_cmd.size());
+        }
+
+        torque_cmd_pub_->publish(torque_msg);
+
+        // Create and publish separate vehicle thrust setpoint
+        px4_msgs::msg::VehicleThrustSetpoint thrust_msg{};
+        thrust_msg.timestamp = this->now().nanoseconds() / 1000;
+
+        // Set thrust (normalized 0-1)
+        thrust_msg.xyz[0] = 0.0;            // x thrust
+        thrust_msg.xyz[1] = 0.0;            // y thrust
+        thrust_msg.xyz[2] = cmd.thrust_cmd; // z thrust (negative for upward)
+
+        thrust_cmd_pub_->publish(thrust_msg);
       }
-
-      torque_cmd_pub_->publish(torque_msg);
-
-      // Create and publish separate vehicle thrust setpoint
-      px4_msgs::msg::VehicleThrustSetpoint thrust_msg{};
-      thrust_msg.timestamp = this->now().nanoseconds() / 1000;
-
-      // Set thrust (normalized 0-1)
-      thrust_msg.xyz[0] = 0.0;            // x thrust
-      thrust_msg.xyz[1] = 0.0;            // y thrust
-      thrust_msg.xyz[2] = cmd.thrust_cmd; // z thrust (negative for upward)
-
-      thrust_cmd_pub_->publish(thrust_msg);
       break;
     }
 
