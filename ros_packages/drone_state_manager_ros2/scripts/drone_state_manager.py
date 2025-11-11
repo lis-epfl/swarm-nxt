@@ -2,6 +2,7 @@
 
 from functools import partial
 import rclpy
+import re
 from rclpy.node import Node
 from rclpy.task import Future
 from swarmnxt_msgs.msg import Trigger, ControllerCommand, DroneState
@@ -48,6 +49,22 @@ class DroneStateManager(Node):
 
         self.create_control_cmd_sub()
         namespace = self.get_namespace()
+
+        self.target_system = 1  # Default
+        if namespace != "/":
+            ns_str = namespace.lstrip('/') # e.g., "nxt7"
+            match = re.search(r'[0-9]+$', ns_str)
+            if match:
+                try:
+                    self.target_system = int(match.group(0))
+                    self.get_logger().info(f"Target system ID set to {self.target_system} from namespace '{namespace}'")
+                except ValueError:
+                    self.get_logger().warning(f"Could not parse number from namespace '{namespace}'. Defaulting target_system to 1.")
+            else:
+                 self.get_logger().warning(f"No number found in namespace '{namespace}'. Defaulting target_system to 1.")
+        else:
+            self.get_logger().info("No namespace set. Defaulting target_system to 1.")
+
         reliable_qos = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
 
@@ -111,7 +128,7 @@ class DroneStateManager(Node):
         cmd.command = command
         cmd.param1 = float(param1)
         cmd.param2 = float(param2)
-        cmd.target_system = 1
+        cmd.target_system = self.target_system
         cmd.target_component = 1
         cmd.source_system = 1
         cmd.source_component = 1
