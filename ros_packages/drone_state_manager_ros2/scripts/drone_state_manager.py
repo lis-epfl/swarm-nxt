@@ -68,7 +68,7 @@ class DroneStateManager(Node):
 
         self.vehicle_status_sub_ = self.create_subscription(
             VehicleStatus,
-            "/fmu/out/vehicle_status", self.vehicle_status_cb, best_effort_qos
+            "/fmu/out/vehicle_status_v1", self.vehicle_status_cb, best_effort_qos
         )
 
         self.vehicle_odometry_sub_ = self.create_subscription(
