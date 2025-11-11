@@ -273,10 +273,15 @@ class DroneStateManager(Node):
         self.vehicle_status = msg
 
     def vehicle_odometry_cb(self, msg: VehicleOdometry):
+
+        if self.current_pose is None:
+            self.current_pose = PoseStamped()
+            self.current_pose.header.frame_id = "world" # Set frame_id
+
         # Populate position, converting FRD to FLU
-        self.current_pose.pose.position.x = msg.position[0]
-        self.current_pose.pose.position.y = -msg.position[1]
-        self.current_pose.pose.position.z = -msg.position[2]
+        self.current_pose.pose.position.x = float(msg.position[0])
+        self.current_pose.pose.position.y = float(-msg.position[1])
+        self.current_pose.pose.position.z = float(-msg.position[2])
 
         # Populate orientation
         self.current_pose.pose.orientation.w = float(msg.q[0])
