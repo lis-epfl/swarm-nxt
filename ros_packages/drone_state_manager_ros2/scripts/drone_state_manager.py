@@ -278,6 +278,9 @@ class DroneStateManager(Node):
             self.set_mode(make_drone_state(DroneState.LANDING))
 
     def arm_cb(self, msg):
+        # 1. Switch to Offboard mode
+        self.set_mode(make_drone_state(DroneState.OFFBOARD))
+
         # Publish arm/disarm command
         arm_value = 1.0 if msg.enable else 0.0
         self.publish_vehicle_command(
