@@ -115,28 +115,31 @@ void SafetyChecker::HandleControllerCommand(
       // Publish offboard control mode
       offboard_control_mode_pub_->publish(offboard_mode);
 
-      // Create and publish vehicle rates setpoint
-      px4_msgs::msg::VehicleRatesSetpoint rates_msg{};
-      rates_msg.timestamp = this->now().nanoseconds() / 1000;
+      if (current_nav_state_.load() ==
+          px4_msgs::msg::VehicleStatus::NAVIGATION_STATE_OFFBOARD) {
+        // Create and publish vehicle rates setpoint
+        px4_msgs::msg::VehicleRatesSetpoint rates_msg{};
+        rates_msg.timestamp = this->now().nanoseconds() / 1000;
 
-      // Assuming rate_cmd has [roll_rate, pitch_rate, yaw_rate] in rad/s
-      if (cmd.rate_cmd.size() >= 3) {
-        rates_msg.roll = cmd.rate_cmd[0];
-        rates_msg.pitch = cmd.rate_cmd[1];
-        rates_msg.yaw = cmd.rate_cmd[2];
-      } else {
-        RCLCPP_WARN(this->get_logger(),
-                    "Rate command has insufficient elements: %zu",
-                    cmd.rate_cmd.size());
+        // Assuming rate_cmd has [roll_rate, pitch_rate, yaw_rate] in rad/s
+        if (cmd.rate_cmd.size() >= 3) {
+          rates_msg.roll = cmd.rate_cmd[0];
+          rates_msg.pitch = cmd.rate_cmd[1];
+          rates_msg.yaw = cmd.rate_cmd[2];
+        } else {
+          RCLCPP_WARN(this->get_logger(),
+                      "Rate command has insufficient elements: %zu",
+                      cmd.rate_cmd.size());
+        }
+
+        // Use thrust_cmd for thrust (normalized 0-1)
+        rates_msg.thrust_body[0] = 0.0; // x thrust
+        rates_msg.thrust_body[1] = 0.0; // y thrust
+        rates_msg.thrust_body[2] =
+            cmd.thrust_cmd; // z thrust (negative for upward)
+
+        rates_cmd_pub_->publish(rates_msg);
       }
-
-      // Use thrust_cmd for thrust (normalized 0-1)
-      rates_msg.thrust_body[0] = 0.0; // x thrust
-      rates_msg.thrust_body[1] = 0.0; // y thrust
-      rates_msg.thrust_body[2] =
-          cmd.thrust_cmd; // z thrust (negative for upward)
-
-      rates_cmd_pub_->publish(rates_msg);
       break;
     }
 
@@ -187,25 +190,25 @@ void SafetyChecker::HandleControllerCommand(
       // Publish offboard control mode
       offboard_control_mode_pub_->publish(offboard_mode);
 
-      // Create and publish actuator motors setpoint
-      px4_msgs::msg::ActuatorMotors motors_msg{};
-      motors_msg.timestamp = this->now().nanoseconds() / 1000;
-
-      // Copy motor commands (up to 12 motors supported by PX4)
-      size_t num_motors = std::min(cmd.motor_cmd.size(), size_t(12));
-      for (size_t i = 0; i < num_motors; ++i) {
-        motors_msg.control[i] = cmd.motor_cmd[i]; // normalized 0-1
-      }
-
-      // Set remaining motors to NaN (disarmed)
-      for (size_t i = num_motors; i < 12; ++i) {
-        motors_msg.control[i] = NAN;
-      }
-
-      // publish motor command only when we are already in OFFBOARD mode,
-      // otherwise the FC crashes and bricks
       if (current_nav_state_.load() ==
           px4_msgs::msg::VehicleStatus::NAVIGATION_STATE_OFFBOARD) {
+        // Create and publish actuator motors setpoint
+        px4_msgs::msg::ActuatorMotors motors_msg{};
+        motors_msg.timestamp = this->now().nanoseconds() / 1000;
+
+        // Copy motor commands (up to 12 motors supported by PX4)
+        size_t num_motors = std::min(cmd.motor_cmd.size(), size_t(12));
+        for (size_t i = 0; i < num_motors; ++i) {
+          motors_msg.control[i] = cmd.motor_cmd[i]; // normalized 0-1
+        }
+
+        // Set remaining motors to NaN (disarmed)
+        for (size_t i = num_motors; i < 12; ++i) {
+          motors_msg.control[i] = NAN;
+        }
+
+        // publish motor command only when we are already in OFFBOARD mode,
+        // otherwise the FC crashes and bricks
         motors_cmd_pub_->publish(motors_msg);
       }
       break;
