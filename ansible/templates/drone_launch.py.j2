@@ -157,6 +157,16 @@ def generate_launch_description():
         ),
     )
 
+    # Calculate goal position based on drone ID
+    angle_degrees = hdsm_idx * 36.0
+    angle_radians = math.radians(angle_degrees)
+    goal_x = 1.5 * math.cos(angle_radians)  # R=1.5, center_x=0
+    goal_y = 1.5 * math.sin(angle_radians)  # R=1.5, center_y=0
+    goal_z = 1.0                              # center_z=1.0
+
+    # Format as the required string: "[x, y, z]"
+    goal_position_str = f"[{goal_x}, {goal_y}, {goal_z}]"
+    
     multi_agent_planner_include = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -170,6 +180,7 @@ def generate_launch_description():
         launch_arguments={
             "id": str(hdsm_idx),
             "n_rob": "{{ groups['drones'] | length }}",
+            "goal_position": goal_position_str,
         }.items(),
     )
 
