@@ -1,0 +1,19 @@
+# Parameters for the Safety Checker
+safety_checker:
+  ros__parameters:
+    plane_offset: 0.3
+    # Defines safety boundary as a list of hyperplanes: [a, b, c, d]
+    # for the equation ax + by + cz + d = 0
+    # A point (x,y,z) is 'safe' if (a*x + b*y + c*z + d) <= 0 for ALL planes.
+    #
+    # Example: A 2x2x2m box centered at (0,0,1)
+    planes: [
+        # a,    b,    c,    d
+         1.0,  0.0,  0.0, -3.0,  # x <= 1.0
+        -1.0,  0.0,  0.0, -3.0,  # x >= -1.0
+         0.0,  1.0,  0.0, -3.0,  # y <= 1.0
+         0.0, -1.0,  0.0, -3.0,  # y >= -1.0
+         0.0,  0.0,  1.0, -3.6,  # z <= 2.0
+         0.0,  0.0, -1.0, -0.5    # z >= 0.0
+      ]
+      

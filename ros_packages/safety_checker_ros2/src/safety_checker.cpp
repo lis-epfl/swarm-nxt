@@ -7,10 +7,17 @@ SafetyChecker::SafetyChecker()
     : ::rclcpp::Node("safety_checker"), current_nav_state_(0) {
   std::string filepath;
 
-  this->declare_parameter("plane_file", "/var/opt/config/bounds.json");
-  this->get_parameter("plane_file", filepath);
+  this->declare_parameter<std::vector<double>>("planes", std::vector<double>{});
+  std::vector<double> planes_tmp;
+  this->get_parameter("planes", planes_tmp);
 
-  this->declare_parameter("plane_offset", 0.5f); // meters
+  for (int i = 0; i < planes_tmp.size() / 4; i++) {
+    std::vector<double> plane = {planes_tmp[4 * i], planes_tmp[4 * i + 1],
+                                 planes_tmp[4 * i + 2], planes_tmp[4 * i + 3]};
+    planes_.push_back(plane);
+  }
+
+  this->declare_parameter("plane_offset", 0.5); // meters
   this->get_parameter("plane_offset", plane_offset_);
 
   if (plane_offset_ < 0) {
@@ -18,12 +25,41 @@ SafetyChecker::SafetyChecker()
                 "Parameter plane_offset set to: %.5f, must be positive. "
                 "Setting to zero.",
                 plane_offset_);
-    plane_offset_ = 0.0f;
+    plane_offset_ = 0.0;
   }
 
   RCLCPP_INFO(this->get_logger(), "Using plane offset: %5.2f", plane_offset_);
 
-  LoadHullFromFile(filepath);
+  // --- NAMESPACE PARSING LOGIC ---
+  std::string ns = this->get_namespace();
+  if (ns != "/") {
+    ns.erase(0, 1); // Remove leading '/' (e.g., "/nxt7" -> "nxt7")
+    std::smatch match;
+    std::regex re("[0-9]+$"); // Find one or more digits at the end
+
+    if (std::regex_search(ns, match, re) && match.size() > 0) {
+      try {
+        target_system_ = static_cast<uint8_t>(std::stoi(match.str(0)));
+        RCLCPP_INFO(this->get_logger(),
+                    "Target system ID set to %u from namespace '%s'",
+                    target_system_, this->get_namespace());
+      } catch (const std::exception &e) {
+        RCLCPP_WARN(this->get_logger(),
+                    "Could not parse number from namespace '%s'. Defaulting to "
+                    "1. Error: %s",
+                    this->get_namespace(), e.what());
+        target_system_ = 1;
+      }
+    } else {
+      RCLCPP_WARN(this->get_logger(),
+                  "No number found in namespace '%s'. Defaulting to 1.",
+                  this->get_namespace());
+      target_system_ = 1;
+    }
+  } else {
+    RCLCPP_INFO(this->get_logger(), "No namespace set. Defaulting to 1.");
+    target_system_ = 1;
+  }
 
   rclcpp::QoS best_effort_qos =
       rclcpp::QoS(rclcpp::KeepLast(10))
@@ -43,6 +79,10 @@ SafetyChecker::SafetyChecker()
       "/fmu/out/vehicle_status_v1", best_effort_qos,
       std::bind(&SafetyChecker::HandleVehicleStatus, this,
                 std::placeholders::_1));
+
+  planes_srv_ = this->create_service<swarmnxt_msgs::srv::GetPlanes>(
+      "/get_planes", std::bind(&SafetyChecker::GetPlanesCallback, this,
+                               std::placeholders::_1, std::placeholders::_2));
 
   // deprecated
   safe_trajectory_pub_ =
@@ -77,6 +117,21 @@ void SafetyChecker::HandleVehicleStatus(
     const px4_msgs::msg::VehicleStatus::SharedPtr msg) {
   // Store the current navigation state
   current_nav_state_.store(msg->nav_state);
+}
+
+void SafetyChecker::GetPlanesCallback(
+    const std::shared_ptr<swarmnxt_msgs::srv::GetPlanes::Request> request,
+    std::shared_ptr<swarmnxt_msgs::srv::GetPlanes::Response> response) {
+  (void)request;
+  // Request is empty, suppress unused warning
+  for (const auto &plane : planes_) {
+    swarmnxt_msgs::msg::Plane plane_msg;
+    plane_msg.normal.x = plane[0];
+    plane_msg.normal.y = plane[1];
+    plane_msg.normal.z = plane[2];
+    plane_msg.d = plane[3];
+    response->planes.push_back(plane_msg);
+  }
 }
 
 void SafetyChecker::HandleControllerCommand(
@@ -241,7 +296,7 @@ void SafetyChecker::SetModeForwarder(
     cmd.command = px4_msgs::msg::VehicleCommand::VEHICLE_CMD_DO_SET_MODE;
     cmd.param1 = 1; // MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
     cmd.param2 = 6; // PX4_CUSTOM_MAIN_MODE_OFFBOARD
-    cmd.target_system = 1;
+    cmd.target_system = target_system_;
     cmd.target_component = 1;
     cmd.source_system = 1;
     cmd.source_component = 1;
@@ -272,7 +327,7 @@ void SafetyChecker::LandNow() {
   cmd.param5 = NAN; // Latitude
   cmd.param6 = NAN; // Longitude
   cmd.param7 = NAN; // Altitude
-  cmd.target_system = 1;
+  cmd.target_system = target_system_;
   cmd.target_component = 1;
   cmd.source_system = 1;
   cmd.source_component = 1;
@@ -284,115 +339,22 @@ void SafetyChecker::LandNow() {
   safety_flags_ &= (~SafetyStatus::UNSAFE_COMMAND_SEND_RATE);
 }
 
-void SafetyChecker::LoadHullFromFile(const std::filesystem::path &filepath) {
-  auto logger = this->get_logger();
-
-  are_planes_valid_ = false;
-  using json = nlohmann::json;
-
-  if (!std::filesystem::exists(filepath)) {
-    throw std::runtime_error("File " + filepath.string() + " does not exist");
-  }
-
-  std::ifstream file(filepath);
-  if (!file.is_open()) {
-    throw std::runtime_error("Could not open plane definition file...");
-  }
-
-  json json_parser;
-  file >> json_parser;
-
-  bool valid_parse = true;
-
-  for (const auto &arr : json_parser) {
-    if (!arr.is_array() || arr.size() != 4) {
-      RCLCPP_ERROR(logger, "Invalid JSON Format...");
-      valid_parse = false;
-    }
-    swarmnxt_msgs::msg::Plane plane;
-    geometry_msgs::msg::Vector3 normal;
-
-    double a = arr[0].get<double>();
-    double b = arr[1].get<double>();
-    double c = arr[2].get<double>();
-    double d = arr[3].get<double>();
-
-    RCLCPP_INFO(logger, "Plane elements: %5.2f, %5.2f, %5.2f, %5.2f", a, b, c,
-                d);
-
-    if (plane_offset_ < std::abs(d)) {
-      if (d < 0) {
-        d = d + plane_offset_;
-      } else {
-        d = d - plane_offset_;
-      }
-    } else {
-      RCLCPP_WARN(logger,
-                  "Plane offset was too high, this facet did not get scaled!");
-    }
-
-    RCLCPP_INFO(logger, "Plane elements (scaled): %5.2f, %5.2f, %5.2f, %5.2f",
-                a, b, c, d);
-
-    normal.set__x(a);
-    normal.set__y(b);
-    normal.set__z(c);
-
-    plane.set__normal(normal);
-    plane.set__offset(d);
-
-    planes_.push_back(plane);
-  }
-
-  if (!valid_parse) {
-    throw std::runtime_error("The planes could not be parsed...");
-  }
-
-  are_planes_valid_ = true;
-}
-
 bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   if (!are_planes_valid_) {
     return false;
   }
   for (const auto &plane : planes_) {
-    double val = plane.normal.x * point.x + plane.normal.y * point.y +
-                 plane.normal.z * point.z - plane.offset;
+    double val =
+        plane[0] * point.x + plane[1] * point.y + plane[2] * point.z + plane[3];
 
     if (val > 0) {
       RCLCPP_INFO(this->get_logger(),
-                  "Failed on plane [%5.2f, %5.2f, %5.2f, %5.2f]",
-                  plane.normal.x, plane.normal.y, plane.normal.z, plane.offset);
+                  "Failed on plane [%5.2f, %5.2f, %5.2f, %5.2f]", plane[0],
+                  plane[1], plane[2], plane[3]);
       return false;
     }
   }
   return true;
-}
-
-geometry_msgs::msg::Point SafetyChecker::ProjectPointToClosestPlane(
-    const geometry_msgs::msg::Point &point) {
-  geometry_msgs::msg::Point projected_point = point;
-
-  for (const auto &plane : planes_) {
-    // which plane are we violating?
-    // Calculate the distance from the point to the plane
-    double numerator = plane.normal.x * projected_point.x +
-                       plane.normal.y * projected_point.y +
-                       plane.normal.z * projected_point.z - plane.offset;
-    double denominator = std::sqrt(plane.normal.x * plane.normal.x +
-                                   plane.normal.y * plane.normal.y +
-                                   plane.normal.z * plane.normal.z);
-
-    if (numerator > 0) {
-      // we are violating this plane, so project onto this plane
-      double scale = numerator / (denominator * denominator);
-      projected_point.x = projected_point.x - scale * plane.normal.x;
-      projected_point.y = projected_point.y - scale * plane.normal.y;
-      projected_point.z = projected_point.z - scale * plane.normal.z;
-    }
-  }
-
-  return projected_point;
 }
 
 void SafetyChecker::HandlePoseMessage(
@@ -417,46 +379,5 @@ void SafetyChecker::HandlePoseMessage(
     safety_flags_ |= SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
     LandNow();
   }
-}
-
-// DEPRECATED: We do not project trajectory messages on the safe plane anymore.
-// We simply land if the pose ends up outside of of the (shrunk) bounds.
-void SafetyChecker::HandleTrajectoryMessage(const nav_msgs::msg::Path &msg) {
-  // TODO: What if another drone in the swarm gets the same projected value?
-  RCLCPP_WARN(this->get_logger(),
-              "Checking trajectory messages are deprecated!");
-  auto safe_traj = msg;
-  bool safe = true;
-  // todo: make the trajectory hull an inset of the true hull.
-  for (auto &pose : safe_traj.poses) {
-    if (!IsPointInHull(pose.pose.position)) {
-      safe = false;
-      pose.pose.position = ProjectPointToClosestPlane(pose.pose.position);
-    }
-
-    // todo: make this a paramter
-    // enforce a min z height
-    if (pose.pose.position.z < 0.7f) {
-      safe = false;
-      pose.pose.position.z = 0.7f;
-    }
-  }
-
-  if (!safe) {
-    RCLCPP_WARN(this->get_logger(), "Trajectory was unsafe");
-  } else {
-    RCLCPP_DEBUG(this->get_logger(), "Trajectory was safe");
-  }
-
-  safe_trajectory_pub_->publish(safe_traj);
-}
-
-void SafetyChecker::ClearPlanes() {
-  are_planes_valid_ = false;
-  planes_.clear();
-}
-
-std::vector<swarmnxt_msgs::msg::Plane> SafetyChecker::GetPlanes() {
-  return planes_;
 }
 } // namespace safety_checker

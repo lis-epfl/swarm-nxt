@@ -111,7 +111,6 @@
         - { src: "templates/peer_list.yaml.j2", dest: "{{ drone_ros_path }}/config/peer_list.yaml" }
         - { src: "templates/drone_bridge_config.yaml.j2", dest: "{{ drone_ros_path }}/config/bridge_config.yaml" }
         - { src: "templates/mcap_bag_options.yml", dest: "{{ drone_ros_path }}/config/mcap_bag_options.yml"}
-        - { src: "templates/bounds.json", dest: "{{ drone_ros_path }}/config/bounds.json"}
         - { src: "templates/drone_launch.py.j2", dest: "{{ drone_base_path }}/launch.py"}
         - { src: "templates/ros_packages_service.j2", dest: "~/.local/share/systemd/user/ros_packages.service"}
         - { src: "templates/micro_xrce_service.j2", dest: "~/.local/share/systemd/user/micro_xrce.service"}

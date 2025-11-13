@@ -78,23 +78,31 @@ def generate_launch_description():
         output="log",
     )
 
+    safety_params_file = PathJoinSubstitution([
+        FindPackageShare('safety_checker_ros2'),
+        'config',
+        'safety_params.yaml'
+    ])
     safety_checker = Node(
         package="safety_checker_ros2",
         executable="safety_checker_node",
         namespace="{{ ns }}",
-        parameters=[
-            {
-                "plane_file": "{{ drone_ros_path }}/config/bounds.json",
-            }
-        ],
+        parameters=[safety_params_file],
         output="log",
     )
+
+    dsm_params_file = PathJoinSubstitution([
+        FindPackageShare('drone_state_manager_ros2'),
+        'config',
+        'drone_state_manager_params.yaml'
+    ])
 
     drone_state_manager = Node(
         package="drone_state_manager_ros2",
         executable="drone_state_manager.py",
         namespace="{{ ns }}",
         output="log",
+        parameters=[dsm_params_file],
     )
 
     drone_planner = Node(

@@ -14,7 +14,6 @@ find_package(nav_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(px4_ros_com REQUIRED)
 find_package(swarmnxt_msgs REQUIRED)
-find_package(nlohmann_json REQUIRED)
 find_package(std_srvs REQUIRED)
 
 
@@ -27,7 +26,6 @@ set(DEPENDENCIES
   px4_msgs
   px4_ros_com
   swarmnxt_msgs
-  nlohmann_json
 )
 
 include_directories(
@@ -50,6 +48,7 @@ ament_target_dependencies(safety_checker_node
 
 install(DIRECTORY
   launch
+  config
   DESTINATION share/${PROJECT_NAME}
 )
 install(TARGETS

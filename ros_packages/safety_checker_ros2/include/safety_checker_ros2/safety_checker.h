@@ -1,26 +1,29 @@
 #pragma once
 
 #include <chrono>
+#include <string>
+#include <regex>
+#include <cstdint>
 
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/path.hpp"
-#include "nlohmann/json.hpp"
 #include "px4_msgs/msg/actuator_motors.hpp"
 #include "px4_msgs/msg/offboard_control_mode.hpp"
 #include "px4_msgs/msg/vehicle_attitude_setpoint.hpp"
 #include "px4_msgs/msg/vehicle_command.hpp"
 #include "px4_msgs/msg/vehicle_local_position.hpp"
 #include "px4_msgs/msg/vehicle_rates_setpoint.hpp"
+#include "px4_msgs/msg/vehicle_status.hpp"
 #include "px4_msgs/msg/vehicle_thrust_setpoint.hpp"
 #include "px4_msgs/msg/vehicle_torque_setpoint.hpp"
 #include "px4_ros_com/frame_transforms.h"
-#include "px4_msgs/msg/vehicle_status.hpp"
-#include <atomic>
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "swarmnxt_msgs/msg/controller_command.hpp"
 #include "swarmnxt_msgs/msg/plane.hpp"
+#include "swarmnxt_msgs/srv/get_planes.hpp"
+#include <atomic>
 
 namespace safety_checker {
 
@@ -37,34 +40,30 @@ class SafetyChecker : public ::rclcpp::Node {
 public:
   SafetyChecker();
 
-  void LoadHullFromFile(const std::filesystem::path &filepath);
   bool IsPointInHull(const geometry_msgs::msg::Point &point);
   void
   HandlePoseMessage(const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg);
   void HandleTrajectoryMessage(const nav_msgs::msg::Path &msg); // deprecated
   void
   HandleControllerCommand(const swarmnxt_msgs::msg::ControllerCommand &msg);
-  void
-  HandleVehicleStatus(const px4_msgs::msg::VehicleStatus::SharedPtr msg);
+  void HandleVehicleStatus(const px4_msgs::msg::VehicleStatus::SharedPtr msg);
+  void GetPlanesCallback(
+      const std::shared_ptr<swarmnxt_msgs::srv::GetPlanes::Request> request,
+      std::shared_ptr<swarmnxt_msgs::srv::GetPlanes::Response> response);
 
   void
   SetModeForwarder(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
                    std::shared_ptr<std_srvs::srv::Trigger::Response> resp);
   void LandNow();
 
-  geometry_msgs::msg::Point
-  ProjectPointToClosestPlane(const geometry_msgs::msg::Point &point);
-  void ClearPlanes();
-
-  std::vector<swarmnxt_msgs::msg::Plane> GetPlanes();
-
 private:
   std::atomic<uint8_t> current_nav_state_;
-  std::vector<swarmnxt_msgs::msg::Plane> planes_;
+  uint8_t target_system_ = 1;
+  std::vector<std::vector<double>> planes_;
 
   bool are_planes_valid_ = false;
   uint8_t safety_flags_ = SafetyStatus::SAFE;
-  float plane_offset_; // meters, positive
+  double plane_offset_; // meters, positive
 
   // parameters
   std::string position_topic_suffix_;
@@ -94,9 +93,10 @@ private:
   rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr
       vehicle_command_pub_;
 
-  // servers
+  // services
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr land_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr set_mode_server_;
+  rclcpp::Service<swarmnxt_msgs::srv::GetPlanes>::SharedPtr planes_srv_;
 };
 
 } // namespace safety_checker

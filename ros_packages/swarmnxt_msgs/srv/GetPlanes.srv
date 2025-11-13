@@ -1,0 +1,4 @@
+# Request is empty
+---
+# Response is a list of planes
+swarmnxt_msgs/Plane[] planes
