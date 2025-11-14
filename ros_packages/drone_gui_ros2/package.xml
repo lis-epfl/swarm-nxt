@@ -7,18 +7,23 @@
   <maintainer email="dev@example.com">Developer</maintainer>
   <license>Apache-2.0</license>
 
-  <depend>rclpy</depend>
-  <depend>std_msgs</depend>
-  <depend>px4_msgs</depend>
-  <depend>px4_ros_com</depend>
-  <depend>swarmnxt_msgs</depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
-  <test_depend>python3-pytest</test_depend>
+  <!-- Python ROS 2 -->
+  <depend>rclpy</depend>
+
+  <!-- Message/Service dependencies -->
+  <depend>px4_msgs</depend>
+  <depend>swarmnxt_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>multi_agent_planner_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
