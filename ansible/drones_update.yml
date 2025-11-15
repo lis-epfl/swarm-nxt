@@ -112,7 +112,7 @@
       . /opt/ros/humble/setup.sh
       rosdep init
       rosdep update
-      rosdep install --from-paths {{ drone_ros_path }}/src --from-paths {{ drone_ros_path }}/multi_agent_pkgs -y --ignore-src -r --rosdistro humble
+      rosdep install --from-paths {{ drone_ros_path }}/src -y --ignore-src -r --rosdistro humble
             
   - name: Clean previous build
     when: clean_build | default(false) | bool
