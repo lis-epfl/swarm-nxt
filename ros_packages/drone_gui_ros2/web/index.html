@@ -20,41 +20,73 @@
         <section class="global-controls">
             <h2>Global Commands</h2>
             <div class="button-group">
-                <button class="btn btn-success" id="global-arm" onclick="sendGlobalCommand('arm')">
-                    ✈️ Arm All
-                </button>
-                <button class="btn btn-danger" id="global-disarm" onclick="sendGlobalCommand('disarm')">
-                    ⛔ Disarm All
-                </button>
-                <button class="btn btn-primary" id="global-takeoff" onclick="sendGlobalCommand('takeoff')">
-                    🚀 Takeoff All
-                </button>
-                <button class="btn btn-warning" id="global-land" onclick="sendGlobalCommand('land')">
-                    🛬 Land All
-                </button>
-                <button class="btn btn-info" id="global-controller-enable" onclick="sendGlobalCommand('controller_enable')">
-                    🎮 Enable Controllers
-                </button>
-                <button class="btn btn-secondary" id="global-controller-disable" onclick="sendGlobalCommand('controller_disable')">
-                    ⏸️ Disable Controllers
-                </button>
-                <button class="btn btn-success" id="global-planning-start" onclick="sendGlobalCommand('planning_start')">
-                    🧠 Start Planning All
-                </button>
-                <button class="btn btn-danger" id="global-planning-stop" onclick="sendGlobalCommand('planning_stop')">
-                    🛑 Stop Planning All
-                </button>
-                <button class="btn btn-warning" id="swap-positions" onclick="sendGlobalCommand('swap_positions')">
-                    🔄 Swap Positions
-                </button>
+                <div class="btn-subgroup">
+                    <button class="btn btn-success" id="global-arm" onclick="sendGlobalCommand('arm')">
+                        ✈️ Arm All
+                    </button>
+                    <button class="btn btn-danger" id="global-disarm" onclick="sendGlobalCommand('disarm')">
+                        ⛔ Disarm All
+                    </button>
+                    <button class="btn btn-primary" id="global-takeoff" onclick="sendGlobalCommand('takeoff')">
+                        🚀 Takeoff All
+                    </button>
+                    <button class="btn btn-warning" id="global-land" onclick="sendGlobalCommand('land')">
+                        🛬 Land All
+                    </button>
+                </div>
+
+                <div class="btn-subgroup">
+                    <button class="btn btn-success" id="global-planning-start" onclick="sendGlobalCommand('planning_start')">
+                        🧠 Start Planning All
+                    </button>
+                    <button class="btn btn-danger" id="global-planning-stop" onclick="sendGlobalCommand('planning_stop')">
+                        🛑 Stop Planning All
+                    </button>
+                </div>
+
+                <div class="btn-subgroup">
+                    <button class="btn btn-warning" id="swap-positions" onclick="sendGlobalCommand('swap_positions')">
+                        🔄 Swap Positions
+                    </button>
+                </div>
+
+                <div class="btn-subgroup danger-zone">
+                    <button class="btn btn-danger btn-kill" id="global-kill" onclick="sendGlobalCommand('kill')">
+                        ☠️ KILL ALL DRONES
+                    </button>
+                </div>
+
+                <div class="btn-subgroup roaming-controls">
+                    <div class="roaming-inputs">
+                        <div class="roaming-input-group">
+                            <label for="roam-radius">Radius (m)</label>
+                            <input type="number" id="roam-radius" value="2.8">
+                        </div>
+                        <div class="roaming-input-group">
+                            <label for="roam-center-height">Center Height (m)</label>
+                            <input type="number" id="roam-center-height" value="1.5">
+                        </div>
+                        <div class="roaming-input-group">
+                            <label for="roam-cyl-height">Cylinder Height (m)</label>
+                            <input type="number" id="roam-cyl-height" value="0.1">
+                        </div>
+                    </div>
+                    <div class="roaming-buttons">
+                        <button class="btn btn-success" id="global-start-roaming" onclick="sendRoamingCommand('start')">
+                            🌀 Start Roaming
+                        </button>
+                        <button class="btn btn-danger" id="global-stop-roaming" onclick="sendRoamingCommand('stop')">
+                            🛑 Stop Roaming
+                        </button>
+                    </div>
+                </div>
             </div>
         </section>
 
         <section class="drone-grid">
             <h2>Individual Drone Status & Control</h2>
             <div id="drone-cards" class="cards-container">
-                <!-- Drone cards will be populated by JavaScript -->
-            </div>
+                </div>
         </section>
 
         <footer>

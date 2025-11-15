@@ -17,16 +17,8 @@ SafetyChecker::SafetyChecker()
     planes_.push_back(plane);
   }
 
-  this->declare_parameter("plane_offset", 0.5); // meters
+  this->declare_parameter("plane_offset", 0.3); // meters
   this->get_parameter("plane_offset", plane_offset_);
-
-  if (plane_offset_ < 0) {
-    RCLCPP_WARN(this->get_logger(),
-                "Parameter plane_offset set to: %.5f, must be positive. "
-                "Setting to zero.",
-                plane_offset_);
-    plane_offset_ = 0.0;
-  }
 
   RCLCPP_INFO(this->get_logger(), "Using plane offset: %5.2f", plane_offset_);
 
@@ -345,7 +337,7 @@ bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   }
   for (const auto &plane : planes_) {
     double val =
-        plane[0] * point.x + plane[1] * point.y + plane[2] * point.z + plane[3];
+        plane[0] * point.x + plane[1] * point.y + plane[2] * point.z + plane[3] - plane_offset_;
 
     if (val > 0) {
       RCLCPP_INFO(this->get_logger(),

@@ -10,13 +10,13 @@ from px4_msgs.msg import (
     VehicleCommand,
     VehicleStatus,
     OffboardControlMode,
-    VehicleOdometry,  
+    VehicleOdometry,
 )
 from geometry_msgs.msg import (
     PoseStamped,
     Point,
     Quaternion,
-    Vector3,  
+    Vector3,
 )
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 from mpc_controller_ros2_msgs.msg import Trajectory, TrajectoryState
@@ -36,7 +36,7 @@ class DroneStateManager(Node):
         self.get_logger().info("DroneStateManager node has been started.")
 
         self.declare_parameter('takeoff_altitude', 0.5)
-        self.declare_parameter('takeoff_duration', 3.0) 
+        self.declare_parameter('takeoff_duration', 3.0)
         self.declare_parameter('takeoff_dt', 0.1)
 
         # Initialize drone state and vehicle status
@@ -61,23 +61,35 @@ class DroneStateManager(Node):
                 except ValueError:
                     self.get_logger().warning(f"Could not parse number from namespace '{namespace}'. Defaulting target_system to 1.")
             else:
-                 self.get_logger().warning(f"No number found in namespace '{namespace}'. Defaulting target_system to 1.")
+                   self.get_logger().warning(f"No number found in namespace '{namespace}'. Defaulting target_system to 1.")
         else:
             self.get_logger().info("No namespace set. Defaulting target_system to 1.")
 
         reliable_qos = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE, depth=10)
 
-        self.global_takeoff_sub_ = self.create_subscription(
-            Trigger, "/global/takeoff", self.takeoff_cb, reliable_qos
-        )
-        self.global_land_sub_ = self.create_subscription(
-            Trigger, "/global/land", self.land_cb, reliable_qos
-        )
+        # --- MODIFIED: Subscriptions are now namespace-relative (no tilde) ---
 
-        self.global_arm_sub_ = self.create_subscription(
-            Trigger, "/global/arm", self.arm_cb, reliable_qos
+        self.takeoff_sub_ = self.create_subscription(
+            Trigger, "takeoff", self.takeoff_cb, reliable_qos
         )
+        self.get_logger().info(f"Subscribed to {self.takeoff_sub_.topic_name}")
+
+        self.land_sub_ = self.create_subscription(
+            Trigger, "land", self.land_cb, reliable_qos
+        )
+        self.get_logger().info(f"Subscribed to {self.land_sub_.topic_name}")
+
+        self.arm_sub_ = self.create_subscription(
+            Trigger, "arm", self.arm_cb, reliable_qos
+        )
+        self.get_logger().info(f"Subscribed to {self.arm_sub_.topic_name}")
+
+        self.kill_sub_ = self.create_subscription(
+            Trigger, "kill", self.kill_cb, reliable_qos
+        )
+        self.get_logger().info(f"Subscribed to {self.kill_sub_.topic_name}")
+        # --- END MODIFICATIONS ---
 
         # Subscribe to PX4 topics
         best_effort_qos = QoSProfile(
@@ -149,6 +161,10 @@ class DroneStateManager(Node):
             DroneState.LANDING: 18,  # NAVIGATION_STATE_AUTO_LAND
         }
 
+        if mode.state not in mode_map:
+            self.get_logger().error(f"Cannot set unknown mode: {mode.state}")
+            return
+
         nav_state = mode_map[mode.state]
 
         if nav_state == 14:  # OFFBOARD
@@ -194,7 +210,7 @@ class DroneStateManager(Node):
 
         # 2. Generate and publish the takeoff trajectory
         self.generate_and_publish_takeoff_trajectory()
-    
+
     def generate_and_publish_takeoff_trajectory(self):
         # Get parameters
         takeoff_alt = self.get_parameter('takeoff_altitude').get_parameter_value().double_value
@@ -288,6 +304,23 @@ class DroneStateManager(Node):
             param1=arm_value
         )
         self.get_logger().info(f"Sent arm command: {msg.enable}")
+
+    # --- NEW: Kill Callback ---
+    def kill_cb(self, msg: Trigger):
+        if not msg.enable:
+            return  # Kill is only an enable=true command
+
+        self.get_logger().critical("!!! KILL COMMAND RECEIVED !!!")
+
+        # Send Force Disarm (Kill)
+        self.publish_vehicle_command(
+            VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM,
+            param1=0.0,  # 0.0 for disarm
+            param2=21196.0 # Magic number for KILL
+        )
+
+        # Also set internal state to IDLE
+        self.set_mode(make_drone_state(DroneState.IDLE))
 
     def vehicle_status_cb(self, msg: VehicleStatus):
         self.vehicle_status = msg
