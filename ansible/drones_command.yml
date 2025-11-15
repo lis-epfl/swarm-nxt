@@ -11,9 +11,17 @@
   # tasks:
   #   - name: Command
   #     ansible.builtin.command: '{{ command }}'
+  #   - name: "Common Components"
+  #     ansible.builtin.include_tasks: "tasks/install-acados.yml"
 
   tasks:
-    - name: "Common Components"
-      ansible.builtin.include_tasks: "tasks/install-acados.yml"
+    - name: Copy Gurobi license file
+      ansible.builtin.copy:
+        src: secrets/gurobi.lic
+        dest: /opt/gurobi/gurobi.lic
+        mode: '0644'
+        owner: root
+        group: root
+
 
 
