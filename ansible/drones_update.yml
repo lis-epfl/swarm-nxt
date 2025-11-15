@@ -49,7 +49,7 @@
   - name: Get HDSM package
     ansible.builtin.git: 
       repo: https://github.com/ctoumieh/multi_agent_pkgs/
-      dest: "{{ drone_ros_path }}/multi_agent_pkgs"
+      dest: "{{ drone_ros_path }}/src/multi_agent_pkgs"
       force: yes
       version: niel/chill-dynamics
 
