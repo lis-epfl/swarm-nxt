@@ -8,13 +8,13 @@ topics:
   /optitrack_multiplexer_node/rigid_body/nxt{{ num }}: 
     type: optitrack_multiplexer_ros2_msgs/msg/RigidBodyStamped
     to_domain: {{ num }}
-  /global/takeoff:
+  /nxt{{ num }}/takeoff:
     type: swarmnxt_msgs/msg/Trigger
     to_domain: {{ num }}
-  /global/land:
+  /nxt{{ num }}/land:
     type: swarmnxt_msgs/msg/Trigger
     to_domain: {{ num }}
-  /global/arm:
+  /nxt{{ num }}/arm:
     type: swarmnxt_msgs/msg/Trigger
     to_domain: {{ num }}
   /tf:
