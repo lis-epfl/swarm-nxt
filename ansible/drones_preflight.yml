@@ -21,6 +21,7 @@
         vars: 
           ros_path: "{{ host_ros_path }}"
           base_path: "{{ host_base_path }}"
+          drone_num: 0
         ansible.builtin.template: 
           src: scripts/ros_packages_start.sh
           dest: "{{ host_base_path }}/ros_packages_start.sh"
