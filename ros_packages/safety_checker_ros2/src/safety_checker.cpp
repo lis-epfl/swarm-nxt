@@ -353,15 +353,11 @@ void SafetyChecker::HandlePoseMessage(
     const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg) {
   auto logger = this->get_logger();
 
-  // Convert NED to ENU for bounds checking using frame_transforms
-  Eigen::Vector3d position_ned(msg->x, msg->y, msg->z);
-  Eigen::Vector3d position_enu =
-      px4_ros_com::frame_transforms::ned_to_enu_local_frame(position_ned);
-
+  // Convert FRD to FLU for bounds checking using frame_transforms
   geometry_msgs::msg::Point position;
-  position.x = position_enu.x();
-  position.y = position_enu.y();
-  position.z = position_enu.z();
+  position.x = msg->x();
+  position.y = -msg->y();
+  position.z = -msg->z();
 
   if (IsPointInHull(position)) {
     RCLCPP_DEBUG(logger, "Pose is within bounds.");
