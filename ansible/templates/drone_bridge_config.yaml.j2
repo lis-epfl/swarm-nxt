@@ -14,6 +14,8 @@ topics:
     remap: {{ns}}/fmu/out/vehicle_local_position
   {{ns}}/manager/state:
     type: swarmnxt_msgs/msg/DroneState
+  {{ns}}/latency_checker/heartbeat:
+    type: latency_checker_ros2/msg/Heartbeat
   agent_{{ current_drone_idx }}/traj_full: 
     type: multi_agent_planner_msgs/msg/Trajectory
   agent_{{ current_drone_idx }}/traj:

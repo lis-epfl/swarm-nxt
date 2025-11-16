@@ -39,4 +39,7 @@ topics:
   /agent_{{ drone_idx }}/goal:
     type: geometry_msgs/msg/PointStamped
     to_domain: {{ num }}
+  /{{ host_hostname }}/latency_checker/heartbeat:
+    type: latency_checker_ros2/msg/Heartbeat
+    to_domain: {{ num }}
 {% endfor %}
