@@ -6,7 +6,7 @@
     --text-secondary: #5a6b82;
     --border-color: #e6ebf1;
     --shadow-color: rgba(44, 62, 80, 0.1);
-    
+
     --color-green: #27ae60;
     --color-red: #e74c3c;
     --color-blue: #3498db;
@@ -155,7 +155,7 @@ header h1 {
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 5px;
-    text-align: center; 
+    text-align: center;
 }
 .roaming-input-group input {
     width: 100%;
@@ -256,7 +256,7 @@ header h1 {
 
 .drone-card:hover {
     box-shadow: 0 6px 25px var(--shadow-color);
-    transform: translateY(-4px); 
+    transform: translateY(-4px);
 }
 
 .drone-card.connected {
@@ -328,11 +328,12 @@ header h1 {
     font-weight: 600;
 }
 
+/* --- MODIFIED: Widened battery display --- */
 .battery-display {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 120px;
+    width: 160px; /* Increased from 120px */
 }
 
 .battery-bar-container {
@@ -352,13 +353,16 @@ header h1 {
 
 .battery-text {
     font-weight: 600;
-    min-width: 35px;
+    min-width: 110px; /* Increased from 35px */
     text-align: right;
 }
+/* --- END MODIFICATION --- */
 
 .battery-info.medium .battery-bar-level { background-color: var(--color-orange); }
 .battery-info.low .battery-bar-level { background-color: var(--color-red); }
 .battery-info.low .battery-text { color: var(--color-red); }
+
+/* --- REMOVED: voltage-info styles --- */
 
 /* --- LATENCY STYLES --- */
 .latency-info .latency-text {
@@ -487,5 +491,5 @@ footer {
 #global-stop-roaming,
 #global-start-roaming,
 .btn-plan-stop {
-    color: white;
+    color: black;
 }

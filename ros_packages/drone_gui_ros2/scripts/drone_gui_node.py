@@ -5,11 +5,11 @@ import os
 import yaml
 import threading
 from typing import Dict, List
-import math # <-- NEW
-import random # <-- NEW
+import math
+import random
 
 try:
-    from flask import Flask, send_from_directory, request # <-- NEW: import request
+    from flask import Flask, send_from_directory, request
     from flask_socketio import SocketIO, emit
 except ImportError:
     print(
@@ -50,7 +50,7 @@ class DroneGUINode(Node):
         self.drone_list = []
         self.hdsm_mapping = {}
 
-        # --- NEW: Roaming State ---
+        # --- Roaming State ---
         self.roaming_active = False
         self.roaming_params = {'radius': 2.0, 'center_height': -2.5, 'cylinder_height': 1.0}
         self.roaming_goals = {} # Stores the current goal for each drone
@@ -60,8 +60,9 @@ class DroneGUINode(Node):
         self.declare_parameter("port", 8080)
         self.declare_parameter("peers_file", "~/ros/config/peers.yaml")
         self.declare_parameter("hdsm_mapping_file", "~/ros/config/hdsm_planner_map.yaml")
+        # --- Using 'hostname' as per your provided file ---
         self.declare_parameter("hostname", "host")
-        self.declare_parameter("roaming_threshold", 0.5) # <-- NEW: Goal reached distance in meters
+        self.declare_parameter("roaming_threshold", 0.5)
 
         # Get parameter values
         self.port = self.get_parameter("port").get_parameter_value().integer_value
@@ -72,7 +73,7 @@ class DroneGUINode(Node):
             self.get_parameter("hdsm_mapping_file").get_parameter_value().string_value
         )
         self.hostname = self.get_parameter("hostname").get_parameter_value().string_value
-        self.roaming_threshold = self.get_parameter("roaming_threshold").get_parameter_value().double_value # <-- NEW
+        self.roaming_threshold = self.get_parameter("roaming_threshold").get_parameter_value().double_value
 
         # Load drone list from peers.yaml
         self.load_drone_list()
@@ -121,11 +122,8 @@ class DroneGUINode(Node):
             f"Drone GUI Node started, monitoring {len(self.drone_list)} drones"
         )
 
-        # --- NEW: Handle GUI connect events ---
-        # This ensures a new GUI client gets the current roaming state
         self.socketio.on_event('connect', self.handle_gui_connect)
 
-    # --- NEW: GUI Connect Handler ---
     def handle_gui_connect(self):
         """Send current roaming state to a newly connected client."""
         try:
@@ -199,12 +197,17 @@ class DroneGUINode(Node):
                 "armed": False, "connected": False, "nav_state": 0,
             }
             self.drone_positions[drone] = Point(x=0.0, y=0.0, z=0.0)
+
+            # --- MODIFIED: Initialized new battery keys ---
             self.drone_battery_statuses[drone] = {
-                "remaining": -1.0, "warning": BatteryStatus.WARNING_NONE
+                "soc_estimate": -1.0, # Use -1.0 to indicate "unknown"
+                "voltage_v": 0.0,
+                "warning": BatteryStatus.WARNING_NONE
             }
             self.drone_latencies[drone] = -1.0
 
         if Heartbeat is not None:
+            # Use self.hostname (which you've defined from parameters)
             topic_name = f"/{self.hostname}/latency_checker/heartbeat"
             self.latency_sub = self.create_subscription(
                 Heartbeat, topic_name, self.latency_heartbeat_callback, 10
@@ -236,7 +239,13 @@ class DroneGUINode(Node):
 
     def setup_planning_publishers(self):
         for drone in self.drone_list:
-            drone_num = int(''.join(filter(str.isdigit, drone)))
+            # Safely get drone number
+            drone_num_str = ''.join(filter(str.isdigit, drone))
+            if not drone_num_str:
+                self.get_logger().warn(f"Could not extract number from drone name: {drone}")
+                continue
+            drone_num = int(drone_num_str)
+
             if drone_num in self.hdsm_mapping:
                 agent_idx = self.hdsm_mapping[drone_num]
                 self.planning_start_publishers[drone] = self.create_publisher(StartPlanning, f"/agent_{agent_idx}/start_planning", 10)
@@ -247,7 +256,13 @@ class DroneGUINode(Node):
 
     def setup_goal_publishers(self):
         for drone in self.drone_list:
-            drone_num = int(''.join(filter(str.isdigit, drone)))
+            # Safely get drone number
+            drone_num_str = ''.join(filter(str.isdigit, drone))
+            if not drone_num_str:
+                self.get_logger().warn(f"Could not extract number from drone name: {drone}")
+                continue
+            drone_num = int(drone_num_str)
+
             if drone_num in self.hdsm_mapping:
                 agent_idx = self.hdsm_mapping[drone_num]
                 self.goal_publishers[drone] = self.create_publisher(PointStamped, f"/agent_{agent_idx}/goal", 10)
@@ -278,8 +293,11 @@ class DroneGUINode(Node):
         self.drone_positions[drone_name].z = -msg.z
 
     def battery_status_callback(self, msg: BatteryStatus, drone_name: str):
+        print("received batteeeeeeeeeeeeeeeeeeeeeeeeeeeeery")
         self.drone_battery_statuses[drone_name] = {
-            "remaining": msg.remaining, "warning": msg.warning
+            "soc_estimate": msg.volt_based_soc_estimate,
+            "voltage_v": msg.ocv_estimate_filtered,
+            "warning": msg.warning
         }
 
     def update_gui(self):
@@ -290,8 +308,12 @@ class DroneGUINode(Node):
             battery_status = self.drone_battery_statuses.get(drone, {})
             latency_ms = self.drone_latencies.get(drone, -1.0)
 
-            drone_num = int(''.join(filter(str.isdigit, drone)))
-            agent_id = self.hdsm_mapping.get(drone_num, "N/A") if drone_num else "N/A"
+            # Safely get drone number
+            drone_num_str = ''.join(filter(str.isdigit, drone))
+            agent_id = "N/A"
+            if drone_num_str:
+                drone_num = int(drone_num_str)
+                agent_id = self.hdsm_mapping.get(drone_num, "N/A")
 
             nav_state = vehicle_status.get("nav_state", 0)
             mode_map = {
@@ -300,7 +322,8 @@ class DroneGUINode(Node):
             }
             mode = mode_map.get(nav_state, f"NAV_{nav_state}")
 
-            remaining_float = battery_status.get("remaining", -1.0)
+            # --- MODIFIED: Using "soc_estimate" ---
+            remaining_float = battery_status.get("soc_estimate", -1.0)
             battery_percent = -1
             if 0.0 <= remaining_float <= 1.0:
                 battery_percent = int(remaining_float * 100)
@@ -312,6 +335,7 @@ class DroneGUINode(Node):
                 "mode": mode, "state": drone_state.get("state", "UNKNOWN"),
                 "last_update": drone_state.get("timestamp", 0),
                 "battery_percent": battery_percent,
+                "voltage_v": battery_status.get("voltage_v", 0.0), # Added voltage
                 "battery_warning": battery_status.get("warning", 0),
                 "latency_ms": latency_ms
             }
@@ -327,7 +351,7 @@ class DroneGUINode(Node):
             publisher_dict = self.takeoff_pubs
         elif command == "land":
             publisher_dict = self.land_pubs
-            self.stop_roaming_loop() # <-- Stop roaming on global land
+            self.stop_roaming_loop() # Stop roaming on global land
         elif command == "arm":
             publisher_dict = self.arm_pubs
         elif command == "disarm":
@@ -335,7 +359,7 @@ class DroneGUINode(Node):
             publisher_dict = self.arm_pubs
         elif command == "kill":
             publisher_dict = self.kill_pubs
-            self.stop_roaming_loop() # <-- Stop roaming on global kill
+            self.stop_roaming_loop() # Stop roaming on global kill
 
         if publisher_dict:
             for drone in publisher_dict.keys():
@@ -349,8 +373,6 @@ class DroneGUINode(Node):
             self.stop_planning_all()
         elif command == "swap_positions":
             self.swap_positions()
-
-        # Roaming commands are handled by their own socket events
 
         self.get_logger().info(f"Published global {command} command")
 
@@ -456,7 +478,7 @@ class DroneGUINode(Node):
                         self.controller_enable_pubs[drone].publish(enable_msg)
                         self.get_logger().info(f"Disabled controller for {drone}")
                     self.call_planning_service(drone, "stop")
-                    self.stop_roaming_loop() # <-- Stop roaming on individual land
+                    self.stop_roaming_loop() # Stop roaming on individual land
             elif command == "kill":
                 pub = self.kill_pubs.get(drone)
                 if pub:
@@ -465,7 +487,7 @@ class DroneGUINode(Node):
                         enable_msg.data = False
                         self.controller_enable_pubs[drone].publish(enable_msg)
                         self.get_logger().info(f"Disabled controller for {drone} (KILL)")
-                    self.stop_roaming_loop() # <-- Stop roaming on individual kill
+                    self.stop_roaming_loop() # Stop roaming on individual kill
             elif command == "planning_start":
                 self.call_planning_service(drone, "start")
                 return
@@ -503,7 +525,7 @@ class DroneGUINode(Node):
         except Exception as e:
             self.get_logger().error(f"Error publishing goal for {drone}: {e}")
 
-    # --- NEW ROAMING METHODS ---
+    # --- ROAMING METHODS ---
     def start_roaming_loop(self, data):
         """Start the roaming behavior loop"""
         if self.roaming_active:
@@ -532,7 +554,6 @@ class DroneGUINode(Node):
             self.roaming_loop_timer.cancel()
             self.roaming_loop_timer = None
 
-        # Optionally stop planners when roaming stops
         self.stop_planning_all()
 
         self.get_logger().info("Roaming stopped.")
@@ -547,7 +568,6 @@ class DroneGUINode(Node):
         angle = random.uniform(0, 2 * math.pi)
         x = radius * math.cos(angle)
         y = radius * math.sin(angle)
-        # Z is negative-up, so subtract half-height
         z = center_h + random.uniform(-cyl_h / 2.0, cyl_h / 2.0)
 
         return Point(x=x, y=y, z=z)
@@ -561,7 +581,6 @@ class DroneGUINode(Node):
             for drone_name in self.drone_list:
                 current_pos = self.drone_positions.get(drone_name)
                 current_goal = self.roaming_goals.get(drone_name)
-
                 goal_reached = False
 
                 if current_pos and current_goal:
@@ -577,7 +596,6 @@ class DroneGUINode(Node):
                     new_goal = self.sample_point_on_cylinder()
                     self.roaming_goals[drone_name] = new_goal
 
-                    # Send the new goal
                     self.publish_individual_goal(
                         drone_name, new_goal.x, new_goal.y, new_goal.z
                     )
@@ -589,7 +607,6 @@ class DroneGUINode(Node):
         except Exception as e:
             self.get_logger().error(f"Error in roaming_update: {e}")
 
-        # Schedule the next update
         if self.roaming_active:
             self.roaming_loop_timer = threading.Timer(0.2, self.roaming_update) # Loop every 200ms
             self.roaming_loop_timer.start()
@@ -640,7 +657,6 @@ def handle_individual_goal(data):
         else:
             ros_node.get_logger().warn(f"Received incomplete goal data: {data}")
 
-# --- NEW SOCKET.IO HANDLERS ---
 @socketio.on("start_roaming")
 def handle_start_roaming(data):
     if ros_node:
@@ -650,7 +666,6 @@ def handle_start_roaming(data):
 def handle_stop_roaming(data):
     if ros_node:
         ros_node.stop_roaming_loop()
-# --- END NEW HANDLERS ---
 
 def run_flask_app(port=8080):
     socketio.run(

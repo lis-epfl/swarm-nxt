@@ -65,7 +65,7 @@
       ansible.builtin.blockinfile: 
         path: ~/.bashrc
         block: |
-          export ROS_DOMAIN_ID={{ drone_num }}
+          export ROS_DOMAIN_ID=0
           
           # ROS package systemctl aliases
           alias ros_status='systemctl --user status ros_packages'

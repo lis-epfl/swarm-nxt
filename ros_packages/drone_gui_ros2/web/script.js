@@ -17,7 +17,6 @@ class DroneGUI {
             console.log('Connected to server');
             this.isConnected = true;
             this.updateConnectionStatus();
-            // Note: Roaming button state is set by 'roaming_status' event
         });
 
         this.socket.on('disconnect', () => {
@@ -33,7 +32,6 @@ class DroneGUI {
             this.updateLastUpdateTime();
         });
 
-        // --- Handle roaming status from backend ---
         this.socket.on('roaming_status', (data) => {
             console.log('Roaming status update:', data);
             document.getElementById('global-start-roaming').disabled = data.active;
@@ -68,9 +66,6 @@ class DroneGUI {
         }
     }
 
-    /**
-     * Non-destructive update function.
-     */
     updateDroneCards() {
         const container = document.getElementById('drone-cards');
 
@@ -88,16 +83,13 @@ class DroneGUI {
             let existingCard = document.getElementById(cardId);
 
             if (!existingCard) {
-                // Card doesn't exist, so create it
                 existingCard = this.createDroneCard(drone);
                 container.appendChild(existingCard);
             } else {
-                // Card *does* exist, so surgically update it
                 this.updateCardData(existingCard, drone);
             }
         });
 
-        // Clean up: Remove any old cards that are no longer in the data
         if (container.children.length > Object.keys(this.droneData).length) {
             for (const card of container.children) {
                 if (card.id && !updatedCardIds.has(card.id)) {
@@ -107,13 +99,10 @@ class DroneGUI {
         }
     }
 
-    /**
-     * Creates the card's initial HTML structure.
-     */
     createDroneCard(drone) {
         const card = document.createElement('div');
         card.className = 'drone-card';
-        card.id = `drone-card-${drone.name}`; // Stable ID
+        card.id = `drone-card-${drone.name}`;
 
         card.innerHTML = `
             <div class="drone-header">
@@ -191,31 +180,38 @@ class DroneGUI {
             </div>
         `;
 
-        // Populate the new card with its first set of data
         this.updateCardData(card, drone);
         return card;
     }
 
-    /**
-     * Surgically updates all data on an *existing* card
-     */
     updateCardData(card, drone) {
-        // --- Update Card Classes ---
         card.classList.toggle('connected', drone.connected);
         card.classList.toggle('armed', drone.armed);
 
-        // --- Update Battery ---
+        // --- MODIFIED: Battery Logic ---
         const battery = drone.battery_percent;
         let batteryClass = 'unknown';
-        if (battery >= 0) {
-            batteryClass = (battery <= 20 || drone.battery_warning >= 2) ? 'low' : (battery <= 50 ? 'medium' : 'high');
+        // Use percentage OR raw voltage for 6S (e.g., 3.5V/cell * 6 = 21.0V)
+        const isLow = (battery <= 20 && battery >= 0) || (drone.voltage_v > 0 && drone.voltage_v <= 21.0);
+
+        if (battery < 0) {
+            batteryClass = 'unknown';
+        } else if (isLow) {
+            batteryClass = 'low';
+        } else if (battery <= 50) {
+            batteryClass = 'medium';
         }
-        const batteryText = battery < 0 ? 'N/A' : `${battery}%`;
+
+        // New text format: "55% (22.27 V)"
+        const batteryText = battery < 0 ? 'N/A' : `${battery}% (${drone.voltage_v.toFixed(2)} V)`;
 
         card.querySelector('.battery-info').className = `info-row battery-info ${batteryClass}`;
         card.querySelector('.battery-bar-level').style.width = `${battery < 0 ? 0 : battery}%`;
         card.querySelector('.battery-text').textContent = batteryText;
         card.classList.toggle('low-battery', batteryClass === 'low');
+
+        // REMOVED: Voltage row logic
+        // --- END MODIFICATION ---
 
         // --- Update Latency ---
         const latency = drone.latency_ms;
@@ -269,9 +265,14 @@ class DroneGUI {
 
     getOverallStatus(drone) {
         if (!drone.connected) { return '❌ Disconnected'; }
-        if (drone.battery_percent <= 20 && drone.battery_percent >= 0) { return '⚠️ Low Battery'; }
-        if (drone.latency_ms > 10.0) { return '📡 High Latency'; }
 
+        // --- MODIFIED: Robust Low Battery Check ---
+        // 6S low voltage cutoff (e.g., 3.5V/cell * 6 = 21.0V)
+        const isLow = (drone.battery_percent <= 20 && drone.battery_percent >= 0) || (drone.voltage_v > 0 && drone.voltage_v <= 21.0);
+        if (isLow) { return '⚠️ Low Battery'; }
+        // --- END MODIFICATION ---
+
+        if (drone.latency_ms > 10.0) { return '📡 High Latency'; }
         if (drone.state === 'TAKING_OFF') { return '🚀 Taking Off...'; }
         if (drone.state === 'LANDING') { return '🛬 Landing...'; }
         if (drone.state === 'HOVERING') { return '⏸️ Hovering'; }
@@ -349,7 +350,6 @@ class DroneGUI {
         this.showNotification(`Goal sent to ${drone.toUpperCase()}`);
     }
 
-    // --- Roaming Command Function ---
     sendRoamingCommand(command) {
         if (!this.isConnected) {
             this.showError('Not connected to server');
