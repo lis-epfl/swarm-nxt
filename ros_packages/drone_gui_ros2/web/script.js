@@ -108,8 +108,8 @@ class DroneGUI {
             <div class="drone-header">
                 <div class="drone-name">${drone.name.toUpperCase()} (Agent ${drone.agent_id})</div>
                 <div class="drone-status">
-                    <span class="status-badge status-connected"></span>
-                    <span class="status-badge status-armed"></span>
+                    <span class="status-badge conn-badge"></span>
+                    <span class="status-badge armed-badge"></span>
                 </div>
             </div>
 
@@ -188,10 +188,9 @@ class DroneGUI {
         card.classList.toggle('connected', drone.connected);
         card.classList.toggle('armed', drone.armed);
 
-        // --- MODIFIED: Battery Logic ---
+        // --- Battery Logic ---
         const battery = drone.battery_percent;
         let batteryClass = 'unknown';
-        // Use percentage OR raw voltage for 6S (e.g., 3.5V/cell * 6 = 21.0V)
         const isLow = (battery <= 20 && battery >= 0) || (drone.voltage_v > 0 && drone.voltage_v <= 21.0);
 
         if (battery < 0) {
@@ -202,7 +201,6 @@ class DroneGUI {
             batteryClass = 'medium';
         }
 
-        // New text format: "55% (22.27 V)"
         const batteryText = battery < 0 ? 'N/A' : `${battery}% (${drone.voltage_v.toFixed(2)} V)`;
 
         card.querySelector('.battery-info').className = `info-row battery-info ${batteryClass}`;
@@ -210,10 +208,7 @@ class DroneGUI {
         card.querySelector('.battery-text').textContent = batteryText;
         card.classList.toggle('low-battery', batteryClass === 'low');
 
-        // REMOVED: Voltage row logic
-        // --- END MODIFICATION ---
-
-        // --- Update Latency ---
+        // --- Latency Logic ---
         const latency = drone.latency_ms;
         let latencyClass = (latency < 0) ? 'unknown' : (latency > 10.0 ? 'high' : 'normal');
         const latencyText = latency < 0 ? 'N/A' : `${latency.toFixed(1)} ms`;
@@ -221,14 +216,19 @@ class DroneGUI {
         card.querySelector('.latency-info').className = `info-row latency-info ${latencyClass}`;
         card.querySelector('.latency-text').textContent = latencyText;
 
-        // --- Update Status Badges ---
-        const connBadge = card.querySelector('.status-connected');
+        // --- MODIFIED: Update Status Badges (THE FIX) ---
+        const connBadge = card.querySelector('.conn-badge'); // Select by stable class
         connBadge.textContent = drone.connected ? 'ONLINE' : 'OFFLINE';
-        connBadge.className = `status-badge ${drone.connected ? 'status-connected' : 'status-disconnected'}`;
+        // Use classList to safely add/remove dynamic classes
+        connBadge.classList.toggle('status-connected', drone.connected);
+        connBadge.classList.toggle('status-disconnected', !drone.connected);
 
-        const armedBadge = card.querySelector('.status-armed');
+        const armedBadge = card.querySelector('.armed-badge'); // Select by stable class
         armedBadge.textContent = drone.armed ? 'ARMED' : 'DISARMED';
-        armedBadge.className = `status-badge ${drone.armed ? 'status-armed' : 'status-disarmed'}`;
+        // Use classList
+        armedBadge.classList.toggle('status-armed', drone.armed);
+        armedBadge.classList.toggle('status-disarmed', !drone.armed);
+        // --- END MODIFICATION ---
 
         // --- Update Info Text ---
         card.querySelector('.flight-mode-value').textContent = this.formatModeName(drone.mode);
@@ -266,11 +266,8 @@ class DroneGUI {
     getOverallStatus(drone) {
         if (!drone.connected) { return '❌ Disconnected'; }
 
-        // --- MODIFIED: Robust Low Battery Check ---
-        // 6S low voltage cutoff (e.g., 3.5V/cell * 6 = 21.0V)
         const isLow = (drone.battery_percent <= 20 && drone.battery_percent >= 0) || (drone.voltage_v > 0 && drone.voltage_v <= 21.0);
         if (isLow) { return '⚠️ Low Battery'; }
-        // --- END MODIFICATION ---
 
         if (drone.latency_ms > 10.0) { return '📡 High Latency'; }
         if (drone.state === 'TAKING_OFF') { return '🚀 Taking Off...'; }
