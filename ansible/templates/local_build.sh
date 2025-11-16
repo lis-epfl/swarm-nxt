@@ -5,4 +5,4 @@ set -e
 source /opt/ros/humble/setup.sh
 
 # Build main packages
-colcon build --symlink-install src
+colcon build --symlink-install
