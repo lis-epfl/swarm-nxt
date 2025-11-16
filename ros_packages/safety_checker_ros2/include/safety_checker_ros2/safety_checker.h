@@ -61,7 +61,6 @@ private:
   uint8_t target_system_ = 1;
   std::vector<std::vector<double>> planes_;
 
-  bool are_planes_valid_ = false;
   uint8_t safety_flags_ = SafetyStatus::SAFE;
   double plane_offset_; // meters, positive
 

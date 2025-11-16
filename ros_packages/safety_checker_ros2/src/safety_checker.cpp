@@ -332,9 +332,6 @@ void SafetyChecker::LandNow() {
 }
 
 bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
-  if (!are_planes_valid_) {
-    return false;
-  }
   for (const auto &plane : planes_) {
     double val =
         plane[0] * point.x + plane[1] * point.y + plane[2] * point.z + plane[3] - plane_offset_;
