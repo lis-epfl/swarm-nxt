@@ -116,21 +116,20 @@ void LatencyChecker::PublishHeartbeat() {
 
     // ---
     // ⬇️ THIS IS THE FIX ⬇️
-    // Convert the rclcpp::Duration to a double (in seconds)
-    // and then multiply by 1000.0 to get floating-point milliseconds.
-    // This assumes your `latency_msg.latency` field is a `float64`.
-    double latency_ms = latency.seconds() * 1000.0;
-    latency_msg.latency = latency_ms;
+    // 'latency' is an rclcpp::Duration
+    // 'latency_msg.latency' is a builtin_interfaces::msg::Duration
+    // The library handles this assignment automatically.
+    latency_msg.latency = latency;
     // ---
     // ⬆️ END OF FIX ⬆️
     // ---
 
-    // ⬇️ ADDED LOGGING ⬇️
-    // Log the final floating-point value being sent.
-    // This is where you would see 0.0 if you were using integer truncation.
+    // ⬇️ UPDATED LOGGING ⬇️
+    // Log the final sec/nanosec value being sent in the message.
     RCLCPP_INFO(logger,
-                "[PUB] ...Converted to (ms): %f. Adding to message.",
-                latency_ms);
+                "[PUB] ...Assigned %d sec, %u nanosec to message.",
+                latency_msg.latency.sec,
+                latency_msg.latency.nanosec);
 
     msg.latency_list.push_back(latency_msg);
   }
