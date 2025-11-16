@@ -188,7 +188,7 @@ class DroneGUINode(Node):
             )
             self.create_subscription(
                 BatteryStatus, f"/{drone}/fmu/out/battery_status",
-                lambda msg, d=drone: self.battery_status_callback(msg, d), 10,
+                lambda msg, d=drone: self.battery_status_callback(msg, d), best_effort_qos,
             )
 
             # Initialize states
@@ -293,7 +293,6 @@ class DroneGUINode(Node):
         self.drone_positions[drone_name].z = -msg.z
 
     def battery_status_callback(self, msg: BatteryStatus, drone_name: str):
-        print("received batteeeeeeeeeeeeeeeeeeeeeeeeeeeeery")
         self.drone_battery_statuses[drone_name] = {
             "soc_estimate": msg.volt_based_soc_estimate,
             "voltage_v": msg.ocv_estimate_filtered,
