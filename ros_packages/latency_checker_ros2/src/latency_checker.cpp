@@ -1,8 +1,15 @@
 #include "latency_checker.h"
-#include <filesystem> // Make sure this is included for std::filesystem
-#include <fstream>
-#include <string>
-#include <chrono>
+
+// read a local file provided by ansible that contains list of peers (can just
+// be hostnames, since we can construct topic names) publish stochastically (so
+// that they are not synchronized) a ~/latency/heartbeat message that the others
+// will subscribe to (maybe once every ten seconds)
+// - includes:
+//     + timestamp of when the message was made
+//     + the latency calculated for all the peers in ms
+// subscribe to all the peers heartbeat messages
+// when a heartbeat message comes in, then update the latency in our table of
+// latencies.
 
 namespace latency_checker {
 
@@ -12,18 +19,12 @@ LatencyChecker::LatencyChecker() : ::rclcpp::Node("latency_checker") {
 
   if (config_file_path_.empty() ||
       !std::filesystem::exists(config_file_path_)) {
-    // ⬇️ ADDED LOGGING ⬇️
-    RCLCPP_ERROR(this->get_logger(), "Invalid or non-existent config file path: %s",
-                 config_file_path_.c_str());
     throw std::runtime_error("Invalid or non-existent config file path: " +
                              config_file_path_);
   }
 
   std::ifstream config_file(config_file_path_);
   if (!config_file.is_open()) {
-    // ⬇️ ADDED LOGGING ⬇️
-    RCLCPP_ERROR(this->get_logger(), "Failed to open config file: %s",
-                 config_file_path_.c_str());
     throw std::runtime_error("Failed to open config file: " +
                              config_file_path_);
   }
@@ -35,12 +36,9 @@ LatencyChecker::LatencyChecker() : ::rclcpp::Node("latency_checker") {
     }
   }
   config_file.close();
-  // ⬇️ ADDED LOGGING ⬇️
-  RCLCPP_INFO(this->get_logger(), "Loaded %zu peers from %s", peers_.size(), config_file_path_.c_str());
 
   my_name_ = rclcpp::Node::get_namespace();
   RCLCPP_INFO(this->get_logger(), "My name: %s", my_name_.c_str());
-
   for (const auto &peer : peers_) {
     std::string ns = "/" + peer;
     if (ns == my_name_) {
@@ -48,10 +46,6 @@ LatencyChecker::LatencyChecker() : ::rclcpp::Node("latency_checker") {
     }
 
     std::string topic_name = ns + "/" + rclcpp::Node::get_name() + "/heartbeat";
-
-    // ⬇️ ADDED LOGGING ⬇️
-    RCLCPP_INFO(this->get_logger(), "Subscribing to peer topic: %s", topic_name.c_str());
-
     auto subscription =
         this->create_subscription<latency_checker_ros2::msg::Heartbeat>(
             topic_name, 10,
@@ -68,74 +62,36 @@ LatencyChecker::LatencyChecker() : ::rclcpp::Node("latency_checker") {
   heartbeat_timer_ = this->create_wall_timer(
       std::chrono::seconds(10),
       std::bind(&LatencyChecker::PublishHeartbeat, this));
-
-  // ⬇️ ADDED LOGGING ⬇️
-  RCLCPP_INFO(this->get_logger(), "LatencyChecker node initialized successfully.");
 }
 
 void LatencyChecker::HandleHeartbeatMessage(
     const latency_checker_ros2::msg::Heartbeat &msg) {
   std::string name = msg.node_name;
   auto ts = msg.timestamp;
-  auto now = this->get_clock()->now();
 
-  auto latency = now - rclcpp::Time(ts);
-
-  // ⬇️ ADDED LOGGING ⬇️
-  // This is the most important log for calculation.
-  // We log the raw nanoseconds to confirm the calculation is correct.
-  RCLCPP_INFO(this->get_logger(),
-              "[SUB] Received from: %s. Calculated latency (ns): %ld",
-              name.c_str(),
-              latency.nanoseconds());
-
+  auto latency = this->get_clock()->now() - rclcpp::Time(ts);
   heartbeat_map_.insert_or_assign(name, latency);
 }
 
 void LatencyChecker::PublishHeartbeat() {
   auto logger = this->get_logger();
-  RCLCPP_INFO(logger, "[PUB] Publishing heartbeat timer fired.");
-
+  RCLCPP_INFO(logger, "Sending heartbeat...");
   auto msg = latency_checker_ros2::msg::Heartbeat();
   msg.node_name = my_name_;
   msg.timestamp = this->get_clock()->now();
-
   for (const auto &entry : heartbeat_map_) {
     const auto &peer_name = entry.first;
-    const auto &latency = entry.second; // This is an rclcpp::Duration
+    const auto &latency = entry.second;
 
     latency_checker_ros2::msg::NameLatency latency_msg;
     latency_msg.name = peer_name;
-
-    // ⬇️ ADDED LOGGING ⬇️
-    // Log the high-precision value we have stored in our map.
-    RCLCPP_INFO(logger,
-                "[PUB] Processing peer: %s. Stored latency (ns): %ld",
-                peer_name.c_str(),
-                latency.nanoseconds());
-
-    // ---
-    // ⬇️ THIS IS THE FIX ⬇️
-    // 'latency' is an rclcpp::Duration
-    // 'latency_msg.latency' is a builtin_interfaces::msg::Duration
-    // The library handles this assignment automatically.
-    latency_msg.latency = latency;
-    // ---
-    // ⬆️ END OF FIX ⬆️
-    // ---
-
-    // ⬇️ UPDATED LOGGING ⬇️
-    // Log the final sec/nanosec value being sent in the message.
-    RCLCPP_INFO(logger,
-                "[PUB] ...Assigned %d sec, %u nanosec to message.",
-                latency_msg.latency.sec,
-                latency_msg.latency.nanosec);
+    latency_msg.latency = rclcpp::Duration::from_nanoseconds(
+        latency.to_chrono<std::chrono::nanoseconds>().count());
 
     msg.latency_list.push_back(latency_msg);
   }
 
   heartbeat_publisher_->publish(msg);
-  RCLCPP_INFO(logger, "[PUB] Heartbeat message published.");
 }
 
-} // namespace latency_checker
+}  // namespace latency_checker
