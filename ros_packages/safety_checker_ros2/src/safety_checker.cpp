@@ -355,9 +355,9 @@ void SafetyChecker::HandlePoseMessage(
 
   // Convert FRD to FLU for bounds checking using frame_transforms
   geometry_msgs::msg::Point position;
-  position.x = msg->x();
-  position.y = -msg->y();
-  position.z = -msg->z();
+  position.x = msg->x;
+  position.y = -msg->y;
+  position.z = -msg->z;
 
   if (IsPointInHull(position)) {
     RCLCPP_DEBUG(logger, "Pose is within bounds.");
