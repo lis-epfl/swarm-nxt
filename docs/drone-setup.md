@@ -229,12 +229,12 @@ Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epf
 
 ### NXT Configuration and Calibration
 
-#### MAV System ID
+#### MAV System ID and DDS Domain ID
 
 The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. Follow a consistent naming scheme as described at the [top](#hardware-setup) of this document. Use the number that this drone ends with as your system ID. To set it:
 
-1. Search for `MAV_SYS_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
-2. Set it to the unique number of your drone. 
+1. Search for `MAV_SYS_ID` and `UXRCS_DDS_DOM_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
+2. Set them to the unique number of your drone.
 
 !!! important   
     If this number is the same for two drones, things will **not** work and it will be very hard to debug. 
