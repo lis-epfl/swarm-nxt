@@ -158,6 +158,21 @@ def generate_launch_description():
         ),
     )
 
+    planner_input_topic = '/agent_' + str(hdsm_idx) + '/traj_full'
+    trajectory_converter_node = Node(
+        package='omninxt_bridge_ros2',
+        executable='trajectory_converter_node',
+        name='trajectory_converter',
+        output='screen',
+        parameters=[
+            config_file,
+            {
+                'input_topic': planner_input_topic,
+                'output_topic': '/planner/trajectory',
+            }
+        ]
+    )
+
     # Calculate goal position based on drone ID
     angle_degrees = hdsm_idx * 36.0
     angle_radians = math.radians(angle_degrees)
