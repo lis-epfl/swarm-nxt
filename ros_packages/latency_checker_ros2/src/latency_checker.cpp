@@ -75,7 +75,6 @@ void LatencyChecker::HandleHeartbeatMessage(
 
 void LatencyChecker::PublishHeartbeat() {
   auto logger = this->get_logger();
-  RCLCPP_INFO(logger, "Sending heartbeat...");
   auto msg = latency_checker_ros2::msg::Heartbeat();
   msg.node_name = my_name_;
   msg.timestamp = this->get_clock()->now();

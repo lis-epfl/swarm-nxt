@@ -1,4 +1,4 @@
-drone_state_manager:
+/**:
   ros__parameters:
     takeoff_altitude: 0.5
     takeoff_duration: 3.0

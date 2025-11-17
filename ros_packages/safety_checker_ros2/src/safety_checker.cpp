@@ -357,10 +357,10 @@ void SafetyChecker::HandlePoseMessage(
   position.z = -msg->z;
 
   if (IsPointInHull(position)) {
-    RCLCPP_DEBUG(logger, "Pose is within bounds.");
+    RCLCPP_INFO(logger, "Pose is within bounds.");
     safety_flags_ &= ~SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
   } else {
-    RCLCPP_WARN(logger, "Pose is out of bounds, landing...");
+    RCLCPP_INFO(logger, "Pose is out of bounds, landing...");
     safety_flags_ |= SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
     LandNow();
   }

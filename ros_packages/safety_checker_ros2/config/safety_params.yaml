@@ -1,5 +1,5 @@
 # Parameters for the Safety Checker
-safety_checker:
+/**:
   ros__parameters:
     plane_offset: 0.3 # the polyhedra are expanded by this offset because the planner is constrained by the planes, but the controller is not perfectly accurate so to avoid landing, we add a little margin
     # Defines safety boundary as a list of hyperplanes: [a, b, c, d]
