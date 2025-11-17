@@ -30,6 +30,6 @@
         mode: "644"
       loop:
         - { src: "../ros_packages/safety_checker_ros2/config/safety_params.yaml", dest: "{{ drone_ros_path }}/src/safety_checker_ros2/config/safety_params.yaml"}
-
+        - { src: "../ros_packages/drone_state_manager_ros2/config/drone_state_manager_params.yaml", dest: "{{ drone_ros_path }}/src/drone_state_manager_ros2/config/drone_state_manager_params.yaml"}
 
 

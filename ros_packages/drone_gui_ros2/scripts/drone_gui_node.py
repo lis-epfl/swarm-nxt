@@ -290,7 +290,7 @@ class DroneGUINode(Node):
 
     def vehicle_local_position_callback(self, msg: VehicleLocalPosition, drone_name: str):
         self.drone_positions[drone_name].x = msg.x
-        self.drone_positions[drone_name].y = msg.y
+        self.drone_positions[drone_name].y = -msg.y
         self.drone_positions[drone_name].z = -msg.z
 
     def battery_status_callback(self, msg: BatteryStatus, drone_name: str):

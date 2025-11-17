@@ -58,7 +58,8 @@ private:
         out_msg.dt = msg->dt;
         
         // Convert yaw to quaternion (will be applied to all states)
-        auto orientation = yawToQuaternion(msg->yaw);
+        // For now keep it at 0.0 since the drone is omnidirectional
+        auto orientation = yawToQuaternion(0.0);
         
         // Convert each state
         for (const auto& in_state : msg->states) {
