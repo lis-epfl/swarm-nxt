@@ -460,9 +460,17 @@ class DroneGUINode(Node):
 
             if command == "arm":
                 pub = self.arm_pubs.get(drone)
+                if pub and drone in self.controller_enable_pubs:
+                    enable_msg.data = True
+                    self.controller_enable_pubs[drone].publish(enable_msg)
+                    self.get_logger().info(f"Enabled controller for {drone} (on arm)")
             elif command == "disarm":
                 msg.enable = False
                 pub = self.arm_pubs.get(drone)
+                if pub and drone in self.controller_enable_pubs:
+                    enable_msg.data = False
+                    self.controller_enable_pubs[drone].publish(enable_msg)
+                    self.get_logger().info(f"Enabled controller for {drone} (on arm)")
             elif command == "takeoff":
                 pub = self.takeoff_pubs.get(drone)
                 if pub and drone in self.controller_enable_pubs:
