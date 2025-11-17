@@ -305,12 +305,11 @@ class DroneStateManager(Node):
         )
         self.get_logger().info(f"Sent arm command: {msg.enable}")
 
-    # --- NEW: Kill Callback ---
     def kill_cb(self, msg: Trigger):
         if not msg.enable:
             return  # Kill is only an enable=true command
 
-        self.get_logger().critical("!!! KILL COMMAND RECEIVED !!!")
+        self.get_logger().info("!!! KILL COMMAND RECEIVED !!!")
 
         # Send Force Disarm (Kill)
         self.publish_vehicle_command(

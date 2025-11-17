@@ -17,6 +17,9 @@ topics:
   /nxt{{ num }}/arm:
     type: swarmnxt_msgs/msg/Trigger
     to_domain: {{ num }}
+  /nxt{{ num }}/kill:
+    type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
   /tf:
     type: tf2_msgs/msg/TFMessage
     to_domain: {{ num }}
