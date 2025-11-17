@@ -290,11 +290,6 @@ class DroneGUI {
             this.showError('Not connected to server');
             return;
         }
-        if (command === 'kill') {
-            if (!confirm('ARE YOU SURE YOU WANT TO KILL ALL DRONES? This is irreversible.')) {
-                return;
-            }
-        }
         console.log(`Sending global command: ${command}`);
         this.socket.emit('global_command', { command: command });
         this.showNotification(`Global ${command} command sent`);
@@ -314,11 +309,6 @@ class DroneGUI {
         if (!this.isConnected) {
             this.showError('Not connected to server');
             return;
-        }
-        if (command === 'kill') {
-            if (!confirm(`ARE YOU SURE YOU WANT TO KILL ${drone.toUpperCase()}? This is irreversible.`)) {
-                return;
-            }
         }
         console.log(`Sending command to ${drone}: ${command}`);
         this.socket.emit('individual_command', {

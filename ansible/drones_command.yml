@@ -23,5 +23,13 @@
         owner: root
         group: root
 
+    - name: Send files
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "644"
+      loop:
+        - { src: "../ros_packages/safety_checker_ros2/config/safety_params.yaml", dest: "{{ drone_ros_path }}/src/safety_checker_ros2/config/safety_params.yaml"}
+
 
 

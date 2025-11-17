@@ -7,6 +7,7 @@ import threading
 from typing import Dict, List
 import math
 import random
+import time
 
 try:
     from flask import Flask, send_from_directory, request
@@ -414,40 +415,69 @@ class DroneGUINode(Node):
             self.get_logger().error(f"Error publishing planning message for {drone}: {e}")
 
     def swap_positions(self):
-        import time
-        if len(self.drone_list) != 2:
-            self.get_logger().error(f"Swap positions requires exactly 2 drones, but found {len(self.drone_list)} drones")
+        """
+        Calculates the 2D centroid of all drones and sends each drone
+        to its symmetrical position relative to the centroid,
+        while maintaining its original Z altitude.
+        """
+        valid_drones = []
+        for drone_name in self.drone_list:
+            pos = self.drone_positions.get(drone_name)
+            if pos is None:
+                self.get_logger().warn(f"Could not get position for {drone_name}, skipping.")
+                continue
+            valid_drones.append((drone_name, pos))
+
+        if not valid_drones:
+            self.get_logger().error("Swap positions failed: No valid drone positions available.")
             return
 
-        drone1, drone2 = self.drone_list[0], self.drone_list[1]
-        pos1 = self.drone_positions.get(drone1)
-        pos2 = self.drone_positions.get(drone2)
-        if pos1 is None or pos2 is None:
-            self.get_logger().error("Could not get current positions for both drones")
-            return
+        n_drones = len(valid_drones)
+        sum_x = sum(p.x for _, p in valid_drones)
+        sum_y = sum(p.y for _, p in valid_drones)
 
-        pub1 = self.goal_publishers.get(drone1)
-        pub2 = self.goal_publishers.get(drone2)
-        if pub1 is None or pub2 is None:
-            self.get_logger().error("Goal publishers not available for both drones")
-            return
+        centroid_x = sum_x / n_drones
+        centroid_y = sum_y / n_drones
 
-        goal1 = PointStamped()
-        goal1.header.stamp = self.get_clock().now().to_msg()
-        goal1.header.frame_id = "world"
-        goal1.point.x, goal1.point.y, goal1.point.z = pos2.x, pos2.y, pos1.z
+        self.get_logger().info(f"Calculated 2D centroid for {n_drones} drones: ({centroid_x:.2f}, {centroid_y:.2f})")
 
-        goal2 = PointStamped()
-        goal2.header.stamp = self.get_clock().now().to_msg()
-        goal2.header.frame_id = "world"
-        goal2.point.x, goal2.point.y, goal2.point.z = pos1.x, pos1.y, pos2.z
+        goals_to_publish = []
+        log_goals = {}
+        for drone_name, pos in valid_drones:
+            pub = self.goal_publishers.get(drone_name)
+            if pub is None:
+                self.get_logger().warn(f"No goal publisher for {drone_name}, cannot send swap goal.")
+                continue
 
+            # Calculate symmetrical position (2D)
+            goal_x = 2.0 * centroid_x - pos.x
+            goal_y = 2.0 * centroid_y - pos.y
+            goal_z = pos.z  # Maintain original altitude
+
+            goal_msg = PointStamped()
+            goal_msg.header.frame_id = "world"
+            goal_msg.point.x = goal_x
+            goal_msg.point.y = goal_y
+            goal_msg.point.z = goal_z
+
+            goals_to_publish.append((pub, goal_msg))
+            log_goals[drone_name] = (goal_x, goal_y, goal_z)
+
+        # Log all goals
+        for drone, goal_pos in log_goals.items():
+             self.get_logger().info(f"  {drone} -> ({goal_pos[0]:.2f}, {goal_pos[1]:.2f}, {goal_pos[2]:.2f})")
+
+        # Publish goals multiple times
         for i in range(5):
-            pub1.publish(goal1)
-            pub2.publish(goal2)
-            self.get_logger().info(f"Published swap goals (iteration {i+1}/5): {drone1} -> ({goal1.point.x:.2f}, {goal1.point.y:.2f}, {goal1.point.z:.2f}), {drone2} -> ({goal2.point.x:.2f}, {goal2.point.y:.2f}, {goal2.point.z:.2f})")
-            if i < 4: time.sleep(0.1)
-        self.get_logger().info(f"Successfully swapped positions between {drone1} and {drone2}")
+            current_time = self.get_clock().now().to_msg()
+            for pub, msg in goals_to_publish:
+                msg.header.stamp = current_time
+                pub.publish(msg)
+
+            if i < 4:
+                time.sleep(0.1) # Use time.sleep
+
+        self.get_logger().info(f"Published symmetrical swap goals for {len(goals_to_publish)} drones.")
 
     def call_individual_service(self, drone: str, command: str):
         try:

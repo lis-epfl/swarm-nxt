@@ -115,7 +115,6 @@
         - { src: "templates/drone_launch.py.j2", dest: "{{ drone_base_path }}/launch.py"}
         - { src: "templates/ros_packages_service.j2", dest: "~/.local/share/systemd/user/ros_packages.service"}
         - { src: "templates/micro_xrce_service.j2", dest: "~/.local/share/systemd/user/micro_xrce.service"}
-        - { src: "../ros_packages/safety_checker_ros2/config/safety_params.yaml", dest: "{{ drone_ros_path }}/src/safety_checker_ros2/config/safety_params.yaml"}
 
       vars:
         peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
