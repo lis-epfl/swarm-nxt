@@ -369,6 +369,7 @@ Then install the packages with:
 
 #### Connecting to QGC
 
+In QGC go to Application Settings, MAVLink, then make sure enable MAVLink forwarding is unchecked. 
 The DDS uses TELEM2 for communication with the FC, so we need to use the USB-C connection to communicate via MAVLINK. For this ssh into the drone and run:
 
 ``mavproxy.py --master="/dev/ttyACM0" --baudrate 115200 --out="udp:<ipofhost>:14550"``
