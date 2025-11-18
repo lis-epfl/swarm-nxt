@@ -326,8 +326,8 @@ void SafetyChecker::LandNow() {
   cmd.from_external = true;
 
   vehicle_command_pub_->publish(cmd);
-  /* RCLCPP_INFO(get_logger(), "Sent land command. SafetyFlag Code: %d", */
-  /*             safety_flags_); */
+  RCLCPP_INFO(get_logger(), "Sent land command. SafetyFlag Code: %d",
+              safety_flags_);
   safety_flags_ &= (~SafetyStatus::UNSAFE_COMMAND_SEND_RATE);
 }
 
@@ -337,9 +337,9 @@ bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
         plane[0] * point.x + plane[1] * point.y + plane[2] * point.z + plane[3] - plane_offset_;
 
     if (val > 0) {
-      /* RCLCPP_INFO(this->get_logger(), */
-      /*             "Failed on plane [%5.2f, %5.2f, %5.2f, %5.2f]", plane[0], */
-      /*             plane[1], plane[2], plane[3]); */
+      RCLCPP_INFO(this->get_logger(),
+                  "Failed on plane [%5.2f, %5.2f, %5.2f, %5.2f]", plane[0],
+                  plane[1], plane[2], plane[3]);
       return false;
     }
   }
@@ -360,7 +360,7 @@ void SafetyChecker::HandlePoseMessage(
     /* RCLCPP_INFO(logger, "Pose is within bounds."); */
     safety_flags_ &= ~SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
   } else {
-    /* RCLCPP_INFO(logger, "Pose is out of bounds, landing..."); */
+    RCLCPP_INFO(logger, "Pose is out of bounds, landing...");
     safety_flags_ |= SafetyStatus::UNSAFE_OUT_OF_BOUNDS;
     LandNow();
   }
