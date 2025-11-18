@@ -19,8 +19,15 @@ SafetyChecker::SafetyChecker()
 
   this->declare_parameter("plane_offset", 0.3); // meters
   this->get_parameter("plane_offset", plane_offset_);
-
   RCLCPP_INFO(this->get_logger(), "Using plane offset: %5.2f", plane_offset_);
+
+  this->declare_parameter("position_uncertainty_threshold",
+                          0.2); // Default: 0.2 meters
+  this->get_parameter("position_uncertainty_threshold",
+                      position_uncertainty_threshold_);
+  RCLCPP_INFO(this->get_logger(),
+              "Using position uncertainty threshold: %5.2f m",
+              position_uncertainty_threshold_);
 
   // --- NAMESPACE PARSING LOGIC ---
   std::string ns = this->get_namespace();
@@ -333,8 +340,8 @@ void SafetyChecker::LandNow() {
 
 bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
   for (const auto &plane : planes_) {
-    double val =
-        plane[0] * point.x + plane[1] * point.y + plane[2] * point.z + plane[3] - plane_offset_;
+    double val = plane[0] * point.x + plane[1] * point.y + plane[2] * point.z +
+                 plane[3] - plane_offset_;
 
     if (val > 0) {
       RCLCPP_INFO(this->get_logger(),
@@ -349,6 +356,19 @@ bool SafetyChecker::IsPointInHull(const geometry_msgs::msg::Point &point) {
 void SafetyChecker::HandlePoseMessage(
     const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg) {
   auto logger = this->get_logger();
+
+  if (msg->eph > position_uncertainty_threshold_ ||
+      msg->epv > position_uncertainty_threshold_) {
+    RCLCPP_WARN_THROTTLE(logger, *this->get_clock(), 1000,
+                         "High position uncertainty! EPH: %.2f, EPV: %.2f "
+                         "(Threshold: %.2f). Landing...",
+                         msg->eph, msg->epv, position_uncertainty_threshold_);
+    safety_flags_ |= SafetyStatus::UNSAFE_HIGH_COVARIANCE;
+    LandNow(); // Trigger landing
+  } else {
+    // Pose uncertainty is acceptable, clear the flag
+    safety_flags_ &= ~SafetyStatus::UNSAFE_HIGH_COVARIANCE;
+  }
 
   // Convert FRD to FLU for bounds checking using frame_transforms
   geometry_msgs::msg::Point position;

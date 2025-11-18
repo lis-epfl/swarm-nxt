@@ -31,7 +31,7 @@ enum SafetyStatus : uint8_t {
   SAFE = 0,
   UNSAFE_OUT_OF_BOUNDS = 1 << 0,
   UNSAFE_COMMAND_SEND_RATE = 1 << 1,
-  UNSAFE_OTHER = 1 << 2
+  UNSAFE_HIGH_COVARIANCE = 1 << 2
 };
 
 enum class DroneState { Idle, TakingOff, Hold, Flying, Landing };
@@ -60,6 +60,7 @@ private:
   std::atomic<uint8_t> current_nav_state_;
   uint8_t target_system_ = 1;
   std::vector<std::vector<double>> planes_;
+  double position_uncertainty_threshold_;
 
   uint8_t safety_flags_ = SafetyStatus::SAFE;
   double plane_offset_; // meters, positive
