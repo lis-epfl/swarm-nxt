@@ -239,26 +239,6 @@ The MAV System ID needs to be setup for every drone individually. This ID is a p
 !!! important   
     If this number is the same for two drones, things will **not** work and it will be very hard to debug. 
 
-#### Telemetry Streaming
-
-The flight controller needs to be configured to output data on a serial port so that the NVIDIA Orin can read and write commands. Here, when you load the params file,  telemetry is set up on the TELEM2 port. 
-
-!!! note 
-	You can optionally chose to use another port to do this telemetry streaming. See [Appendix > Flight Controller > Alternate Telemetry Port](appendix.md#alternate-telemetry-port) for further instructions
-
-Go to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
-
-In the console, run the following commands: 
-```
-cd fs/microsd
-mkdir etc
-cd etc
-echo "mavlink stream -d /dev/ttyS3 -s HIGHRES_IMU -r 1000" > extras.txt
-```
-
-If you run `cat extras.txt`, the mavlink stream line should be present. 
-
-
 #### Propeller Numbering and Spin Direction
 
 First make sure the power is connected to the ESC and the ESC is connected to the FC. No need to power the Orin at this point, so you can unplug the power cable from the orin before powering the ESC. Ensure that the photo under "Actuator Testing" looks correct: 
@@ -380,6 +360,15 @@ Enter the sudo password of the orin when prompted, as well as the hostname which
 !!! important
     It is very important that you set a unique hostname. You must follow the structured naming pattern described at the top of this document. The software depends on this assumption.
 
+Then install the packages with: 
+
+``ansible-playbook -i inventory.ini drones_update.yml``
+
+#### Connecting to QGC
+
+The DDS uses TELEM2 for communication with the FC, so we need to use the USB-C connection to communicate via MAVLINK. For this ssh into the drone and run:
+
+``mavproxy.py --master="/dev/ttyACM0" --baudrate 115200 --out="udp:<ipofhost>:14550"``
 
 ## Flight Preparation 
 
