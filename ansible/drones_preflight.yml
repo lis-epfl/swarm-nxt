@@ -115,7 +115,6 @@
         base_path: "{{ drone_base_path }}"
       loop: 
         - { src: "scripts/ros_packages_start.sh", dest: "{{ drone_base_path }}/ros_packages_start.sh"}
-        - { src: "scripts/mavlink_shell.py", dest: "{{ drone_base_path }}/scripts/mavlink_shell.py"}
   
     - name: Chrony Tracking Check
       block: 
