@@ -373,6 +373,9 @@ The DDS uses TELEM2 for communication with the FC, so we need to use the USB-C c
 
 ``mavproxy.py --master="/dev/ttyACM0" --baudrate 115200 --out="udp:<ipofhost>:14550"``
 
+!!! important
+    Sometimes you need to connect at `/dev/ttyACM1` instead of `/dev/ttyACM0` especially after rebooting the FC.
+
 ## Flight Preparation 
 
 ### PID Tuning
