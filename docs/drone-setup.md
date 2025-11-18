@@ -364,6 +364,9 @@ Then install the packages with:
 
 ``ansible-playbook -i inventory.ini drones_update.yml``
 
+!!! important
+    If you get an error during the compilation when running `drones_update.yml`, try running it again
+
 #### Connecting to QGC
 
 The DDS uses TELEM2 for communication with the FC, so we need to use the USB-C connection to communicate via MAVLINK. For this ssh into the drone and run:
