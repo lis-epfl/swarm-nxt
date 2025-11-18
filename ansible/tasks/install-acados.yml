@@ -114,6 +114,10 @@
   command: /tmp/rustup.sh -y --default-toolchain stable
   args:
     creates: "{{ drone_base_path }}/.cargo/bin/rustc"
+  environment:
+    HOME: "{{ drone_base_path }}"
+    RUSTUP_HOME: "{{ drone_base_path }}/.rustup"
+    CARGO_HOME: "{{ drone_base_path }}/.cargo"
   when: not rust_installed.stat.exists
 
 # Build and install t_renderer

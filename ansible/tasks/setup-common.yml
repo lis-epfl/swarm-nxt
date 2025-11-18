@@ -1,6 +1,23 @@
+- name: Check Internet connectivity
+  block:
+    - name: Test Internet via HTTPS
+      ansible.builtin.uri:
+        url: https://www.google.com/generate_204
+        method: GET
+        return_content: false
+        status_code: 204
+      register: internet_check
+      failed_when: internet_check.status != 204
+      retries: 1
+      delay: 3
+
+  rescue:
+    - name: Fail if Internet is not reachable
+      ansible.builtin.fail:
+        msg: "No Internet connectivity. Please check network settings."
+
 - name: Check kernel, patch if needed
   ansible.builtin.include_tasks: "patch-kernel.yml"       
-
 - name: Add Docker apt repository
   block:
     - name: Install prerequisites
@@ -203,17 +220,6 @@
 
         - name: Get Geographic Lib
           ansible.builtin.include_tasks: "geographic-lib.yml"       
-
-        - name: Patch pluginlists
-          ansible.builtin.template:
-            src: templates/px4_pluginlists.yaml
-            dest: /opt/ros/humble/share/mavros/launch/px4_pluginlists.yaml 
-
-        - name: Patch px4_rate
-          ansible.builtin.template:
-            src: templates/px4_config.j2 
-            dest: /opt/ros/humble/share/mavros/launch/px4_config.yaml
-        
         - name: Ensure persistent storage in journald.conf
           become: true
           ansible.builtin.replace:

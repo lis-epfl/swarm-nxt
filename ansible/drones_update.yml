@@ -2,9 +2,13 @@
   hosts: drones
   remote_user: lis
   become: false
-  
+  vars: 
+    gcs_url: "{{ host_hostname }}.local" 
+
   tasks:
- 
+  - name: Ensure we are synced with chrony
+    ansible.builtin.include_tasks: "tasks/chrony-sync.yml"
+
   - name: Stop ROS if exists
     ansible.builtin.include_tasks: "tasks/ensure-ros-off.yml"
     
