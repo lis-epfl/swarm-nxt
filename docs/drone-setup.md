@@ -402,7 +402,6 @@ If the autotune fails, you can increase the `MC_AT_SYSID_AMP` parameter by steps
 3. Select the drone's markers on the screen, right click, and click on create rigid body. Give each drone the same name as the hostname. This allows the automated tooling to work properly.
 
 !!! warning
-	It is very important that the drone is facing the positive x direction (orin towards the negative x direction). 
-
+	It is very important that the drone is facing the positive x direction (orin towards the negative x direction). It is also important that the Optitrack streams at 120Hz and not 240Hz (otherwise ROS2 would have performance issue).
 
 
