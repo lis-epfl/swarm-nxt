@@ -139,6 +139,13 @@
     args:
       chdir: "{{ drone_ros_path }}"
       executable: /bin/bash
+    environment:
+     # These variables are sourced from your ~/.bashrc file
+     GUROBI_HOME: /opt/gurobi1003/armlinux64
+     PATH: "{{ ansible_env.PATH }}:/opt/gurobi1003/armlinux64/bin"
+     LD_LIBRARY_PATH: "/opt/gurobi1003/armlinux64/lib:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+     ACADOS_SOURCE_DIR: /opt/acados
+     PYTHONPATH: "/opt/acados/interfaces/acados_template:{{ ansible_env.PYTHONPATH | default('') }}"
     async: 2400
     poll: 0
     register: ros_build_async

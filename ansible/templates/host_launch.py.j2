@@ -63,16 +63,6 @@ def generate_launch_description():
         ]
     )
 
-    goal_giver_node = Node(
-        package="goal_giver_ros2",
-        executable="goal_giver.py",
-        name="goal_giver_node",
-        output="screen",
-        parameters=[
-            {"agent_name": "agent_1"}
-        ]
-    )
-
     # collect nodes
     nodes = {
         "domain_bridge": bridge_node,
@@ -80,7 +70,6 @@ def generate_launch_description():
         "optitrack_wrapper": wrapper_node,
         "optitrack_multiplexer": multiplexer_node,
         "drone_gui": drone_gui_node,
-        "goal_giver": goal_giver_node
     }
 
     # Create exit handlers for each node so that we exit if of them exits

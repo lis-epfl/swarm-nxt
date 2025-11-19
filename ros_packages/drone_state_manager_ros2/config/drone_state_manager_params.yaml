@@ -1,5 +1,5 @@
 /**:
   ros__parameters:
-    takeoff_altitude: 0.5
+    takeoff_altitude: 1.5
     takeoff_duration: 3.0
     takeoff_dt: 0.1

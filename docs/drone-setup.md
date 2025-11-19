@@ -364,9 +364,6 @@ Then install the packages with:
 
 ``ansible-playbook -i inventory.ini drones_update.yml``
 
-!!! important
-    If you get an error during the compilation when running `drones_update.yml`, try running it again
-
 #### Connecting to QGC
 
 In QGC go to Application Settings, MAVLink, then make sure enable MAVLink forwarding is unchecked. 

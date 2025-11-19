@@ -23,6 +23,14 @@ topics:
     type: multi_agent_planner_msgs/msg/Trajectory
   agent_{{ current_drone_idx }}/traj:
     type: nav_msgs/msg/Path
+  agent_{{ current_drone_idx }}/position:
+    type: visualization_msgs/msg/Marker
+  agent_{{ current_drone_idx }}/path:
+    type: nav_msgs/msg/Path
+  agent_{{ current_drone_idx }}/polyhedra:
+    type: decomp_ros_msgs/msg/PolyhedronArray
+  agent_{{ current_drone_idx }}/seeds:
+    type: sensor_msgs/msg/PointCloud2
 {% for drone in groups['drones'] %}
 {% set drone_num_id = drone | regex_replace('\.local', '') | regex_search('[0-9]+$') %}
 {% set drone_idx = loop.index0 %}

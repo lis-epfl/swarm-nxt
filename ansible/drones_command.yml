@@ -32,6 +32,6 @@
         - { src: "../ros_packages/safety_checker_ros2/config/safety_params.yaml", dest: "{{ drone_ros_path }}/src/safety_checker_ros2/config/safety_params.yaml"}
         - { src: "../ros_packages/drone_state_manager_ros2/config/drone_state_manager_params.yaml", dest: "{{ drone_ros_path }}/src/drone_state_manager_ros2/config/drone_state_manager_params.yaml"}
         - { src: "/home/toumieh/ros2_ws/src/multi_agent_pkgs/multi_agent_planner/config/agent_omninxt_config.yaml", dest: "{{ drone_ros_path }}/src/multi_agent_pkgs/multi_agent_planner/config/agent_omninxt_config.yaml"}
-        # - { src: "/home/toumieh/ros2_ws/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml", dest: "{{ drone_ros_path }}/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml"}
+        - { src: "/home/toumieh/ros2_ws/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml", dest: "{{ drone_ros_path }}/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml"}
 
 
