@@ -133,22 +133,27 @@ header h1 {
 
 /* --- Roaming Styles --- */
 .btn-subgroup.roaming-controls {
-    flex-direction: column;
-    align-items: stretch;
+    /* MODIFIED: Change to row for side-by-side layout on desktop */
+    flex-direction: row;
+    align-items: center; /* Center items vertically */
+    gap: 20px; /* Space between inputs and buttons */
     border-left: 2px solid var(--color-info);
-    flex-basis: 100%; /* Force to new line */
-    margin-top: 15px;  /* Add space above */
+    flex-basis: 100%;
+    margin-top: 15px;
     padding: 15px;
 }
 .roaming-inputs {
-    display: grid; /* Use grid for alignment */
-    grid-template-columns: 1fr 1fr 1fr; /* Three columns */
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 15px;
-    margin-bottom: 15px;
+    /* MODIFIED: Remove margin-bottom to align with buttons */
+    margin-bottom: 0;
+    /* ADDED: Ensure enough space on desktop */
+    min-width: 450px;
 }
 .roaming-input-group {
     display: flex;
-    flex-direction: column; /* Stack label on top of input */
+    flex-direction: column;
 }
 .roaming-input-group label {
     font-size: 0.9em;
@@ -169,9 +174,11 @@ header h1 {
 .roaming-buttons {
     display: flex;
     gap: 10px;
+    /* ADDED: Allow buttons to grow and fill space */
+    flex-grow: 1;
 }
 .roaming-buttons .btn {
-    flex-grow: 1; /* Make buttons share space */
+    flex-grow: 1;
 }
 /* --- END: Roaming Styles --- */
 
@@ -187,7 +194,7 @@ header h1 {
     min-width: 140px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: white; /* Default color is white */
+    color: white;
 }
 
 .btn:hover {
@@ -312,7 +319,7 @@ header h1 {
 .info-row {
     display: flex;
     justify-content: space-between;
-    align-items: center; /* Align items vertically */
+    align-items: center;
     margin-bottom: 8px;
     font-size: 0.9em;
 }
@@ -333,7 +340,7 @@ header h1 {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 190px; /* Increased from 160px */
+    width: 190px;
 }
 
 .battery-bar-container {
@@ -353,9 +360,9 @@ header h1 {
 
 .battery-text {
     font-weight: 600;
-    min-width: 140px; /* Increased from 110px */
+    min-width: 140px;
     text-align: right;
-    white-space: nowrap; /* ADDED: Prevents "V" from wrapping */
+    white-space: nowrap;
 }
 /* --- END MODIFICATION --- */
 
@@ -469,10 +476,19 @@ footer {
     .btn { flex: 1; min-width: auto; }
     .cards-container { grid-template-columns: 1fr; }
 
-    /* Stack roaming inputs on mobile */
+    /* ADDED/MODIFIED: Ensure roaming controls stack on mobile */
+    .btn-subgroup.roaming-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        min-width: auto;
+    }
+
     .roaming-inputs {
         grid-template-columns: 1fr;
         gap: 10px;
+        margin-bottom: 15px; /* Re-introduce vertical spacing */
+        min-width: auto;
     }
     .roaming-input-group label {
         text-align: center;

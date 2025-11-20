@@ -51,6 +51,12 @@ class DroneGUINode(Node):
         self.drone_list = []
         self.hdsm_mapping = {}
 
+        # --- Connection State Tracking (NEW) ---
+        self.last_status_time = {} # Tracks the last time a VehicleStatus message was received (in nanoseconds)
+        # 2.0 seconds in nanoseconds. This is the threshold for considering a drone disconnected.
+        self.DISCONNECT_THRESHOLD_NS = 2_000_000_000
+        # --- End Connection State Tracking ---
+
         # --- Roaming State ---
         self.roaming_active = False
         self.roaming_params = {'radius': 2.0, 'center_height': -2.5, 'cylinder_height': 1.0}
@@ -78,6 +84,10 @@ class DroneGUINode(Node):
 
         # Load drone list from peers.yaml
         self.load_drone_list()
+
+        # Initialize connection time tracking for all drones (NEW)
+        for drone in self.drone_list:
+            self.last_status_time[drone] = 0.0
 
         # Load HDSM mapping
         self.load_hdsm_mapping()
@@ -272,6 +282,9 @@ class DroneGUINode(Node):
                 self.get_logger().warn(f"No HDSM mapping found for drone {drone} (num: {drone_num}) for goal publisher")
 
     def vehicle_status_callback(self, msg: VehicleStatus, drone_name: str):
+        # NEW: Update the last time we received a status message for this drone
+        self.last_status_time[drone_name] = self.get_clock().now().nanoseconds
+
         self.drone_vehicle_statuses[drone_name] = {
             "armed": msg.arming_state == VehicleStatus.ARMING_STATE_ARMED,
             "connected": True, "nav_state": msg.nav_state,
@@ -302,6 +315,9 @@ class DroneGUINode(Node):
 
     def update_gui(self):
         gui_data = {}
+        # NEW: Get current time for connection check
+        current_time_ns = self.get_clock().now().nanoseconds
+
         for drone in self.drone_list:
             vehicle_status = self.drone_vehicle_statuses.get(drone, {})
             drone_state = self.drone_states.get(drone, {})
@@ -314,6 +330,18 @@ class DroneGUINode(Node):
             if drone_num_str:
                 drone_num = int(drone_num_str)
                 agent_id = self.hdsm_mapping.get(drone_num, "N/A")
+
+            # --- Connection Timeout Check (NEW) ---
+            last_time = self.last_status_time.get(drone, 0)
+            time_delta_ns = current_time_ns - last_time
+            # Determine connection status based on the time threshold
+            is_connected = (time_delta_ns < self.DISCONNECT_THRESHOLD_NS)
+
+            # If not connected, make sure the internal state reflects it
+            if not is_connected and drone in self.drone_vehicle_statuses:
+                 self.drone_vehicle_statuses[drone]["connected"] = False
+            # --- End Connection Timeout Check ---
+
 
             nav_state = vehicle_status.get("nav_state", 0)
             mode_map = {
@@ -331,7 +359,7 @@ class DroneGUINode(Node):
             gui_data[drone] = {
                 "name": drone, "agent_id": agent_id,
                 "armed": vehicle_status.get("armed", False),
-                "connected": vehicle_status.get("connected", False),
+                "connected": is_connected, # Use the dynamic connection status
                 "mode": mode, "state": drone_state.get("state", "UNKNOWN"),
                 "last_update": drone_state.get("timestamp", 0),
                 "battery_percent": battery_percent,
