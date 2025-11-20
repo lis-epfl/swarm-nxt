@@ -1,5 +1,4 @@
 ---
-
 - name: Local Actions
   connection: local
   hosts: localhost
@@ -144,9 +143,5 @@
         enabled: false
         daemon_reload: true
         scope: user
-    
-  
-
 
 # TODO: Add something about waiting and checking all the packages after :)
-
