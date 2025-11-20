@@ -1,6 +1,7 @@
 # Flying
 
 ## Pre-Flight Checklist
+The takeoff altitude and other takeoff parameters are set in `ros_packages/drone_state_manager_ros2/config/drone_state_manager_params.yml`.
 
 1. Ensure that the `inventory.ini` file has all of the hostnames of the drones under `[drones]`. This selects the drones that the operators are done on.
 	1. Ensure that the `gcs_url` variable in the preflight ansible (`/path/to/swarmnxtrepo/ansible/drones_preflight.yml`) is set to the correct hostname or [IP address of the ground station](software-common-tasks.md#get-ip-of-computer). 

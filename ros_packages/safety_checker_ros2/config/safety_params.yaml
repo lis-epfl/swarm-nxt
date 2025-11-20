@@ -1,7 +1,7 @@
 # Parameters for the Safety Checker
 /**:
   ros__parameters:
-    plane_offset: 0.5 # the polyhedra are expanded by this offset because the planner is constrained by the planes, but the controller is not perfectly accurate so to avoid landing, we add a little margin
+    plane_offset: 0.6 # the polyhedra are expanded by this offset because the planner is constrained by the planes, but the controller is not perfectly accurate so to avoid landing, we add a little margin
 
     position_uncertainty_threshold: 14.0 # if the position variance along the vertical/horizontal coordinates is bigger than this value, we land
 
@@ -12,11 +12,11 @@
     # Example: A 2x2x2m box centered at (0,0,1)
     planes: [
         # a,    b,    c,    d
-         1.0,  0.0,  0.0, -2.8,  # x <= 1.0
-        -1.0,  0.0,  0.0, -2.8,  # x >= -1.0
-         0.0,  1.0,  0.0, -2.8,  # y <= 1.0
-         0.0, -1.0,  0.0, -2.8,  # y >= -1.0
-         0.0,  0.0,  1.0, -3.2,  # z <= 2.0
-         0.0,  0.0, -1.0,  0.3   # z >= 0.3
+         1.0,  0.0,  0.0, -2.7,  # x <= 1.0
+        -1.0,  0.0,  0.0, -2.7,  # x >= -1.0
+         0.0,  1.0,  0.0, -2.7,  # y <= 1.0
+         0.0, -1.0,  0.0, -2.7,  # y >= -1.0
+         0.0,  0.0,  1.0, -3.1,  # z <= 2.0
+         0.0,  0.0, -1.0,  0.4   # z >= 0.3
       ]
       
