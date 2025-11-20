@@ -1,20 +1,32 @@
-- name: Check Internet connectivity
+- name: Check Internet connectivity (Ping)
   block:
-    - name: Test Internet via HTTPS
-      ansible.builtin.uri:
-        url: https://www.google.com/generate_204
-        method: GET
-        return_content: false
-        status_code: 204
-      register: internet_check
-      failed_when: internet_check.status != 204
+    - name: Ping Google DNS
+      ansible.builtin.command: ping -c 1 -W 2 8.8.8.8
+      register: ping_check
+      changed_when: false
+      # 0 means success (reachable), anything else is failure
+      failed_when: ping_check.rc != 0
       retries: 1
       delay: 3
 
   rescue:
     - name: Fail if Internet is not reachable
       ansible.builtin.fail:
-        msg: "No Internet connectivity. Please check network settings."
+        msg: "No Internet connectivity (Ping 8.8.8.8 failed). Please check network settings."
+
+- name: Force sync date from Google HTTP Header
+  become: true
+  ansible.builtin.shell: |
+    # 1. Get headers from google
+    # 2. Find the Date line
+    # 3. Remove everything up to 'Date: ' (handling variable whitespace)
+    # 4. Take the first result only (in case of redirects)
+    NEW_DATE=$(wget --no-check-certificate -qSO- --max-redirect=0 google.com 2>&1 | grep "Date:" | sed 's/.*Date: //g' | head -n 1)
+    
+    # Set the date
+    date -s "$NEW_DATE"
+  args:
+    executable: /bin/bash
 
 - name: Check kernel, patch if needed
   ansible.builtin.include_tasks: "patch-kernel.yml"       
@@ -342,7 +354,6 @@
       ansible.builtin.apt: 
         name: chrony
 
-
 - name: Set WiFi
   community.general.nmcli: 
     type: wifi
@@ -361,7 +372,7 @@
   poll: 0 # skip to next task 
   ignore_errors: true # TODO: make this less fragile
 
-# - name: Reboot system and wait for it to come back
-#   ansible.builtin.reboot:
-#     reboot_timeout: 600        
-#     test_command: whoami
+- name: Reboot system and wait for it to come back
+  ansible.builtin.reboot:
+    reboot_timeout: 600        
+    test_command: whoami
