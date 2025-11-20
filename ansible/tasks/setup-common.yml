@@ -310,6 +310,9 @@
         remote_src: true
         mode: preserve
 
+- name: MicroXRCE 
+  ansible.builtin.include_tasks: install-microxrce.yml
+
 - name: Gurobi 
   ansible.builtin.include_tasks: install-gurobi.yml
   
