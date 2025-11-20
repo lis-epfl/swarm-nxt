@@ -1,6 +1,6 @@
 - name: MicroXRCE Agent Source Setup and Build
   vars:
-    microxrce_agent_path: "/home/lis/repos"
+    microxrce_agent_path: "/home/lis/repos/Micro-XRCE-DDS-Agent"
     microxrce_agent_repo: "https://github.com/eProsima/Micro-XRCE-DDS-Agent.git"
     microxrce_agent_version: "v2.4.3" 
   block:
