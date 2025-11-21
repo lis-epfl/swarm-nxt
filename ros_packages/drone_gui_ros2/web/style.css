@@ -8,11 +8,11 @@
     --border-color: #334155;  /* Mid-tone Slate */
     --shadow-color: rgba(15, 23, 42, 0.6);
 
-    /* Allowed Colors (Only for Kill & Status) */
-    --color-green: #22c55e;   /* Vibrant Green */
-    --color-red: #ef4444;     /* Vibrant Red */
+    /* Allowed Colors (Cooler "Slate" compatible tones) */
+    --color-green: #10b981;   /* Emerald 500 - Cooler, blends with slate */
+    --color-red: #f43f5e;     /* Rose 500 - Cooler, blends with slate */
 
-    /* Neutrals (Buttons) */
+    /* Neutrals (Other Buttons) */
     --color-neutral: #475569;       /* Slate 600 */
     --color-neutral-hover: #64748b; /* Slate 500 */
     --color-grey: #475569;
@@ -214,7 +214,7 @@ header h1 {
     box-shadow: none;
 }
 
-/* --- ALL Standard Buttons are Neutral --- */
+/* --- Standard Buttons set to Neutral --- */
 .btn-success,
 .btn-danger,
 .btn-primary,
@@ -225,7 +225,6 @@ header h1 {
     color: var(--text-primary);
 }
 
-/* Hover states for neutrals */
 .btn-success:hover,
 .btn-danger:hover,
 .btn-primary:hover,
@@ -235,13 +234,34 @@ header h1 {
     background-color: var(--color-neutral-hover);
 }
 
-/* --- EXCEPTION: Kill Button is Red --- */
+/* --- OVERRIDES: Arm & Disarm Colors (Using new Cool Tones) --- */
+#global-arm,
+.btn-arm {
+    background-color: var(--color-green) !important;
+    color: white !important;
+}
+#global-arm:hover,
+.btn-arm:hover {
+    background-color: #059669 !important; /* Emerald 600 */
+}
+
+#global-disarm,
+.btn-disarm {
+    background-color: var(--color-red) !important;
+    color: white !important;
+}
+#global-disarm:hover,
+.btn-disarm:hover {
+    background-color: #e11d48 !important; /* Rose 600 */
+}
+
+/* --- OVERRIDE: Kill Button --- */
 .btn-kill {
     background-color: var(--color-red) !important;
     color: white !important;
 }
 .btn-kill:hover {
-    background-color: #dc2626 !important;
+    background-color: #e11d48 !important; /* Rose 600 */
 }
 #global-kill {
     animation: pulse-danger 1.5s infinite;
@@ -250,9 +270,9 @@ header h1 {
     animation-play-state: paused;
 }
 @keyframes pulse-danger {
-    0% { box-shadow: 0 0 5px 0px rgba(239, 68, 68, 0.7); }
-    50% { box-shadow: 0 0 15px 5px rgba(239, 68, 68, 0.7); }
-    100% { box-shadow: 0 0 5px 0px rgba(239, 68, 68, 0.7); }
+    0% { box-shadow: 0 0 5px 0px rgba(244, 63, 94, 0.7); } /* Rose 500 */
+    50% { box-shadow: 0 0 15px 5px rgba(244, 63, 94, 0.7); }
+    100% { box-shadow: 0 0 5px 0px rgba(244, 63, 94, 0.7); }
 }
 
 .cards-container {
@@ -296,7 +316,7 @@ header h1 {
 }
 
 .drone-name {
-    font-size: 1.35em; /* MODIFIED: Set to 1.35em */
+    font-size: 1.35em;
     font-weight: bold;
     color: var(--text-primary);
     text-transform: uppercase;
@@ -442,7 +462,7 @@ header h1 {
 .goal-button {
     grid-column: 1 / -1;
     margin-top: 8px;
-    /* Handled by neutral override */
+    /* Handled by neutral default */
 }
 
 .kill-controls {
