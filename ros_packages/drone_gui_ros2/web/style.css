@@ -1,20 +1,24 @@
-/* Modern Color Palette & Variables */
+/* Dark Mode (Cool Slate Tint) & Restricted Palette */
 :root {
-    --bg-color: #f4f7f9;
-    --card-bg: #ffffff;
-    --text-primary: #2c3e50;
-    --text-secondary: #5a6b82;
-    --border-color: #e6ebf1;
-    --shadow-color: rgba(44, 62, 80, 0.1);
+    /* Slate Tint Variables */
+    --bg-color: #0f172a;      /* Dark Slate Blue */
+    --card-bg: #1e293b;       /* Lighter Slate */
+    --text-primary: #f1f5f9;  /* Off-white */
+    --text-secondary: #94a3b8;/* Muted Blue-Grey */
+    --border-color: #334155;  /* Mid-tone Slate */
+    --shadow-color: rgba(15, 23, 42, 0.6);
 
-    --color-green: #27ae60;
-    --color-red: #e74c3c;
-    --color-blue: #3498db;
-    --color-orange: #f39c12;
-    --color-grey: #95a5a6;
-    --color-info: #5DADE2;
+    /* Allowed Colors (Only for Kill & Status) */
+    --color-green: #22c55e;   /* Vibrant Green */
+    --color-red: #ef4444;     /* Vibrant Red */
 
-    --header-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Neutrals (Buttons) */
+    --color-neutral: #475569;       /* Slate 600 */
+    --color-neutral-hover: #64748b; /* Slate 500 */
+    --color-grey: #475569;
+
+    /* Header */
+    --header-bg: #1e293b;
 }
 
 * {
@@ -44,13 +48,13 @@ header {
     box-shadow: 0 4px 12px var(--shadow-color);
     text-align: center;
     margin-bottom: 30px;
-    color: white;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
 }
 
 header h1 {
     font-size: 2.5em;
     margin-bottom: 10px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 .connection-status {
@@ -58,11 +62,10 @@ header h1 {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(15, 23, 42, 0.3);
     padding: 10px 20px;
     border-radius: 25px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-color);
     max-width: 200px;
     margin: 0 auto;
 }
@@ -111,6 +114,7 @@ header h1 {
     padding: 25px;
     border-radius: 16px;
     box-shadow: 0 4px 15px var(--shadow-color);
+    border: 1px solid var(--border-color);
 }
 
 .btn-subgroup {
@@ -130,14 +134,12 @@ header h1 {
     border-left: 2px solid var(--color-red);
 }
 
-
 /* --- Roaming Styles --- */
 .btn-subgroup.roaming-controls {
-    /* MODIFIED: Change to row for side-by-side layout on desktop */
     flex-direction: row;
-    align-items: center; /* Center items vertically */
-    gap: 20px; /* Space between inputs and buttons */
-    border-left: 2px solid var(--color-info);
+    align-items: center;
+    gap: 20px;
+    border-left: 2px solid var(--border-color);
     flex-basis: 100%;
     margin-top: 15px;
     padding: 15px;
@@ -146,9 +148,7 @@ header h1 {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 15px;
-    /* MODIFIED: Remove margin-bottom to align with buttons */
     margin-bottom: 0;
-    /* ADDED: Ensure enough space on desktop */
     min-width: 450px;
 }
 .roaming-input-group {
@@ -170,19 +170,19 @@ header h1 {
     font-family: 'Courier New', monospace;
     font-size: 0.9em;
     text-align: center;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
 }
 .roaming-buttons {
     display: flex;
     gap: 10px;
-    /* ADDED: Allow buttons to grow and fill space */
     flex-grow: 1;
 }
 .roaming-buttons .btn {
     flex-grow: 1;
 }
-/* --- END: Roaming Styles --- */
 
-
+/* --- Button Styles --- */
 .btn {
     padding: 12px 24px;
     border: none;
@@ -194,13 +194,13 @@ header h1 {
     min-width: 140px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: white;
+    color: var(--text-primary);
 }
 
 .btn:hover {
     transform: translateY(-2px);
     opacity: 0.9;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .btn:active {
@@ -214,19 +214,34 @@ header h1 {
     box-shadow: none;
 }
 
-/* Flat button colors */
-.btn-primary { background-color: var(--color-green); }
-.btn-success { background-color: var(--color-blue); }
-.btn-danger { background-color: var(--color-red); }
-.btn-warning { background-color: var(--color-orange); }
-.btn-info { background-color: var(--color-info); }
-.btn-secondary { background-color: var(--color-grey); }
+/* --- ALL Standard Buttons are Neutral --- */
+.btn-success,
+.btn-danger,
+.btn-primary,
+.btn-info,
+.btn-warning,
+.btn-secondary {
+    background-color: var(--color-neutral);
+    color: var(--text-primary);
+}
 
+/* Hover states for neutrals */
+.btn-success:hover,
+.btn-danger:hover,
+.btn-primary:hover,
+.btn-warning:hover,
+.btn-info:hover,
+.btn-secondary:hover {
+    background-color: var(--color-neutral-hover);
+}
+
+/* --- EXCEPTION: Kill Button is Red --- */
 .btn-kill {
-    background-color: var(--color-red);
+    background-color: var(--color-red) !important;
+    color: white !important;
 }
 .btn-kill:hover {
-    background-color: #c0392b;
+    background-color: #dc2626 !important;
 }
 #global-kill {
     animation: pulse-danger 1.5s infinite;
@@ -235,15 +250,9 @@ header h1 {
     animation-play-state: paused;
 }
 @keyframes pulse-danger {
-    0% { box-shadow: 0 0 5px 0px rgba(231,76,60,0.7); }
-    50% { box-shadow: 0 0 15px 5px rgba(231,76,60,0.7); }
-    100% { box-shadow: 0 0 5px 0px rgba(231,76,60,0.7); }
-}
-
-.drone-grid h2 {
-    margin-bottom: 20px;
-    color: var(--text-secondary);
-    font-size: 1.8em;
+    0% { box-shadow: 0 0 5px 0px rgba(239, 68, 68, 0.7); }
+    50% { box-shadow: 0 0 15px 5px rgba(239, 68, 68, 0.7); }
+    100% { box-shadow: 0 0 5px 0px rgba(239, 68, 68, 0.7); }
 }
 
 .cards-container {
@@ -266,12 +275,13 @@ header h1 {
     transform: translateY(-4px);
 }
 
+/* Status Borders */
 .drone-card.connected {
     border-top-color: var(--color-green);
 }
 
 .drone-card.armed {
-    border-top-color: var(--color-orange);
+    border-top-color: var(--color-green);
 }
 
 .drone-card.low-battery {
@@ -286,7 +296,7 @@ header h1 {
 }
 
 .drone-name {
-    font-size: 1.4em;
+    font-size: 1.35em; /* MODIFIED: Set to 1.35em */
     font-weight: bold;
     color: var(--text-primary);
     text-transform: uppercase;
@@ -307,10 +317,11 @@ header h1 {
     color: white;
 }
 
+/* Badge Colors */
 .status-connected { background: var(--color-green); }
 .status-disconnected { background: var(--color-red); }
-.status-armed { background: var(--color-orange); }
-.status-disarmed { background: var(--color-grey); }
+.status-armed { background: var(--color-green); }
+.status-disarmed { background: var(--color-neutral); }
 
 .drone-info {
     margin-bottom: 15px;
@@ -335,7 +346,6 @@ header h1 {
     font-weight: 600;
 }
 
-/* --- MODIFIED: Widened battery display --- */
 .battery-display {
     display: flex;
     align-items: center;
@@ -346,7 +356,7 @@ header h1 {
 .battery-bar-container {
     width: 100%;
     height: 10px;
-    background-color: var(--border-color);
+    background-color: var(--bg-color);
     border-radius: 5px;
     overflow: hidden;
     border: 1px solid var(--border-color);
@@ -364,13 +374,13 @@ header h1 {
     text-align: right;
     white-space: nowrap;
 }
-/* --- END MODIFICATION --- */
 
-.battery-info.medium .battery-bar-level { background-color: var(--color-orange); }
+/* Battery Colors */
+.battery-info.medium .battery-bar-level { background-color: var(--color-green); }
 .battery-info.low .battery-bar-level { background-color: var(--color-red); }
 .battery-info.low .battery-text { color: var(--color-red); }
 
-/* --- LATENCY STYLES --- */
+/* Latency Styles */
 .latency-info .latency-text {
     font-weight: 600;
 }
@@ -381,7 +391,7 @@ header h1 {
 }
 
 .latency-info.unknown .latency-text {
-    color: var(--color-grey);
+    color: var(--text-secondary);
 }
 
 @keyframes pulse-danger-text {
@@ -389,7 +399,6 @@ header h1 {
     50% { opacity: 0.7; }
     100% { opacity: 1; }
 }
-/* --- END LATENCY STYLES --- */
 
 .drone-controls-container {
     margin-top: 15px;
@@ -426,12 +435,14 @@ header h1 {
     font-family: 'Courier New', monospace;
     font-size: 0.9em;
     text-align: center;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
 }
 
 .goal-button {
     grid-column: 1 / -1;
     margin-top: 8px;
-    background-color: var(--color-green) !important;
+    /* Handled by neutral override */
 }
 
 .kill-controls {
@@ -459,7 +470,6 @@ footer {
     opacity: 0.8;
 }
 
-/* --- Media query for roaming controls --- */
 @media (max-width: 768px) {
     .container { padding: 15px; }
     .button-group { justify-content: stretch; }
@@ -476,7 +486,6 @@ footer {
     .btn { flex: 1; min-width: auto; }
     .cards-container { grid-template-columns: 1fr; }
 
-    /* ADDED/MODIFIED: Ensure roaming controls stack on mobile */
     .btn-subgroup.roaming-controls {
         flex-direction: column;
         align-items: stretch;
@@ -487,7 +496,7 @@ footer {
     .roaming-inputs {
         grid-template-columns: 1fr;
         gap: 10px;
-        margin-bottom: 15px; /* Re-introduce vertical spacing */
+        margin-bottom: 15px;
         min-width: auto;
     }
     .roaming-input-group label {
@@ -501,10 +510,10 @@ footer {
     color: var(--text-secondary);
 }
 
-/* --- RULE FOR BLACK TEXT/EMOJIS --- */
+/* Ensure text overrides for any lingering specific styles */
 #global-planning-stop,
 #global-stop-roaming,
 #global-start-roaming,
 .btn-plan-stop {
-    color: white;
+    color: var(--text-primary);
 }

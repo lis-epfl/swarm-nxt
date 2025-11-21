@@ -144,24 +144,24 @@ class DroneGUI {
             <div class="drone-controls-container">
                 <div class="drone-controls">
                     <button class="btn btn-success btn-small btn-arm" onclick="gui.sendIndividualCommand('${drone.name}', 'arm')">
-                        ✈️ Arm
+                        Arm
                     </button>
                     <button class="btn btn-danger btn-small btn-disarm" onclick="gui.sendIndividualCommand('${drone.name}', 'disarm')">
-                        ⛔ Disarm
+                        Disarm
                     </button>
                     <button class="btn btn-primary btn-small btn-takeoff" onclick="gui.sendIndividualCommand('${drone.name}', 'takeoff')">
-                        🚀 Takeoff
+                        Takeoff
                     </button>
                     <button class="btn btn-warning btn-small btn-land" onclick="gui.sendIndividualCommand('${drone.name}', 'land')">
-                        🛬 Land
+                        Land
                     </button>
                 </div>
                 <div class="drone-controls planning-controls">
                     <button class="btn btn-info btn-small btn-plan-start" onclick="gui.sendIndividualCommand('${drone.name}', 'planning_start')">
-                        🧠 Start Planning
+                        Start Planning
                     </button>
                     <button class="btn btn-danger btn-small btn-plan-stop" onclick="gui.sendIndividualCommand('${drone.name}', 'planning_stop')">
-                        🛑 Stop Planning
+                        Stop Planning
                     </button>
                 </div>
                 <div class="drone-controls goal-controls">
@@ -169,12 +169,12 @@ class DroneGUI {
                     <input type="number" class="goal-input" id="goal-y-${drone.name}" placeholder="Y">
                     <input type="number" class="goal-input" id="goal-z-${drone.name}" placeholder="Z">
                     <button class="btn btn-success btn-small goal-button btn-send-goal" onclick="gui.sendGoalCommand('${drone.name}')">
-                        🎯 Send Goal
+                        Send Goal
                     </button>
                 </div>
                 <div class="drone-controls kill-controls">
                     <button class="btn btn-danger btn-small btn-kill" onclick="gui.sendIndividualCommand('${drone.name}', 'kill')">
-                        ☠️ KILL
+                        KILL
                     </button>
                 </div>
             </div>
@@ -248,34 +248,34 @@ class DroneGUI {
 
     formatStateName(state) {
         const stateNames = {
-            'IDLE': '🟢 Idle', 'TAKING_OFF': '🚀 Taking Off', 'HOVERING': '⏸️ Hovering',
-            'OFFBOARD': '🎮 Offboard', 'LANDING': '🛬 Landing', 'UNKNOWN': '❓ Unknown'
+            'IDLE': 'Idle', 'TAKING_OFF': 'Taking Off', 'HOVERING': 'Hovering',
+            'OFFBOARD': 'Offboard', 'LANDING': 'Landing', 'UNKNOWN': 'Unknown'
         };
         return stateNames[state] || state;
     }
 
     formatModeName(mode) {
         const modeNames = {
-            'MANUAL': '🕹️ Manual', 'POSCTL': '📍 Position', 'AUTO.LOITER': '⭕ Loiter',
-            'AUTO.TAKEOFF': '🚀 Auto Takeoff', 'AUTO.LAND': '🛬 Auto Land',
-            'OFFBOARD': '🎮 Offboard', 'UNKNOWN': '❓ Unknown'
+            'MANUAL': 'Manual', 'POSCTL': 'Position', 'AUTO.LOITER': 'Loiter',
+            'AUTO.TAKEOFF': 'Auto Takeoff', 'AUTO.LAND': 'Auto Land',
+            'OFFBOARD': 'Offboard', 'UNKNOWN': 'Unknown'
         };
         return modeNames[mode] || mode;
     }
 
     getOverallStatus(drone) {
-        if (!drone.connected) { return '❌ Disconnected'; }
+        if (!drone.connected) { return 'Disconnected'; }
 
         const isLow = (drone.battery_percent <= 20 && drone.battery_percent >= 0) || (drone.voltage_v > 0 && drone.voltage_v <= 21.0);
-        if (isLow) { return '⚠️ Low Battery'; }
+        if (isLow) { return 'Low Battery'; }
 
-        if (drone.latency_ms > 10.0) { return '📡 High Latency'; }
-        if (drone.state === 'TAKING_OFF') { return '🚀 Taking Off...'; }
-        if (drone.state === 'LANDING') { return '🛬 Landing...'; }
-        if (drone.state === 'HOVERING') { return '⏸️ Hovering'; }
-        if (drone.state === 'OFFBOARD') { return '🎮 In Mission'; }
-        if (drone.armed) { return '⚡ Armed & Ready'; }
-        return '💤 Standby';
+        if (drone.latency_ms > 10.0) { return 'High Latency'; }
+        if (drone.state === 'TAKING_OFF') { return 'Taking Off...'; }
+        if (drone.state === 'LANDING') { return 'Landing...'; }
+        if (drone.state === 'HOVERING') { return 'Hovering'; }
+        if (drone.state === 'OFFBOARD') { return 'In Mission'; }
+        if (drone.armed) { return 'Armed & Ready'; }
+        return 'Standby';
     }
 
     updateLastUpdateTime() {

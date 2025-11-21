@@ -10,7 +10,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🚁 Drone Control Dashboard</h1>
+            <h1>Drone Control Dashboard</h1>
             <div class="connection-status" id="connection-status">
                 <span class="status-indicator" id="status-indicator"></span>
                 <span id="status-text">Connecting...</span>
@@ -22,37 +22,37 @@
             <div class="button-group">
                 <div class="btn-subgroup">
                     <button class="btn btn-success" id="global-arm" onclick="sendGlobalCommand('arm')">
-                        ✈️ Arm All
+                        Arm All
                     </button>
                     <button class="btn btn-danger" id="global-disarm" onclick="sendGlobalCommand('disarm')">
-                        ⛔ Disarm All
+                        Disarm All
                     </button>
                     <button class="btn btn-primary" id="global-takeoff" onclick="sendGlobalCommand('takeoff')">
-                        🚀 Takeoff All
+                        Takeoff All
                     </button>
                     <button class="btn btn-warning" id="global-land" onclick="sendGlobalCommand('land')">
-                        🛬 Land All
+                        Land All
                     </button>
                 </div>
 
                 <div class="btn-subgroup">
                     <button class="btn btn-success" id="global-planning-start" onclick="sendGlobalCommand('planning_start')">
-                        🧠 Start Planning All
+                        Start Planning All
                     </button>
                     <button class="btn btn-danger" id="global-planning-stop" onclick="sendGlobalCommand('planning_stop')">
-                        🛑 Stop Planning All
+                        Stop Planning All
                     </button>
                 </div>
 
                 <div class="btn-subgroup">
                     <button class="btn btn-warning" id="swap-positions" onclick="sendGlobalCommand('swap_positions')">
-                        🔄 Swap Positions
+                        Swap Positions
                     </button>
                 </div>
 
                 <div class="btn-subgroup danger-zone">
                     <button class="btn btn-danger btn-kill" id="global-kill" onclick="sendGlobalCommand('kill')">
-                        ☠️ KILL ALL DRONES
+                        KILL ALL DRONES
                     </button>
                 </div>
 
@@ -73,10 +73,10 @@
                     </div>
                     <div class="roaming-buttons">
                         <button class="btn btn-success" id="global-start-roaming" onclick="sendRoamingCommand('start')">
-                            🌀 Start Roaming
+                            Start Roaming
                         </button>
                         <button class="btn btn-danger" id="global-stop-roaming" onclick="sendRoamingCommand('stop')">
-                            🛑 Stop Roaming
+                            Stop Roaming
                         </button>
                     </div>
                 </div>
