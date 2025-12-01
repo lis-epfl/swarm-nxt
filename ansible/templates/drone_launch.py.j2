@@ -226,7 +226,10 @@ def generate_launch_description():
                     'launch',
                     'depth_estimation_omninxt.launch.py'
                 ])
-            )
+            ),
+            launch_arguments={
+                'pointcloud_frame_id': '{{ ns }}'
+            }.items()
         )
     )
     {% else %}
