@@ -374,6 +374,60 @@ The DDS uses TELEM2 for communication with the FC, so we need to use the USB-C c
 !!! important
     Sometimes you need to connect at `/dev/ttyACM1` instead of `/dev/ttyACM0` especially after rebooting the FC.
 
+## Vision Setup
+### Enable Vision in Ansible
+
+To launch the vision drivers and mapping nodes, set the `enable_vision` flag in your Ansible configuration.
+
+#### **Option A: Enable for All Drones**
+
+Edit `ansible/group_vars/all`:
+
+```yaml
+enable_vision: true
+```
+
+#### **Option B: Enable for Specific Drones**
+
+Edit `ansible/inventory.ini`:
+
+```ini
+[drones]
+nxt1.local enable_vision=true
+nxt2.local  # Vision disabled
+```
+
+---
+
+### Camera Calibration
+
+We use the **Quadcam Calibration Tool** to generate rectification maps for the depth estimation node.
+
+#### **Install the Tool**
+Ensure you have run the `host_computer.yml` playbook to install the calibration tool on your system. It will be in `~/data/repos/quadcam_calibration_tool`.
+
+#### **Perform Calibration**
+Follow the instructions in the Quadcam Calibration Tool README to collect data and generate the rectification maps.
+
+#### **Deploy Maps**
+
+Copy the output folder to the drone:
+
+```bash
+# Example: Deploying maps for 192x192 resolution to nxt1
+scp -r final_maps lis@nxt1.local:/home/lis/ros2_ws/src/depth_estimation_ros2/config/final_maps_192_192
+```
+
+#### **Configure the Drone**
+
+SSH into the drone and edit:
+
+```
+~/ros2_ws/src/depth_estimation_ros2/config/depth_omninxt_params.yml
+```
+
+Modify the values if necessary: `calibration_resolution: 192_192` and the `onnx_model_path: "/home/lis/ros2_ws/src/depth_estimation_ros2/models/S2M2_S_192_192_v2_torch29.onnx"`.
+
 ## Flight Preparation 
 
 ### PID Tuning

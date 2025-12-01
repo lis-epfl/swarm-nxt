@@ -49,9 +49,23 @@
       force: yes
     loop:
       - { repo: "https://github.com/lis-epfl/mocap_to_vision_pose_ros2", name: "mocap_to_vision_pose_ros2", version: "dds" }
-      - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
       - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
       - { repo: "https://github.com/Auterion/px4-ros2-interface-lib", name: "px4_ros2_interface_lib", version: "1.6.1"}
+      - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
+      - { repo: "https://github.com/lis-epfl/depth_estimation_ros2", name: "depth_estimation_ros2", version: "main" }
+
+  - name: Install Python Dependencies
+    ansible.builtin.pip:
+      requirements: "{{ drone_ros_path }}/src/{{ item }}/requirements.txt"
+    loop:
+      - oak_ffc_4p_driver_ros2
+      - depth_estimation_ros2
+    ignore_errors: yes
+
+  - name: Download Depth Models
+    ansible.builtin.command: python3 scripts/download_models.py
+    args:
+      chdir: "{{ drone_ros_path }}/src/depth_estimation_ros2"
     
   - name: Get HDSM package
     ansible.builtin.git: 
@@ -151,28 +165,6 @@
     async: 2400
     poll: 0
     register: ros_build_async
-
-  # TODO: convert these to DDS  
-  # - name: Ensure params
-  #   block: 
-  #     - name: Send script
-  #       ansible.builtin.template:
-  #         src: "scripts/ensure_params.py"
-  #         dest: "/tmp/ensure_params.py"
-  #     - name: Ensure config folder exists
-  #       ansible.builtin.file: 
-  #         path: "{{ drone_ros_path }}/config"
-  #         state: 'directory'
-  #     - name: Send params file
-  #       ansible.builtin.template:
-  #         src: "scripts/params.yml"
-  #         dest: "{{ drone_ros_path }}/config/params.yml"
-  #     - name: Run ensure params script
-  #       ansible.builtin.shell: 
-  #         cmd: python3 /tmp/ensure_params.py
-  #       register: ensure_params_reg
-  #       changed_when: ensure_params_reg.rc == 10
-  #       failed_when: ensure_params_reg.rc != 0 and ensure_params_reg.rc != 10
 
   - name: Wait for ros build to finish 
     ansible.builtin.async_status: 

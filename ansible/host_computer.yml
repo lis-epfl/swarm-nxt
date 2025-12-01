@@ -237,6 +237,7 @@
       ansible.builtin.apt:
         name: modemmanager
         state: absent
+
     - name: Download necessary items
       become: false
       block: 
@@ -266,4 +267,27 @@
           chdir: "{{ host_fc_path }}/PX4-Autopilot"
           target: hkust_nxt-dual        
           
+    - name: "Vision Calibration Tools"
+      block:
+        - name: Install Calibration Dependencies
+          pip:
+            name:
+              - opencv-python
+              - numpy
+              - scipy
+              - matplotlib
+              - pyyaml
+            state: present
+
+        - name: Clone Quadcam Calibration Tool
+          git:
+            repo: "https://github.com/lis-epfl/quadcam_calibration_tool.git"
+            dest: "{{ host_base_path }}/repos/quadcam_calibration_tool"
+            version: main
+            force: yes
+
+        - name: Install Tool Requirements
+          pip:
+            requirements: "{{ host_base_path }}/repos/quadcam_calibration_tool/requirements.txt"
+          ignore_errors: yes
 

@@ -146,18 +146,6 @@ def generate_launch_description():
         output='screen',
         parameters=[bridge_config_file])
 
-    env_builder_include = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [
-                    FindPackageShare("env_builder"),
-                    "launch",
-                    "env_builder_empty.launch.py",
-                ]
-            )
-        ),
-    )
-
     planner_input_topic = '/agent_' + str(hdsm_idx) + '/traj_full'
     trajectory_converter_node = Node(
         package='omninxt_bridge_ros2',
@@ -181,6 +169,18 @@ def generate_launch_description():
 
     # Format as the required string: "[x, y, z]"
     goal_position_str = f"[{goal_x}, {goal_y}, {goal_z}]"
+
+    # generate the frames to remove the pointcloud around their positions
+    swarm_frames = [
+    {% for host in groups['drones'] %}
+        "{{ host }}",
+    {% endfor %}
+    ]
+    swarm_frames_str = str(swarm_frames) # "[ 'nxt1', 'nxt2', ... ]"
+
+    # Current drone frame name (e.g., nxt7)
+    # Using 'ns' variable from Ansible which is usually the hostname
+    drone_frame_name = "{{ ns }}"
     
     multi_agent_planner_include = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
@@ -196,9 +196,55 @@ def generate_launch_description():
             "id": str(hdsm_idx),
             "n_rob": "{{ groups['drones'] | length }}",
             "goal_position": goal_position_str,
+            "use_vision": "{{ 'true' if enable_vision | default(false) else 'false' }}",
+            "pointcloud_topic": "/depth/pointcloud/combined",
+            "agent_frame": drone_frame_name,
+            "swarm_frames": swarm_frames_str,
         }.items(),
     )
 
+    extra_nodes = []
+
+    {% if enable_vision is defined and enable_vision %}
+    # VISION MODE: Launch Camera and Depth Estimation
+    extra_nodes.append(
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('oak_ffc_4p_driver_ros2'),
+                    'launch',
+                    'oak_ffc_4p_driver_omninxt.launch.py'
+                ])
+            )
+        )
+    )
+    extra_nodes.append(
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('depth_estimation_ros2'),
+                    'launch',
+                    'depth_estimation_omninxt.launch.py'
+                ])
+            )
+        )
+    )
+    {% else %}
+    # NO VISION MODE: Launch Env Builder (Synthetic)
+    extra_nodes.append(
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(
+                PathJoinSubstitution(
+                    [
+                        FindPackageShare("env_builder"),
+                        "launch",
+                        "env_builder_empty.launch.py",
+                    ]
+                )
+            ),
+        )
+    )
+    {% endif %}
 
     return LaunchDescription(
         [
@@ -211,7 +257,6 @@ def generate_launch_description():
             mpc_node,
             command_converter_node,
             trajectory_converter_node,
-            env_builder_include,
             multi_agent_planner_include,
-        ]
+        ] + extra_nodes
     )
