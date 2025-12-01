@@ -64,3 +64,18 @@
         - { src: "/tmp/mpc_logs/latest/", name: "mpc_logs" }
         - { src: "/tmp/depth_logs/", name: "depth_logs" }
         - { src: "/tmp/planner_logs/", name: "planner_logs" }
+
+- name: Analyze consolidated logs
+      ansible.builtin.command: >
+        python3 scripts/analyze_logs.py --log-dir consolidated_logs/latest
+      args:
+        chdir: "{{ playbook_dir }}" # Ensures we are in the root ansible folder
+      register: analysis_output
+      delegate_to: localhost        # Run this on your machine, not the drone
+      run_once: true                # Run only once, not for every drone
+
+    - name: Display analysis results
+      ansible.builtin.debug:
+        msg: "{{ analysis_output.stdout_lines }}"
+      delegate_to: localhost
+      run_once: true
