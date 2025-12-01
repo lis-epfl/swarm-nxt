@@ -1,7 +1,6 @@
-
 ---
 
-- name: Copy the local log to the right place  
+- name: Copy the local log to the right place
   hosts: localhost
   gather_facts: true
   vars:
@@ -17,14 +16,14 @@
        mode: "0755"
 
     - name: Copy latest logs to consolidated folder
-      ansible.posix.synchronize: 
+      ansible.posix.synchronize:
        mode: push
        src: "{{ host_base_path }}/logs/latest"
        dest: "{{ run_dir }}/host"
        recursive: yes
        archive: yes
        compress: yes
-       rsync_opts: 
+       rsync_opts:
          - "--mkpath"
     - name: Create latest consolidated log link
       ansible.builtin.file:
@@ -49,3 +48,19 @@
           - "--mkpath"
       delegate_to: localhost
 
+    - name: Pull additional temporary logs (MPC, Depth, Planner)
+      ansible.posix.synchronize:
+        mode: pull
+        src: "{{ item.src }}" # Trailing slash copies contents
+        dest: "{{ host_base_path }}/consolidated_logs/latest/{{ ansible_hostname }}/{{ item.name }}/"
+        recursive: yes
+        archive: yes
+        compress: yes
+        rsync_opts:
+          - "--mkpath"
+      delegate_to: localhost
+      ignore_errors: true
+      loop:
+        - { src: "/tmp/mpc_logs/latest/", name: "mpc_logs" }
+        - { src: "/tmp/depth_logs/", name: "depth_logs" }
+        - { src: "/tmp/planner_logs/", name: "planner_logs" }
