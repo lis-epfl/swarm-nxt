@@ -75,14 +75,68 @@
       - docker-ce-cli=5:27.5*
       - libopencv-dev
       - libusb-1.0-0-dev
-      
+
     state: present
     allow_downgrade: true
+
+- name: Install nvidia toolkit
+  ansible.builtin.pip:
+    name: 
+      - nvidia-jetpack
 
 - name: Jetson Stats
   ansible.builtin.pip:
     name: 
       - jetson-stats
+
+- name: Install ONNX Runtime (C++ Dev Files)
+    become: true
+    block:
+      # 1. Install the Python package to get the pre-compiled .so libraries
+      - name: Install onnxruntime-gpu pip package (JetPack 6)
+        pip:
+          name: onnxruntime-gpu
+          extra_args: "--index-url https://pypi.jetson-ai-lab.io/jp6/cu126 --upgrade"
+          executable: pip3
+
+      # 2. Find where pip installed it
+      - name: Find onnxruntime location
+        shell: pip3 show onnxruntime-gpu | grep Location | cut -d " " -f 2
+        register: ort_pip_loc
+        changed_when: false
+
+      # 3. Symlink the shared libraries to /usr/local/lib so CMake finds them
+      - name: Symlink ONNX Runtime libraries
+        shell: |
+          # Link versioned libs
+          ln -sf {{ ort_pip_loc.stdout }}/onnxruntime/capi/libonnxruntime.so.* /usr/local/lib/
+          ln -sf {{ ort_pip_loc.stdout }}/onnxruntime/capi/libonnxruntime_providers_*.so /usr/local/lib/
+          
+          # Link the main .so generic name
+          ORT_SO=$(find {{ ort_pip_loc.stdout }}/onnxruntime/capi -name "libonnxruntime.so.*" | head -n 1)
+          ln -sf $ORT_SO /usr/local/lib/libonnxruntime.so
+          
+          # Update library cache
+          ldconfig
+
+      # 4. Download headers from source (since pip package doesn't have them)
+      - name: Download and Install ONNX Runtime Headers
+        shell: |
+          ORT_VER=v1.17.0
+          # Only run if we haven't already installed the headers
+          if [ ! -f /usr/local/include/onnxruntime_cxx_api.h ]; then
+            # Download source code for headers
+            wget https://github.com/microsoft/onnxruntime/archive/refs/tags/${ORT_VER}.tar.gz -O /tmp/ort.tar.gz
+            tar -xf /tmp/ort.tar.gz -C /tmp/
+            
+            # COPY HEADERS DIRECTLY to /usr/local/include (Flattened structure for CMake)
+            # This ensures find_path(ONNXRUNTIME_INCLUDE_DIR ...) finds them immediately
+            cp -r /tmp/onnxruntime-${ORT_VER:1}/include/onnxruntime/core/session/* /usr/local/include/
+            cp -r /tmp/onnxruntime-${ORT_VER:1}/include/onnxruntime/core/providers/* /usr/local/include/ 2>/dev/null || true
+            
+            # Cleanup
+            rm -rf /tmp/ort.tar.gz /tmp/onnxruntime-${ORT_VER:1}
+          fi
 
 - name: Ensure Jetson clocks service
   ansible.builtin.template: 
