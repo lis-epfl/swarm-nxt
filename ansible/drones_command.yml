@@ -15,6 +15,59 @@
     #   ansible.builtin.include_tasks: "tasks/install-microxrce.yml"
 
   tasks:
+  #   - name: Install nvidia toolkit (System Package)
+  #     ansible.builtin.apt:
+  #       name: nvidia-jetpack
+  #       state: present
+  #       update_cache: yes
+
+  #   - name: Jetson Stats
+  #     ansible.builtin.pip:
+  #       name:
+  #         - jetson-stats
+
+  #   - name: Install ONNX Runtime (C++ Dev Files)
+  #     become: true
+  #     block:
+  #       - name: Install onnxruntime-gpu pip package (JetPack 6)
+  #         pip:
+  #           name: onnxruntime-gpu
+  #           extra_args: "--index-url https://pypi.jetson-ai-lab.io/jp6/cu126 --upgrade"
+  #           executable: pip3
+
+  #       - name: Find onnxruntime location
+  #         shell: pip3 show onnxruntime-gpu | grep Location | cut -d " " -f 2
+  #         register: ort_pip_loc
+  #         changed_when: false
+
+  #       - name: Symlink ONNX Runtime libraries
+  #         shell: |
+  #           ln -sf {{ ort_pip_loc.stdout }}/onnxruntime/capi/libonnxruntime.so.* /usr/local/lib/
+  #           ln -sf {{ ort_pip_loc.stdout }}/onnxruntime/capi/libonnxruntime_providers_*.so /usr/local/lib/
+
+  #           ORT_SO=$(find {{ ort_pip_loc.stdout }}/onnxruntime/capi -name "libonnxruntime.so.*" | head -n 1)
+  #           ln -sf $ORT_SO /usr/local/lib/libonnxruntime.so
+
+  #           ldconfig
+
+  #       - name: Download and Install ONNX Runtime Headers
+  #         shell: |
+  #           set -e
+  #           ORT_TAG="v1.17.0"
+  #           ORT_VERSION="1.17.0"
+
+  #           if [ ! -f /usr/local/include/onnxruntime_cxx_api.h ]; then
+  #             wget "https://github.com/microsoft/onnxruntime/archive/refs/tags/$ORT_TAG.tar.gz" -O /tmp/ort.tar.gz
+  #             tar -xf /tmp/ort.tar.gz -C /tmp/
+
+  #             cp -r "/tmp/onnxruntime-$ORT_VERSION/include/onnxruntime/core/session/"* /usr/local/include/
+  #             cp -r "/tmp/onnxruntime-$ORT_VERSION/include/onnxruntime/core/providers/"* /usr/local/include/ 2>/dev/null || true
+
+  #             rm -rf /tmp/ort.tar.gz "/tmp/onnxruntime-$ORT_VERSION"
+  #           fi
+  #         args:
+  #           executable: /bin/bash
+
   #   - name: Copy Gurobi license file
   #     ansible.builtin.copy:
   #       src: secrets/gurobi.lic
@@ -29,9 +82,9 @@
         dest: "{{ item.dest }}"
         mode: "644"
       loop:
-  #       - { src: "../ros_packages/safety_checker_ros2/config/safety_params.yaml", dest: "{{ drone_ros_path }}/src/safety_checker_ros2/config/safety_params.yaml"}
+        # - { src: "../ros_packages/safety_checker_ros2/config/safety_params.yaml", dest: "{{ drone_ros_path }}/src/safety_checker_ros2/config/safety_params.yaml"}
         # - { src: "../ros_packages/drone_state_manager_ros2/config/drone_state_manager_params.yaml", dest: "{{ drone_ros_path }}/src/drone_state_manager_ros2/config/drone_state_manager_params.yaml"}
         - { src: "/home/toumieh/ros2_ws/src/multi_agent_pkgs/multi_agent_planner/config/agent_omninxt_config.yaml", dest: "{{ drone_ros_path }}/src/multi_agent_pkgs/multi_agent_planner/config/agent_omninxt_config.yaml"}
-  #       - { src: "/home/toumieh/ros2_ws/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml", dest: "{{ drone_ros_path }}/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml"}
+        # - { src: "/home/toumieh/ros2_ws/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml", dest: "{{ drone_ros_path }}/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml"}
 
 
