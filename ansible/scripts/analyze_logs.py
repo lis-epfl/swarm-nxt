@@ -33,18 +33,35 @@ def analyze_drone(drone_path):
     if mpc_states_file.exists():
         try:
             df = pd.read_csv(mpc_states_file)
-            # Basic Error Stats
-            stats['error_x_mean'] = df['error_x'].abs().mean()
-            stats['error_x_max'] = df['error_x'].abs().max()
-            stats['error_y_mean'] = df['error_y'].abs().mean()
-            stats['error_y_max'] = df['error_y'].abs().max()
-            stats['error_z_mean'] = df['error_z'].abs().mean()
-            stats['error_z_max'] = df['error_z'].abs().max()
-            stats['error_norm_mean'] = df['error_norm'].mean()
-            stats['error_norm_max'] = df['error_norm'].max()
+
+            # --- FILTERING LOGIC START ---
+            # Wait for error to drop below 10cm (0.1m) before calculating stats
+            # This ignores the large errors during takeoff
+            stable_indices = df.index[df['error_norm'] < 0.1].tolist()
+
+            if stable_indices:
+                # Slice the dataframe starting from the first time it was stable
+                start_idx = stable_indices[0]
+                df_stats = df.iloc[start_idx:]
+            else:
+                # Fallback: if it never stabilized, report on the whole log (and warn)
+                print(f"[{drone_name}] WARNING: Tracking error never dropped below 10cm!")
+                df_stats = df
+            # --- FILTERING LOGIC END ---
+
+            # Basic Error Stats (Calculated on the filtered data)
+            stats['error_x_mean'] = df_stats['error_x'].abs().mean()
+            stats['error_x_max'] = df_stats['error_x'].abs().max()
+            stats['error_y_mean'] = df_stats['error_y'].abs().mean()
+            stats['error_y_max'] = df_stats['error_y'].abs().max()
+            stats['error_z_mean'] = df_stats['error_z'].abs().mean()
+            stats['error_z_max'] = df_stats['error_z'].abs().max()
+            stats['error_norm_mean'] = df_stats['error_norm'].mean()
+            stats['error_norm_max'] = df_stats['error_norm'].max()
 
             # Save trajectory for collision check later
-            # Ensure we sort by timestamp to be safe for interpolation
+            # (We keep the full trajectory for collision checks to be safe,
+            # or you can change df to df_stats here too if you prefer)
             trajectory_df = df[['timestamp', 'x', 'y', 'z']].sort_values('timestamp').copy()
         except Exception as e:
             print(f"[{drone_name}] MPC States Error: {e}")
@@ -114,8 +131,6 @@ def calculate_min_distances(trajectories):
 
     # 1. Determine common time range (Intersection)
     # We can only compare drones when they are ALL in the air/logging.
-    # Start = Maximum of all start times
-    # End   = Minimum of all end times
     start_times = [df['timestamp'].min() for df in trajectories.values()]
     end_times = [df['timestamp'].max() for df in trajectories.values()]
 
@@ -128,7 +143,6 @@ def calculate_min_distances(trajectories):
         return None, None
 
     # 2. Interpolate
-    # Create a common timeline at 1000Hz (0.001s)
     common_time = np.arange(t_start, t_end, 0.001)
     interpolated_pos = {}
 
@@ -136,7 +150,6 @@ def calculate_min_distances(trajectories):
         # Drop duplicates to prevent interpolation errors
         df_clean = df.drop_duplicates(subset='timestamp')
 
-        # Create function: f(time) -> [x, y, z]
         f = interp1d(
             df_clean['timestamp'],
             df_clean[['x', 'y', 'z']],
@@ -163,8 +176,6 @@ def calculate_min_distances(trajectories):
             pos_a = interpolated_pos[name_a]
             pos_b = interpolated_pos[name_b]
 
-            # Vectorized Euclidean Norm over the entire time array
-            # shape of pos_a is (N_samples, 3)
             diff = pos_a - pos_b
             dists = np.linalg.norm(diff, axis=1)
 
@@ -181,7 +192,6 @@ def calculate_min_distances(trajectories):
 # --- MAIN ---
 def main():
     parser = argparse.ArgumentParser(description="Analyze SwarmNXT Flight Logs")
-    # Updated to match the Ansible flag '--log-dir'
     parser.add_argument('--log-dir', required=True, help="Path to consolidated logs")
     args = parser.parse_args()
 
@@ -230,11 +240,6 @@ def main():
         if min_dist is not None:
             print(f"\n>>> GLOBAL MINIMUM DISTANCE: {min_dist:.4f} meters")
             print(f">>> CRITICAL PAIR: {pair[0]} and {pair[1]}")
-
-            if min_dist < 0.5:
-                print("\n[!!!] WARNING: COLLISION RISK DETECTED (< 0.5m) [!!!]")
-            else:
-                print("\n[OK] Safe separation maintained.")
     else:
         print("\n[INFO] Need at least 2 drone logs to calculate safety distances.")
 
