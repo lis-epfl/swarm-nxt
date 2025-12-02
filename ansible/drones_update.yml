@@ -54,14 +54,6 @@
       - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
       - { repo: "https://github.com/lis-epfl/depth_estimation_ros2", name: "depth_estimation_ros2", version: "main" }
 
-  - name: Install Python Dependencies
-    ansible.builtin.pip:
-      requirements: "{{ drone_ros_path }}/src/{{ item }}/requirements.txt"
-    loop:
-      - oak_ffc_4p_driver_ros2
-      - depth_estimation_ros2
-    ignore_errors: yes
-
   - name: Download Depth Models
     ansible.builtin.command: python3 scripts/download_models.py
     args:

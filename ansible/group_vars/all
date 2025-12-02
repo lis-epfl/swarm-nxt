@@ -32,7 +32,7 @@ optitrack_server_address: "192.168.194.150"
 
 # if enabled the drones_update will install the vision driver and depth estimation
 # you can modify it for individual drones in inventory.ini by setting enable_vision after the drone name
-enable_vision: true
+enable_vision: false
 
 drone_rosbag_topics: 
   - "/{{ ns }}/*"
