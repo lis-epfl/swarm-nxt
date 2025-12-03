@@ -296,8 +296,8 @@ Calibrate the accelometer by clicking on the accelerometer sub-tab and completin
 
 <!-- TODO: Add photo for recovery port, REC button, RES button --> 
 1. Plug the external power into the XT60 cable for the battery.
-1. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
-2. Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board
+2. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
+3. Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board
 4. Press the button labelled "RES" on the Devboard
 5. While pressing the RES button, press the REC button
 6. Release the RES button while still pressing the REC button

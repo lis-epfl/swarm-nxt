@@ -36,10 +36,23 @@
   remote_user: lis
   gather_facts: true
   tasks:
+    # 1. Stop the nodes to ensure files are closed and stats written
+    - name: Stop ROS packages to flush logs
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: stopped
+        scope: user
+
+    # 2. Wait a moment to ensure IO operations complete
+    - name: Wait for shutdown flush
+      ansible.builtin.pause:
+        seconds: 3
+
+    # 3. Collect the data
     - name: Pull latest log contents from each drone into its hostname subfolder
       ansible.posix.synchronize:
         mode: pull
-        src: "{{ drone_base_path }}/logs/latest/"   # trailing slash = copy CONTENTS
+        src: "{{ drone_base_path }}/logs/latest/"
         dest: "{{ host_base_path }}/consolidated_logs/latest/{{ ansible_hostname }}/"
         recursive: yes
         archive: yes
@@ -51,7 +64,7 @@
     - name: Pull MPC and Planner logs
       ansible.posix.synchronize:
         mode: pull
-        src: "{{ item.src }}" # Trailing slash copies contents
+        src: "{{ item.src }}"
         dest: "{{ host_base_path }}/consolidated_logs/latest/{{ ansible_hostname }}/{{ item.name }}/"
         recursive: yes
         archive: yes
@@ -78,6 +91,14 @@
       delegate_to: localhost
       ignore_errors: true
 
+    # 4. Restart the nodes immediately (while analysis runs on host)
+    - name: Restart ROS packages
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: started
+        scope: user
+
+    # 5. Run Analysis
     - name: Analyze consolidated logs
       ansible.builtin.command: >
         python3 scripts/analyze_logs.py --log-dir "{{ host_base_path }}/consolidated_logs/latest"
