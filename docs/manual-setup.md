@@ -34,8 +34,9 @@ Download the SDK Manager from the [NVIDIA Website](https://developer.nvidia.com/
 10. Username: lis, Password: orin
 11. Choose NVME for the storage device
 12. Wait for the installation to finish. 
-13. Select proxy mode
-14. Select the IP that you want the device to have. This documentation assumes `192.168.55.1`
+13. Select install when asked to install runtime components/SDK components
+14. Select proxy mode
+15. Select the IP that you want the device to have. This documentation assumes `192.168.55.1`
 
 
 !!! warning
