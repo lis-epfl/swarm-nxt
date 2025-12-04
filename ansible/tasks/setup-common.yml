@@ -22,14 +22,14 @@
     # 3. Remove everything up to 'Date: ' (handling variable whitespace)
     # 4. Take the first result only (in case of redirects)
     NEW_DATE=$(wget --no-check-certificate -qSO- --max-redirect=0 google.com 2>&1 | grep "Date:" | sed 's/.*Date: //g' | head -n 1)
-    
+
     # Set the date
     date -s "$NEW_DATE"
   args:
     executable: /bin/bash
 
 - name: Check kernel, patch if needed
-  ansible.builtin.include_tasks: "patch-kernel.yml"       
+  ansible.builtin.include_tasks: "patch-kernel.yml"
 - name: Add Docker apt repository
   block:
     - name: Remove existing Docker repository definition to prevent conflicts
@@ -44,41 +44,41 @@
           - curl
         state: present
         update_cache: yes
-    
+
     - name: Create keyrings directory
       ansible.builtin.file:
         path: /etc/apt/keyrings
         state: directory
         mode: '0755'
-    
+
     - name: Download Docker GPG key
       ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
-    
+
     - name: Add Docker repository
       ansible.builtin.lineinfile:
         path: /etc/apt/sources.list.d/docker.list
         line: "deb [arch=arm64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         create: yes
-    
+
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: yes
 
 - name: Ensure apt packages are installed
-  ansible.builtin.apt: 
-    name: 
+  ansible.builtin.apt:
+    name:
       - python3-pip
-      - python3-loguru 
+      - python3-loguru
       - python3-yaml
-      - htop 
+      - htop
       - sysstat
       - chrony
       - docker-ce=5:27.5*
       - docker-ce-cli=5:27.5*
-      - libopencv-dev
+      # libopencv-dev removed to allow custom OpenCV 4.8.0
       - libusb-1.0-0-dev
 
     state: present
@@ -138,7 +138,7 @@
         executable: /bin/bash
 
 - name: Ensure Jetson clocks service
-  ansible.builtin.template: 
+  ansible.builtin.template:
     src: templates/jetson_clocks.j2
     dest: /etc/systemd/system/jetson_clocks.service
 
@@ -154,12 +154,12 @@
   become: yes
   block:
     - name: Create NetworkManager WiFi power save disable configuration
-      ansible.builtin.template: 
+      ansible.builtin.template:
         src: templates/90-disable-wifi-powersave.conf.j2
         dest: /etc/NetworkManager/conf.d/90-disable-wifi-powersave.conf
         mode: '0644'
       register: disable_powersave1
-    
+
     - name: Remove default NetworkManager WiFi power save configuration
       ansible.builtin.file:
         path: /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf
@@ -168,45 +168,45 @@
 
     - name: Restart nmcli if needed
       when: disable_powersave1.changed or disable_powersave2.changed
-      ansible.builtin.systemd: 
+      ansible.builtin.systemd:
         name: NetworkManager
         state: restarted
 - name: "Setup VNC"
-  block: 
+  block:
     - name: Enable Automatic Login
-      ansible.builtin.lineinfile: 
+      ansible.builtin.lineinfile:
         path: /etc/gdm3/custom.conf
         regexp: 'AutomaticLoginEnable'
         line: 'AutomaticLoginEnable=true'
     - name: Set automatic login user
-      ansible.builtin.lineinfile: 
+      ansible.builtin.lineinfile:
         path: /etc/gdm3/custom.conf
         regexp: 'AutomaticLogin'
         line: 'AutomaticLogin=lis'
     - name: Install xorg dummy
-      ansible.builtin.apt: 
-        name: 
+      ansible.builtin.apt:
+        name:
           - xserver-xorg-video-dummy
           - vino
     - name: Add vino to graphical session wants
-      ansible.builtin.file: 
+      ansible.builtin.file:
         src: /usr/lib/systemd/user/vino-server.service
         path: /usr/lib/systemd/user/graphical-session.target.wants/vino-server.service
         state: "link"
     - name: "Set gsettings"
       become: false
       block:
-        # TODO: for some reason the community dcom modifier doesn't work. this is a hack to keep going. 
+        # TODO: for some reason the community dcom modifier doesn't work. this is a hack to keep going.
         - name: "Disable prompt requirement"
-          ansible.builtin.command: gsettings set org.gnome.Vino prompt-enabled false 
+          ansible.builtin.command: gsettings set org.gnome.Vino prompt-enabled false
         - name: "Disable encryption"
           ansible.builtin.command: gsettings set org.gnome.Vino require-encryption false
         - name: "Set VNC as auth method"
           ansible.builtin.command: gsettings set org.gnome.Vino authentication-methods "['vnc']"
 
-          # shell to allow for this evaluation 
+          # shell to allow for this evaluation
         - name: "Set password"
-          ansible.builtin.shell: gsettings set org.gnome.Vino vnc-password $(echo -n 'orin'|base64)  # TODO: actual password? 
+          ansible.builtin.shell: gsettings set org.gnome.Vino vnc-password $(echo -n 'orin'|base64)  # TODO: actual password?
 
     - name: "xorg configuration"
       ansible.builtin.blockinfile:
@@ -240,7 +240,7 @@
           EndSubSection
           EndSection
 - name: Setup ROS
-  block: 
+  block:
     - name: Ensure universe is present
       ansible.builtin.lineinfile:
         path: /etc/apt/sources.list
@@ -250,10 +250,10 @@
       ansible.builtin.lineinfile:
         path: /etc/apt/sources.list
         line: "deb http://ports.ubuntu.com/ubuntu-ports/ {{ ansible_distribution_release }}-updates main restricted universe"
-        regexp: "{{ ansible_distribution_release }}-updates (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)" 
+        regexp: "{{ ansible_distribution_release }}-updates (main|restricted|universe) (main|restricted|universe) (main|restricted|universe)"
     - name: Add ROS 2 apt
       block:
-        - name: Add apt key 
+        - name: Add apt key
           ansible.builtin.get_url:
             url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
             dest: /usr/share/keyrings/ros-archive-keyring.gpg
@@ -266,35 +266,35 @@
           ansible.builtin.include_tasks: "download-ros.yml"
         - name: Set bashrc with ROS and aliases
           become: false
-          ansible.builtin.blockinfile: 
+          ansible.builtin.blockinfile:
             path: /home/lis/.bashrc
             block: |
               source /opt/ros/humble/setup.bash
-              export ROS_DOMAIN_ID={{ drone_num }} 
-              
+              export ROS_DOMAIN_ID={{ drone_num }}
+
               # ROS package systemctl aliases
               alias ros_status='systemctl --user status ros_packages'
               alias ros_start='systemctl --user start ros_packages'
               alias ros_stop='systemctl --user stop ros_packages'
               alias ros_restart='systemctl --user restart ros_packages'
-              
+
               # ROS package logs function with argument support
               ros_logs() {
                 journalctl --user -u ros_packages "$@"
-              } 
+              }
 
         - name: Get Geographic Lib
-          ansible.builtin.include_tasks: "geographic-lib.yml"       
+          ansible.builtin.include_tasks: "geographic-lib.yml"
         - name: Ensure persistent storage in journald.conf
           become: true
           ansible.builtin.replace:
             path: /etc/systemd/journald.conf
             regexp: '^\s*#?Storage=.*$'
             replace: 'Storage=persistent'
-                        
-   
-- name: Check for zellij 
-  ansible.builtin.command: zellij --version 
+
+
+- name: Check for zellij
+  ansible.builtin.command: zellij --version
   register: zellij_check
   changed_when: false
   failed_when: false
@@ -308,13 +308,13 @@
         dest: /tmp/zellij.tar.gz
     - name: Extract zellij
       become: true
-      ansible.builtin.unarchive: 
+      ansible.builtin.unarchive:
         src: /tmp/zellij.tar.gz
         dest: /usr/bin/
         remote_src: true
 
 
-- name: Camera prereqs
+- name: Camera prereqs (DepthAI v3.2.1)
   block:
     - name: Ensure Movidius udev rule exists
       ansible.builtin.copy:
@@ -327,65 +327,79 @@
       ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
       when: udev_rule_result.changed
 
-    - name: Check if depthai zip exists
+    - name: Check if DepthAI library headers exist (Simple check)
       ansible.builtin.stat:
-        path: "{{ playbook_dir }}/build_artifacts/depthai-v2.29.0-build.zip"
-        checksum_algorithm: sha256
-        get_checksum: yes
-      register: depthai_zip
-      delegate_to: localhost
-      become: false
+        path: /usr/local/include/depthai/depthai.hpp
+      register: depthai_installed
 
-    - name: Extract zip
-      when: depthai_zip.stat.exists and depthai_zip.stat.checksum == '67e655426e5f7a26197c71c922df6c4351634397991c7c042bab129af9e3bf8b' 
-      ansible.builtin.unarchive: 
-        src: "{{ playbook_dir }}/build_artifacts/depthai-v2.29.0-build.zip"
-        dest: /tmp 
-
-    - name: Manually download and build depthai
-      when: not depthai_zip.stat.exists or depthai_zip.stat.checksum != '67e655426e5f7a26197c71c922df6c4351634397991c7c042bab129af9e3bf8b' 
+    - name: Download and install depthai-core v3.2.1 (Source)
+      when: not depthai_installed.stat.exists
       block:
-      - name: Download depthai-core
-        ansible.builtin.get_url:
-          url: https://github.com/luxonis/depthai-core/releases/download/v2.29.0/depthai-core-v2.29.0.tar.gz
-          dest: /tmp/depthai-core-v2.29.0.tar.gz
-      
-      - name: Extract depthai-core
-        ansible.builtin.unarchive:
-          src: /tmp/depthai-core-v2.29.0.tar.gz
-          dest: /tmp
-          remote_src: true
-      
-      - name: Build depthai-core
-        ansible.builtin.shell:
-          cmd: cmake -B build && cmake --build build --parallel $(nproc) && cmake --install build
-          chdir: /tmp/depthai-core-v2.29.0
-      
-    - name: Copy depthai headers to system location
+        - name: Download depthai-core
+          ansible.builtin.get_url:
+            url: https://github.com/luxonis/depthai-core/releases/download/v3.2.1/depthai-core-v3.2.1.tar.gz
+            dest: /tmp/depthai-core-v3.2.1.tar.gz
+
+        - name: Extract depthai-core
+          ansible.builtin.unarchive:
+            src: /tmp/depthai-core-v3.2.1.tar.gz
+            dest: /tmp
+            remote_src: true
+
+        - name: Build depthai-core (Shared Libs)
+          ansible.builtin.shell: |
+            cmake -S . -B build -DBUILD_SHARED_LIBS=ON
+            cmake --build build --parallel $(nproc)
+            cmake --install build
+          args:
+            chdir: /tmp/depthai-core-v3.2.1
+
+    - name: Copy depthai headers to system location (Ensure they are found)
       ansible.builtin.copy:
-        src: /tmp/depthai-core-v2.29.0/build/install/include/
+        src: /usr/local/include/depthai
         dest: /usr/local/include/
         remote_src: true
         mode: preserve
 
-    - name: Copy depthai libraries to system location
-      ansible.builtin.copy:
-        src: /tmp/depthai-core-v2.29.0/build/install/lib/
-        dest: /usr/local/lib/
-        remote_src: true
-        mode: preserve
+    - name: Run ldconfig
+      ansible.builtin.command: ldconfig
 
-- name: MicroXRCE 
+- name: Build cv_bridge from source (for OpenCV 4.8.0)
+  become: false
+  block:
+    - name: Ensure workspace directory exists
+      ansible.builtin.file:
+        path: /home/lis/ros2_ws/src
+        state: directory
+        owner: lis
+        group: lis
+
+    - name: Clone vision_opencv (Humble)
+      ansible.builtin.git:
+        repo: 'https://github.com/ros-perception/vision_opencv.git'
+        dest: /home/lis/ros2_ws/src/vision_opencv
+        version: humble
+        force: no
+
+    - name: Build cv_bridge with custom OpenCV
+      ansible.builtin.shell: |
+        source /opt/ros/humble/setup.bash
+        colcon build --symlink-install --packages-select cv_bridge --cmake-args -DOpenCV_DIR=/usr/local/lib/cmake/opencv4
+      args:
+        chdir: /home/lis/ros2_ws
+        executable: /bin/bash
+
+- name: MicroXRCE
   ansible.builtin.include_tasks: install-microxrce.yml
 
-- name: Gurobi 
+- name: Gurobi
   ansible.builtin.include_tasks: install-gurobi.yml
-  
-- name: Acados 
+
+- name: Acados
   ansible.builtin.include_tasks: install-acados.yml
 
 - name: NXT compatability
-  block: 
+  block:
     - name: Allow rootless access to flight controller
       ansible.builtin.user:
         name: "lis"
@@ -397,35 +411,35 @@
         state: absent
     - name: Install mavtools
       ansible.builtin.pip:
-        name: 
+        name:
           - mavsdk
           - mavproxy
 
-- name: Chrony Configuration 
+- name: Chrony Configuration
   block:
     - name: Install Chrony
-      ansible.builtin.apt: 
+      ansible.builtin.apt:
         name: chrony
 
 - name: Set WiFi
-  community.general.nmcli: 
+  community.general.nmcli:
     type: wifi
     conn_name: default_drones
     ifname: "{{ drone_wifi_interface }}"
     ssid: "{{ wifi_ssid }}"
-    wifi_sec: 
+    wifi_sec:
       key-mgmt: wpa-psk
       psk: "{{ wifi_password }}"
     autoconnect: true
     state: present
 
-- name: Set max power mode 
-  ansible.builtin.command: nvpmodel -m 0 
+- name: Set max power mode
+  ansible.builtin.command: nvpmodel -m 0
   async: 1
-  poll: 0 # skip to next task 
+  poll: 0 # skip to next task
   ignore_errors: true # TODO: make this less fragile
 
 - name: Reboot system and wait for it to come back
   ansible.builtin.reboot:
-    reboot_timeout: 600        
+    reboot_timeout: 600
     test_command: whoami

@@ -10,6 +10,5 @@
       - ros-humble-image-transport
       - ros-humble-compressed-image-transport
       - ros-humble-theora-image-transport
-      - ros-humble-cv-bridge
     update_cache: true
     state: latest
