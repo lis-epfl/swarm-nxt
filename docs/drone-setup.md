@@ -306,7 +306,7 @@ Calibrate the accelometer by clicking on the accelerometer sub-tab and completin
 9. Run the sdkmanager: `sdkmanager --cli`
 10. Login, and then select the following options: install -> jetson -> target hardware
 11. Select Jetson Orin NX, it should already be pre-selected
-12. Reply Y to showing all Jetson versions. Select JetPack 6.2
+12. Reply Y to showing all Jetson versions. Select JetPack 6.2.1
 13. Select both additional SDKs
 14. Do not customize install settings
 15. Reply N to flashing the Jetson Orin NX Module
