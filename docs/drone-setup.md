@@ -418,6 +418,9 @@ Copy the output folder to the drone:
 scp -r final_maps lis@nxt1.local:/home/lis/ros2_ws/src/depth_estimation_ros2/config/final_maps_192_192
 ```
 
+#### **Fit baseline and disparity correction** 
+Even after the calibration, there can be errors, one way to correct for that is to fit the `baseline_scale` and `disparity_offset` parameters as detailed in [`depth_estimation_ros2`](https://github.com/lis-epfl/depth_estimation_ros2), **Depth Correction Calibration** Section.
+
 #### **Configure the Drone**
 
 SSH into the drone and edit:
@@ -431,6 +434,8 @@ Modify the values if necessary: `calibration_resolution: 192_192` and the `onnx_
 ## Flight Preparation 
 
 ### PID Tuning
+
+Usually not necessary - the default values for one drone work well for the others, and they are loaded when you load the params in QGC. But in case you have issues:
 
 1. Follow all the steps in the [Pre-Flight Checklist](flying.md#pre-flight-checklist)
 2. Launch the vehicle in position mode, and fly it slowly. Make sure that it feels decently well to operate. 
