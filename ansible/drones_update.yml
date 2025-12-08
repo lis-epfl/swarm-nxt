@@ -68,6 +68,15 @@
 
   - name: SwarmNXT Nodes
     block: 
+      - name: Ensure repos directory exists with correct ownership
+        ansible.builtin.file:
+          path: "{{ drone_base_path }}/repos"
+          state: directory
+          owner: lis
+          group: lis
+          mode: '0755'
+        become: true
+
       - name: Get repository 
         ansible.builtin.git: 
             repo: https://github.com/lis-epfl/swarm-nxt

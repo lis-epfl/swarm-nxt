@@ -21,7 +21,7 @@
     # 2. Find the Date line
     # 3. Remove everything up to 'Date: ' (handling variable whitespace)
     # 4. Take the first result only (in case of redirects)
-    NEW_DATE=$(wget --no-check-certificate -qSO- --max-redirect=0 google.com 2>&1 | grep "Date:" | sed 's/.*Date: //g' | head -n 1)
+    NEW_DATE=$(wget -4 --no-check-certificate -qSO- --max-redirect=0 google.com 2>&1 | grep "Date:" | sed 's/.*Date: //g' | head -n 1)
 
     # Set the date
     date -s "$NEW_DATE"
@@ -78,8 +78,8 @@
       - chrony
       - docker-ce=5:27.5*
       - docker-ce-cli=5:27.5*
-      # libopencv-dev removed to allow custom OpenCV 4.8.0
       - libusb-1.0-0-dev
+      - libboost-python-dev
 
     state: present
     allow_downgrade: true
@@ -384,7 +384,7 @@
     - name: Build cv_bridge with custom OpenCV
       ansible.builtin.shell: |
         source /opt/ros/humble/setup.bash
-        colcon build --symlink-install --packages-select cv_bridge --cmake-args -DOpenCV_DIR=/usr/local/lib/cmake/opencv4
+        colcon build --symlink-install --packages-select cv_bridge --allow-overriding cv_bridge --cmake-args -DOpenCV_DIR=/usr/local/lib/cmake/opencv4
       args:
         chdir: /home/lis/ros2_ws
         executable: /bin/bash
