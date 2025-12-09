@@ -350,16 +350,14 @@
           ansible.builtin.shell: |
             cmake -S . -B build -DBUILD_SHARED_LIBS=ON
             cmake --build build --parallel $(nproc)
-            cmake --install build
           args:
             chdir: /tmp/depthai-core-v3.2.1
 
-    - name: Copy depthai headers to system location (Ensure they are found)
-      ansible.builtin.copy:
-        src: /usr/local/include/depthai
-        dest: /usr/local/include/
-        remote_src: true
-        mode: preserve
+        - name: Install depthai-core
+          become: true
+          ansible.builtin.shell: cmake --install build
+          args:
+            chdir: /tmp/depthai-core-v3.2.1
 
     - name: Run ldconfig
       ansible.builtin.command: ldconfig
