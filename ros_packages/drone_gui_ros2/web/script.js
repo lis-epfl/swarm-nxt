@@ -141,23 +141,6 @@ class DroneGUI {
                 </div>
             </div>
 
-            <div class="position-box">
-                <div class="pos-data-row ekf-row">
-                    <span class="pos-label-col ekf-label">EKF</span>
-                    <span class="pos-var">var: <span class="eph-value">-</span></span>
-                    <span class="pos-coord"><span class="coord-lbl">x:</span><span class="pos-val ekf-x">0.00</span></span>
-                    <span class="pos-coord"><span class="coord-lbl">y:</span><span class="pos-val ekf-y">0.00</span></span>
-                    <span class="pos-coord"><span class="coord-lbl">z:</span><span class="pos-val ekf-z">0.00</span></span>
-                </div>
-                <div class="pos-data-row gt-row">
-                    <span class="pos-label-col gt-label">GT</span>
-                    <span class="pos-var-spacer"></span>
-                    <span class="pos-coord"><span class="coord-lbl">x:</span><span class="pos-val ot-x">0.00</span></span>
-                    <span class="pos-coord"><span class="coord-lbl">y:</span><span class="pos-val ot-y">0.00</span></span>
-                    <span class="pos-coord"><span class="coord-lbl">z:</span><span class="pos-val ot-z">0.00</span></span>
-                </div>
-            </div>
-
             <div class="drone-controls-container">
                 <div class="drone-controls">
                     <button class="btn btn-success btn-small btn-arm" onclick="gui.sendIndividualCommand('${drone.name}', 'arm')">
@@ -233,59 +216,24 @@ class DroneGUI {
         card.querySelector('.latency-info').className = `info-row latency-info ${latencyClass}`;
         card.querySelector('.latency-text').textContent = latencyText;
 
-        // --- Update Status Badges ---
-        const connBadge = card.querySelector('.conn-badge');
+        // --- MODIFIED: Update Status Badges (THE FIX) ---
+        const connBadge = card.querySelector('.conn-badge'); // Select by stable class
         connBadge.textContent = drone.connected ? 'ONLINE' : 'OFFLINE';
+        // Use classList to safely add/remove dynamic classes
         connBadge.classList.toggle('status-connected', drone.connected);
         connBadge.classList.toggle('status-disconnected', !drone.connected);
 
-        const armedBadge = card.querySelector('.armed-badge');
+        const armedBadge = card.querySelector('.armed-badge'); // Select by stable class
         armedBadge.textContent = drone.armed ? 'ARMED' : 'DISARMED';
+        // Use classList
         armedBadge.classList.toggle('status-armed', drone.armed);
         armedBadge.classList.toggle('status-disarmed', !drone.armed);
+        // --- END MODIFICATION ---
 
         // --- Update Info Text ---
         card.querySelector('.flight-mode-value').textContent = this.formatModeName(drone.mode);
         card.querySelector('.drone-state-value').textContent = this.formatStateName(drone.state);
         card.querySelector('.overall-status-value').textContent = this.getOverallStatus(drone);
-
-        // --- Update EKF Position ---
-        if (drone.ekf_position) {
-            card.querySelector('.ekf-x').textContent = drone.ekf_position.x.toFixed(2);
-            card.querySelector('.ekf-y').textContent = drone.ekf_position.y.toFixed(2);
-            card.querySelector('.ekf-z').textContent = drone.ekf_position.z.toFixed(2);
-        }
-
-        // --- Update EKF Covariance (EPH only) ---
-        if (drone.ekf_covariance) {
-            const eph = drone.ekf_covariance.eph;
-            const ephElement = card.querySelector('.eph-value');
-            ephElement.textContent = eph >= 0 ? `${eph.toFixed(2)}m` : '-';
-
-            ephElement.classList.remove('cov-good', 'cov-warning', 'cov-bad');
-            if (eph >= 0) {
-                if (eph < 0.1) ephElement.classList.add('cov-good');
-                else if (eph < 0.5) ephElement.classList.add('cov-warning');
-                else ephElement.classList.add('cov-bad');
-            }
-        }
-
-        // --- Update Optitrack Position ---
-        if (drone.optitrack_position) {
-            const gtRow = card.querySelector('.gt-row');
-
-            if (drone.optitrack_position.valid) {
-                card.querySelector('.ot-x').textContent = drone.optitrack_position.x.toFixed(2);
-                card.querySelector('.ot-y').textContent = drone.optitrack_position.y.toFixed(2);
-                card.querySelector('.ot-z').textContent = drone.optitrack_position.z.toFixed(2);
-                gtRow.classList.remove('no-data');
-            } else {
-                card.querySelector('.ot-x').textContent = '-';
-                card.querySelector('.ot-y').textContent = '-';
-                card.querySelector('.ot-z').textContent = '-';
-                gtRow.classList.add('no-data');
-            }
-        }
 
         // --- Update Button Disabled States ---
         card.querySelector('.btn-arm').disabled = !drone.connected || drone.armed;
