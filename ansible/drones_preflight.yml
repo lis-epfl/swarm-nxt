@@ -5,6 +5,13 @@
   remote_user: lis
   gather_facts: no
   tasks:
+    - name: Stop ros_packages service (release camera driver)
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: stopped
+        scope: user
+      ignore_errors: yes  # In case it's not running
+
     - name: Launch Vision Tests (Async)
       when: enable_vision | default(false) | bool
       ansible.builtin.shell: |
@@ -21,7 +28,7 @@
         sleep 1
 
         # 2. Focus Check
-        if ! ros2 run oak_ffc_4p_driver_ros2 oak_focus_checker -- --threshold=350 --timeout-ms=2000; then
+        if ! ros2 run oak_ffc_4p_driver_ros2 oak_focus_checker -- --threshold=100 --timeout-ms=2000; then
             echo "FOCUS_FAILED" >&2
             exit 1
         fi

@@ -38,6 +38,15 @@ except ImportError:
     )
     Heartbeat = None
 
+try:
+    from optitrack_multiplexer_ros2_msgs.msg import RigidBodyStamped
+except ImportError:
+    print(
+        "WARNING: optitrack_multiplexer_ros2_msgs.msg.RigidBodyStamped not found."
+        " Optitrack ground truth features will be disabled."
+    )
+    RigidBodyStamped = None
+
 
 class DroneGUINode(Node):
     def __init__(self, socketio):
@@ -45,29 +54,28 @@ class DroneGUINode(Node):
         self.socketio = socketio
         self.drone_states = {}
         self.drone_vehicle_statuses = {}
-        self.drone_positions = {}
+        self.drone_positions = {}  # EKF positions
+        self.drone_position_covariances = {}  # EKF covariances (eph, epv)
+        self.drone_optitrack_positions = {}  # Ground truth positions
         self.drone_battery_statuses = {}
         self.drone_latencies = {}
         self.drone_list = []
         self.hdsm_mapping = {}
 
-        # --- Connection State Tracking (NEW) ---
-        self.last_status_time = {} # Tracks the last time a VehicleStatus message was received (in nanoseconds)
-        # 2.0 seconds in nanoseconds. This is the threshold for considering a drone disconnected.
+        # --- Connection State Tracking ---
+        self.last_status_time = {}
         self.DISCONNECT_THRESHOLD_NS = 2_000_000_000
-        # --- End Connection State Tracking ---
 
         # --- Roaming State ---
         self.roaming_active = False
         self.roaming_params = {'radius': 2.0, 'center_height': -2.5, 'cylinder_height': 1.0}
-        self.roaming_goals = {} # Stores the current goal for each drone
+        self.roaming_goals = {}
         self.roaming_loop_timer = None
 
         # Declare parameters
         self.declare_parameter("port", 8080)
         self.declare_parameter("peers_file", "~/ros/config/peers.yaml")
         self.declare_parameter("hdsm_mapping_file", "~/ros/config/hdsm_planner_map.yaml")
-        # --- Using 'hostname' as per your provided file ---
         self.declare_parameter("hostname", "host")
         self.declare_parameter("roaming_threshold", 0.5)
 
@@ -85,7 +93,7 @@ class DroneGUINode(Node):
         # Load drone list from peers.yaml
         self.load_drone_list()
 
-        # Initialize connection time tracking for all drones (NEW)
+        # Initialize connection time tracking for all drones
         for drone in self.drone_list:
             self.last_status_time[drone] = 0.0
 
@@ -202,23 +210,30 @@ class DroneGUINode(Node):
                 lambda msg, d=drone: self.battery_status_callback(msg, d), best_effort_qos,
             )
 
+            # Subscribe to optitrack ground truth
+            if RigidBodyStamped is not None:
+                self.create_subscription(
+                    RigidBodyStamped, f"/optitrack_multiplexer_node/rigid_body/{drone}",
+                    lambda msg, d=drone: self.optitrack_callback(msg, d), 10,
+                )
+                self.get_logger().info(f"Subscribed to optitrack for {drone}")
+
             # Initialize states
             self.drone_states[drone] = {"state": "UNKNOWN", "timestamp": 0}
             self.drone_vehicle_statuses[drone] = {
                 "armed": False, "connected": False, "nav_state": 0,
             }
-            self.drone_positions[drone] = Point(x=0.0, y=0.0, z=0.0)
-
-            # --- MODIFIED: Initialized new battery keys ---
+            self.drone_positions[drone] = {"x": 0.0, "y": 0.0, "z": 0.0}
+            self.drone_position_covariances[drone] = {"eph": -1.0, "epv": -1.0}
+            self.drone_optitrack_positions[drone] = {"x": 0.0, "y": 0.0, "z": 0.0, "valid": False}
             self.drone_battery_statuses[drone] = {
-                "soc_estimate": -1.0, # Use -1.0 to indicate "unknown"
+                "soc_estimate": -1.0,
                 "voltage_v": 0.0,
                 "warning": BatteryStatus.WARNING_NONE
             }
             self.drone_latencies[drone] = -1.0
 
         if Heartbeat is not None:
-            # Use self.hostname (which you've defined from parameters)
             topic_name = f"/{self.hostname}/latency_checker/heartbeat"
             self.latency_sub = self.create_subscription(
                 Heartbeat, topic_name, self.latency_heartbeat_callback, 10
@@ -227,7 +242,7 @@ class DroneGUINode(Node):
         else:
             self.get_logger().warn("Latency checking is disabled (Heartbeat message not found).")
 
-    def latency_heartbeat_callback(self, msg: Heartbeat):
+    def latency_heartbeat_callback(self, msg):
         for item in msg.latency_list:
             drone_key = item.name.lstrip('/')
             if drone_key in self.drone_list:
@@ -250,7 +265,6 @@ class DroneGUINode(Node):
 
     def setup_planning_publishers(self):
         for drone in self.drone_list:
-            # Safely get drone number
             drone_num_str = ''.join(filter(str.isdigit, drone))
             if not drone_num_str:
                 self.get_logger().warn(f"Could not extract number from drone name: {drone}")
@@ -267,7 +281,6 @@ class DroneGUINode(Node):
 
     def setup_goal_publishers(self):
         for drone in self.drone_list:
-            # Safely get drone number
             drone_num_str = ''.join(filter(str.isdigit, drone))
             if not drone_num_str:
                 self.get_logger().warn(f"Could not extract number from drone name: {drone}")
@@ -282,7 +295,6 @@ class DroneGUINode(Node):
                 self.get_logger().warn(f"No HDSM mapping found for drone {drone} (num: {drone_num}) for goal publisher")
 
     def vehicle_status_callback(self, msg: VehicleStatus, drone_name: str):
-        # NEW: Update the last time we received a status message for this drone
         self.last_status_time[drone_name] = self.get_clock().now().nanoseconds
 
         self.drone_vehicle_statuses[drone_name] = {
@@ -302,9 +314,29 @@ class DroneGUINode(Node):
         }
 
     def vehicle_local_position_callback(self, msg: VehicleLocalPosition, drone_name: str):
-        self.drone_positions[drone_name].x = msg.x
-        self.drone_positions[drone_name].y = -msg.y
-        self.drone_positions[drone_name].z = -msg.z
+        # Store EKF position (convert FRD to FLU)
+        self.drone_positions[drone_name] = {
+            "x": msg.x,
+            "y": -msg.y,
+            "z": -msg.z
+        }
+        # Store covariances
+        self.drone_position_covariances[drone_name] = {
+            "eph": msg.eph,  # Horizontal position error
+            "epv": msg.epv   # Vertical position error
+        }
+
+    def optitrack_callback(self, msg, drone_name: str):
+        """Handle optitrack ground truth position"""
+        try:
+            self.drone_optitrack_positions[drone_name] = {
+                "x": msg.pose.position.x,
+                "y": msg.pose.position.y,
+                "z": msg.pose.position.z,
+                "valid": True
+            }
+        except Exception as e:
+            self.get_logger().warn(f"Error processing optitrack for {drone_name}: {e}")
 
     def battery_status_callback(self, msg: BatteryStatus, drone_name: str):
         self.drone_battery_statuses[drone_name] = {
@@ -315,7 +347,6 @@ class DroneGUINode(Node):
 
     def update_gui(self):
         gui_data = {}
-        # NEW: Get current time for connection check
         current_time_ns = self.get_clock().now().nanoseconds
 
         for drone in self.drone_list:
@@ -323,25 +354,23 @@ class DroneGUINode(Node):
             drone_state = self.drone_states.get(drone, {})
             battery_status = self.drone_battery_statuses.get(drone, {})
             latency_ms = self.drone_latencies.get(drone, -1.0)
+            ekf_pos = self.drone_positions.get(drone, {"x": 0.0, "y": 0.0, "z": 0.0})
+            ekf_cov = self.drone_position_covariances.get(drone, {"eph": -1.0, "epv": -1.0})
+            optitrack_pos = self.drone_optitrack_positions.get(drone, {"x": 0.0, "y": 0.0, "z": 0.0, "valid": False})
 
-            # Safely get drone number
             drone_num_str = ''.join(filter(str.isdigit, drone))
             agent_id = "N/A"
             if drone_num_str:
                 drone_num = int(drone_num_str)
                 agent_id = self.hdsm_mapping.get(drone_num, "N/A")
 
-            # --- Connection Timeout Check (NEW) ---
+            # Connection Timeout Check
             last_time = self.last_status_time.get(drone, 0)
             time_delta_ns = current_time_ns - last_time
-            # Determine connection status based on the time threshold
             is_connected = (time_delta_ns < self.DISCONNECT_THRESHOLD_NS)
 
-            # If not connected, make sure the internal state reflects it
             if not is_connected and drone in self.drone_vehicle_statuses:
                  self.drone_vehicle_statuses[drone]["connected"] = False
-            # --- End Connection Timeout Check ---
-
 
             nav_state = vehicle_status.get("nav_state", 0)
             mode_map = {
@@ -350,22 +379,40 @@ class DroneGUINode(Node):
             }
             mode = mode_map.get(nav_state, f"NAV_{nav_state}")
 
-            # --- MODIFIED: Using "soc_estimate" ---
             remaining_float = battery_status.get("soc_estimate", -1.0)
             battery_percent = -1
             if 0.0 <= remaining_float <= 1.0:
                 battery_percent = int(remaining_float * 100)
 
             gui_data[drone] = {
-                "name": drone, "agent_id": agent_id,
+                "name": drone,
+                "agent_id": agent_id,
                 "armed": vehicle_status.get("armed", False),
-                "connected": is_connected, # Use the dynamic connection status
-                "mode": mode, "state": drone_state.get("state", "UNKNOWN"),
+                "connected": is_connected,
+                "mode": mode,
+                "state": drone_state.get("state", "UNKNOWN"),
                 "last_update": drone_state.get("timestamp", 0),
                 "battery_percent": battery_percent,
-                "voltage_v": battery_status.get("voltage_v", 0.0), # Added voltage
+                "voltage_v": battery_status.get("voltage_v", 0.0),
                 "battery_warning": battery_status.get("warning", 0),
-                "latency_ms": latency_ms
+                "latency_ms": latency_ms,
+                # EKF position data
+                "ekf_position": {
+                    "x": round(ekf_pos["x"], 3),
+                    "y": round(ekf_pos["y"], 3),
+                    "z": round(ekf_pos["z"], 3)
+                },
+                "ekf_covariance": {
+                    "eph": round(ekf_cov["eph"], 3) if ekf_cov["eph"] >= 0 else -1,
+                    "epv": round(ekf_cov["epv"], 3) if ekf_cov["epv"] >= 0 else -1
+                },
+                # Optitrack ground truth
+                "optitrack_position": {
+                    "x": round(optitrack_pos["x"], 3),
+                    "y": round(optitrack_pos["y"], 3),
+                    "z": round(optitrack_pos["z"], 3),
+                    "valid": optitrack_pos["valid"]
+                }
             }
         self.socketio.emit("drone_update", gui_data)
 
@@ -379,7 +426,7 @@ class DroneGUINode(Node):
             publisher_dict = self.takeoff_pubs
         elif command == "land":
             publisher_dict = self.land_pubs
-            self.stop_roaming_loop() # Stop roaming on global land
+            self.stop_roaming_loop()
         elif command == "arm":
             publisher_dict = self.arm_pubs
         elif command == "disarm":
@@ -387,7 +434,7 @@ class DroneGUINode(Node):
             publisher_dict = self.arm_pubs
         elif command == "kill":
             publisher_dict = self.kill_pubs
-            self.stop_roaming_loop() # Stop roaming on global kill
+            self.stop_roaming_loop()
 
         if publisher_dict:
             for drone in publisher_dict.keys():
@@ -420,9 +467,9 @@ class DroneGUINode(Node):
                 publisher = self.planning_start_publishers.get(drone)
                 if publisher:
                     msg = StartPlanning()
-                    pos = self.drone_positions.get(drone, Point(x=0.0, y=0.0, z=0.0))
+                    pos = self.drone_positions.get(drone, {"x": 0.0, "y": 0.0, "z": 0.0})
                     msg.initial_state = [
-                        float(pos.x), float(pos.y), float(pos.z),
+                        float(pos["x"]), float(pos["y"]), float(pos["z"]),
                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0
                     ]
                     publisher.publish(msg)
@@ -461,8 +508,8 @@ class DroneGUINode(Node):
             return
 
         n_drones = len(valid_drones)
-        sum_x = sum(p.x for _, p in valid_drones)
-        sum_y = sum(p.y for _, p in valid_drones)
+        sum_x = sum(p["x"] for _, p in valid_drones)
+        sum_y = sum(p["y"] for _, p in valid_drones)
 
         centroid_x = sum_x / n_drones
         centroid_y = sum_y / n_drones
@@ -477,10 +524,9 @@ class DroneGUINode(Node):
                 self.get_logger().warn(f"No goal publisher for {drone_name}, cannot send swap goal.")
                 continue
 
-            # Calculate symmetrical position (2D)
-            goal_x = 2.0 * centroid_x - pos.x
-            goal_y = 2.0 * centroid_y - pos.y
-            goal_z = pos.z  # Maintain original altitude
+            goal_x = 2.0 * centroid_x - pos["x"]
+            goal_y = 2.0 * centroid_y - pos["y"]
+            goal_z = pos["z"]
 
             goal_msg = PointStamped()
             goal_msg.header.frame_id = "world"
@@ -491,11 +537,9 @@ class DroneGUINode(Node):
             goals_to_publish.append((pub, goal_msg))
             log_goals[drone_name] = (goal_x, goal_y, goal_z)
 
-        # Log all goals
         for drone, goal_pos in log_goals.items():
              self.get_logger().info(f"  {drone} -> ({goal_pos[0]:.2f}, {goal_pos[1]:.2f}, {goal_pos[2]:.2f})")
 
-        # Publish goals multiple times
         for i in range(5):
             current_time = self.get_clock().now().to_msg()
             for pub, msg in goals_to_publish:
@@ -503,7 +547,7 @@ class DroneGUINode(Node):
                 pub.publish(msg)
 
             if i < 4:
-                time.sleep(0.1) # Use time.sleep
+                time.sleep(0.1)
 
         self.get_logger().info(f"Published symmetrical swap goals for {len(goals_to_publish)} drones.")
 
@@ -513,7 +557,7 @@ class DroneGUINode(Node):
             msg.stamp = self.get_clock().now().to_msg()
             msg.enable = True
 
-            enable_msg = Bool() # For controller
+            enable_msg = Bool()
             pub = None
 
             if command == "arm":
@@ -528,7 +572,7 @@ class DroneGUINode(Node):
                 if pub and drone in self.controller_enable_pubs:
                     enable_msg.data = False
                     self.controller_enable_pubs[drone].publish(enable_msg)
-                    self.get_logger().info(f"Enabled controller for {drone} (on arm)")
+                    self.get_logger().info(f"Disabled controller for {drone} (on disarm)")
             elif command == "takeoff":
                 pub = self.takeoff_pubs.get(drone)
                 if pub and drone in self.controller_enable_pubs:
@@ -543,7 +587,7 @@ class DroneGUINode(Node):
                         self.controller_enable_pubs[drone].publish(enable_msg)
                         self.get_logger().info(f"Disabled controller for {drone}")
                     self.call_planning_service(drone, "stop")
-                    self.stop_roaming_loop() # Stop roaming on individual land
+                    self.stop_roaming_loop()
             elif command == "kill":
                 pub = self.kill_pubs.get(drone)
                 if pub:
@@ -552,7 +596,7 @@ class DroneGUINode(Node):
                         enable_msg.data = False
                         self.controller_enable_pubs[drone].publish(enable_msg)
                         self.get_logger().info(f"Disabled controller for {drone} (KILL)")
-                    self.stop_roaming_loop() # Stop roaming on individual kill
+                    self.stop_roaming_loop()
             elif command == "planning_start":
                 self.call_planning_service(drone, "start")
                 return
@@ -601,12 +645,11 @@ class DroneGUINode(Node):
         self.roaming_params['center_height'] = data.get('center_height', -2.5)
         self.roaming_params['cylinder_height'] = data.get('cylinder_height', 1.0)
         self.roaming_active = True
-        self.roaming_goals = {} # Clear previous goals
+        self.roaming_goals = {}
 
         self.get_logger().info(f"Starting roaming with params: {self.roaming_params}")
         self.socketio.emit('roaming_status', {'active': True})
 
-        # Start the loop
         self.roaming_update()
 
     def stop_roaming_loop(self):
@@ -650,9 +693,9 @@ class DroneGUINode(Node):
 
                 if current_pos and current_goal:
                     dist = math.sqrt(
-                        (current_pos.x - current_goal.x)**2 +
-                        (current_pos.y - current_goal.y)**2 +
-                        (current_pos.z - current_goal.z)**2
+                        (current_pos["x"] - current_goal.x)**2 +
+                        (current_pos["y"] - current_goal.y)**2 +
+                        (current_pos["z"] - current_goal.z)**2
                     )
                     if dist < self.roaming_threshold:
                         goal_reached = True
@@ -673,7 +716,7 @@ class DroneGUINode(Node):
             self.get_logger().error(f"Error in roaming_update: {e}")
 
         if self.roaming_active:
-            self.roaming_loop_timer = threading.Timer(0.2, self.roaming_update) # Loop every 200ms
+            self.roaming_loop_timer = threading.Timer(0.2, self.roaming_update)
             self.roaming_loop_timer.start()
 
 
@@ -754,7 +797,7 @@ def main(args=None):
         pass
     finally:
         if ros_node.roaming_active:
-            ros_node.stop_roaming_loop() # Ensure loop stops on shutdown
+            ros_node.stop_roaming_loop()
         ros_node.destroy_node()
         rclpy.shutdown()
 

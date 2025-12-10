@@ -11,6 +11,8 @@
     /* Allowed Colors (Cooler "Slate" compatible tones) */
     --color-green: #10b981;   /* Emerald 500 - Cooler, blends with slate */
     --color-red: #f43f5e;     /* Rose 500 - Cooler, blends with slate */
+    --color-yellow: #eab308;  /* Yellow 500 */
+    --color-cyan: #06b6d4;    /* Cyan 500 */
 
     /* Neutrals (Other Buttons) */
     --color-neutral: #475569;       /* Slate 600 */
@@ -277,7 +279,7 @@ header h1 {
 
 .cards-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
     gap: 20px;
 }
 
@@ -420,6 +422,84 @@ header h1 {
     100% { opacity: 1; }
 }
 
+/* ========================================
+   POSITION SECTION STYLES
+   ======================================== */
+
+/* --- Position Box (Stacked Aligned) --- */
+.position-box {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    padding: 8px 12px;
+    background: var(--bg-color);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.pos-data-row {
+    display: grid;
+    grid-template-columns: 28px 62px 58px 58px 58px;
+    gap: 6px;
+    align-items: center;
+}
+
+.pos-data-row.no-data .pos-val {
+    opacity: 0.4;
+}
+
+.pos-label-col {
+    font-weight: 600;
+    font-size: 0.85em;
+}
+
+.ekf-label {
+    color: var(--color-cyan);
+}
+
+.gt-label {
+    color: var(--color-green);
+}
+
+.pos-var, .pos-var-spacer {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.pos-var .eph-value {
+    font-weight: 600;
+}
+
+.pos-coord {
+    display: flex;
+    gap: 2px;
+}
+
+.coord-lbl {
+    color: var(--text-secondary);
+}
+
+.pos-val {
+    color: var(--text-primary);
+}
+
+/* Covariance color coding */
+.cov-good {
+    color: var(--color-green) !important;
+}
+
+.cov-warning {
+    color: var(--color-yellow) !important;
+}
+
+.cov-bad {
+    color: var(--color-red) !important;
+}
+
+/* ========================================
+   END POSITION SECTION STYLES
+   ======================================== */
+
 .drone-controls-container {
     margin-top: 15px;
 }
@@ -462,7 +542,6 @@ header h1 {
 .goal-button {
     grid-column: 1 / -1;
     margin-top: 8px;
-    /* Handled by neutral default */
 }
 
 .kill-controls {
