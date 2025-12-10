@@ -139,6 +139,18 @@ class DroneGUI {
                     <span class="info-label">Status:</span>
                     <span class="info-value overall-status-value"></span>
                 </div>
+
+                <div class="stats-grid">
+                    <span class="info-label">EKF</span>
+                    <span></span> <span class="info-value stats-var"></span> <span class="info-value ekf-x"></span>
+                    <span class="info-value ekf-y"></span>
+                    <span class="info-value ekf-z"></span>
+
+                    <span class="info-label">Motion Capture</span>
+                    <span></span> <span></span> <span class="info-value gt-x"></span>
+                    <span class="info-value gt-y"></span>
+                    <span class="info-value gt-z"></span>
+                </div>
             </div>
 
             <div class="drone-controls-container">
@@ -216,24 +228,54 @@ class DroneGUI {
         card.querySelector('.latency-info').className = `info-row latency-info ${latencyClass}`;
         card.querySelector('.latency-text').textContent = latencyText;
 
-        // --- MODIFIED: Update Status Badges (THE FIX) ---
-        const connBadge = card.querySelector('.conn-badge'); // Select by stable class
+        // --- Update Status Badges ---
+        const connBadge = card.querySelector('.conn-badge');
         connBadge.textContent = drone.connected ? 'ONLINE' : 'OFFLINE';
-        // Use classList to safely add/remove dynamic classes
         connBadge.classList.toggle('status-connected', drone.connected);
         connBadge.classList.toggle('status-disconnected', !drone.connected);
 
-        const armedBadge = card.querySelector('.armed-badge'); // Select by stable class
+        const armedBadge = card.querySelector('.armed-badge');
         armedBadge.textContent = drone.armed ? 'ARMED' : 'DISARMED';
-        // Use classList
         armedBadge.classList.toggle('status-armed', drone.armed);
         armedBadge.classList.toggle('status-disarmed', !drone.armed);
-        // --- END MODIFICATION ---
 
         // --- Update Info Text ---
         card.querySelector('.flight-mode-value').textContent = this.formatModeName(drone.mode);
         card.querySelector('.drone-state-value').textContent = this.formatStateName(drone.state);
         card.querySelector('.overall-status-value').textContent = this.getOverallStatus(drone);
+
+        // --- Update Stats (EKF & Motion Capture) ---
+        const pos = drone.position || {x:0, y:0, z:0};
+        const gt = drone.ground_truth || {x:0, y:0, z:0};
+        const varStats = drone.ekf_variance || {h:0, v:0};
+
+        // Format: If non-negative, add a leading space. This matches the width of '-' for negatives.
+        const fmtNum = (n) => (n >= 0 ? ' ' : '') + n.toFixed(2);
+        const fmtVar = (n) => n.toFixed(3);
+
+        // Variance (Horizontal Only)
+        const varElem = card.querySelector('.stats-var');
+        varElem.textContent = `Var:${fmtVar(varStats.h)}`;
+
+        // Color Logic for Variance
+        const hVar = varStats.h;
+        varElem.style.color = ''; // Reset
+        varElem.style.fontWeight = '600';
+        if (hVar > 1.0) {
+            varElem.style.color = '#f43f5e'; // Red
+        } else if (hVar >= 0.1) {
+            varElem.style.color = '#facc15'; // Yellow
+        }
+
+        // Positions: Include a space after the colon for spacing
+        card.querySelector('.ekf-x').textContent = `X: ${fmtNum(pos.x)}`;
+        card.querySelector('.ekf-y').textContent = `Y: ${fmtNum(pos.y)}`;
+        card.querySelector('.ekf-z').textContent = `Z: ${fmtNum(pos.z)}`;
+
+        card.querySelector('.gt-x').textContent = `X: ${fmtNum(gt.x)}`;
+        card.querySelector('.gt-y').textContent = `Y: ${fmtNum(gt.y)}`;
+        card.querySelector('.gt-z').textContent = `Z: ${fmtNum(gt.z)}`;
+
 
         // --- Update Button Disabled States ---
         card.querySelector('.btn-arm').disabled = !drone.connected || drone.armed;

@@ -29,6 +29,16 @@ from ament_index_python.packages import get_package_share_directory
 
 from multi_agent_planner_msgs.msg import StartPlanning, StopPlanning
 
+# --- OPTITRACK IMPORT ---
+try:
+    from optitrack_multiplexer_ros2_msgs.msg import RigidBodyStamped
+    OPTITRACK_AVAILABLE = True
+except ImportError:
+    print("WARNING: optitrack_multiplexer_ros2_msgs not found. Ground truth will be disabled.")
+    RigidBodyStamped = None
+    OPTITRACK_AVAILABLE = False
+# ------------------------
+
 try:
     from latency_checker_ros2.msg import Heartbeat
 except ImportError:
@@ -46,6 +56,8 @@ class DroneGUINode(Node):
         self.drone_states = {}
         self.drone_vehicle_statuses = {}
         self.drone_positions = {}
+        self.drone_ground_truths = {}  # Store Ground Truth positions
+        self.drone_ekf_variances = {}  # Store EKF variances
         self.drone_battery_statuses = {}
         self.drone_latencies = {}
         self.drone_list = []
@@ -202,12 +214,21 @@ class DroneGUINode(Node):
                 lambda msg, d=drone: self.battery_status_callback(msg, d), best_effort_qos,
             )
 
+            # Ground Truth Subscription (RigidBodyStamped)
+            if OPTITRACK_AVAILABLE:
+                self.create_subscription(
+                    RigidBodyStamped, f"/optitrack_multiplexer_node/rigid_body/{drone}",
+                    lambda msg, d=drone: self.ground_truth_callback(msg, d), best_effort_qos,
+                )
+
             # Initialize states
             self.drone_states[drone] = {"state": "UNKNOWN", "timestamp": 0}
             self.drone_vehicle_statuses[drone] = {
                 "armed": False, "connected": False, "nav_state": 0,
             }
             self.drone_positions[drone] = Point(x=0.0, y=0.0, z=0.0)
+            self.drone_ground_truths[drone] = Point(x=0.0, y=0.0, z=0.0)
+            self.drone_ekf_variances[drone] = {'h': 0.0, 'v': 0.0}
 
             # --- MODIFIED: Initialized new battery keys ---
             self.drone_battery_statuses[drone] = {
@@ -306,6 +327,23 @@ class DroneGUINode(Node):
         self.drone_positions[drone_name].y = -msg.y
         self.drone_positions[drone_name].z = -msg.z
 
+        # Capture variance (square of standard deviation eph/epv)
+        eph = getattr(msg, 'eph', 0.0)
+        epv = getattr(msg, 'epv', 0.0)
+        self.drone_ekf_variances[drone_name] = {
+            'h': eph * eph,
+            'v': epv * epv
+        }
+
+    def ground_truth_callback(self, msg, drone_name: str):
+        # Update based on `ros2 interface show` structure:
+        # msg -> rigid_body -> pose -> position -> x, y, z
+        if hasattr(msg, 'rigid_body') and hasattr(msg.rigid_body, 'pose'):
+            pos = msg.rigid_body.pose.position
+            self.drone_ground_truths[drone_name].x = pos.x
+            self.drone_ground_truths[drone_name].y = pos.y
+            self.drone_ground_truths[drone_name].z = pos.z
+
     def battery_status_callback(self, msg: BatteryStatus, drone_name: str):
         self.drone_battery_statuses[drone_name] = {
             "soc_estimate": msg.volt_based_soc_estimate,
@@ -323,6 +361,10 @@ class DroneGUINode(Node):
             drone_state = self.drone_states.get(drone, {})
             battery_status = self.drone_battery_statuses.get(drone, {})
             latency_ms = self.drone_latencies.get(drone, -1.0)
+
+            pos = self.drone_positions.get(drone)
+            gt = self.drone_ground_truths.get(drone)
+            ekf_var = self.drone_ekf_variances.get(drone)
 
             # Safely get drone number
             drone_num_str = ''.join(filter(str.isdigit, drone))
@@ -365,7 +407,10 @@ class DroneGUINode(Node):
                 "battery_percent": battery_percent,
                 "voltage_v": battery_status.get("voltage_v", 0.0), # Added voltage
                 "battery_warning": battery_status.get("warning", 0),
-                "latency_ms": latency_ms
+                "latency_ms": latency_ms,
+                "position": {"x": pos.x, "y": pos.y, "z": pos.z},
+                "ground_truth": {"x": gt.x, "y": gt.y, "z": gt.z},
+                "ekf_variance": ekf_var
             }
         self.socketio.emit("drone_update", gui_data)
 

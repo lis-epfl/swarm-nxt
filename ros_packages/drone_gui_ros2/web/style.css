@@ -420,6 +420,36 @@ header h1 {
     100% { opacity: 1; }
 }
 
+/* --- STATS GRID (NEW) --- */
+.stats-grid {
+    display: grid;
+    /* Columns: Label | Spacer | Variance | X | Y | Z */
+    /* Spacer (1fr) pushes data columns to the right.
+       Variance gets the same width (75px) as X, Y, Z for uniform spacing. */
+    grid-template-columns: 110px 1fr 75px 75px 75px 75px;
+    gap: 5px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    align-items: center;
+    font-size: 0.85em;
+}
+
+.stats-grid .info-value {
+    text-align: right;
+    white-space: pre; /* KEY CHANGE: Preserves spaces for alignment */
+}
+
+.stats-grid .info-label {
+    text-align: left;
+}
+
+/* Ensure variance looks like a value column */
+.stats-var {
+    text-align: right !important;
+}
+
+
 .drone-controls-container {
     margin-top: 15px;
 }
