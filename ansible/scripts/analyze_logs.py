@@ -68,26 +68,53 @@ def analyze_drone(drone_path):
             df = pd.read_csv(depth_log_file)
             rect_cols = [c for c in df.columns if '_rect_ms' in c]
             infer_cols = [c for c in df.columns if '_infer_ms' in c]
-            cloud_cols = [c for c in df.columns if '_cloud_ms' in c]
+            cloud_cols = [c for c in df.columns if '_cloud_ms' in c and c != 'max_cloud_ms']
 
-            df['total_rect'] = df[rect_cols].sum(axis=1)
-            df['total_infer'] = df[infer_cols].sum(axis=1)
-            df['total_cloud'] = df[cloud_cols].sum(axis=1)
+            # For PARALLEL execution, take MAX across pairs (not sum)
+            # This correctly represents wall-clock time when pairs run concurrently
+            df['max_rect'] = df[rect_cols].max(axis=1)
+            df['max_infer'] = df[infer_cols].max(axis=1)
 
-            stats['depth_rect_mean'] = df['total_rect'].mean()
-            stats['depth_rect_max'] = df['total_rect'].max()
-            stats['depth_infer_mean'] = df['total_infer'].mean()
-            stats['depth_infer_max'] = df['total_infer'].max()
-            stats['depth_cloud_mean'] = df['total_cloud'].mean()
-            stats['depth_cloud_max'] = df['total_cloud'].max()
+            stats['depth_rect_mean'] = df['max_rect'].mean()
+            stats['depth_rect_max'] = df['max_rect'].max()
 
+            # Use inference_wall_ms which captures actual wall time for the
+            # inference phase (includes preprocess + parallel rect + parallel infer)
+            if 'inference_wall_ms' in df.columns:
+                stats['depth_infer_mean'] = df['inference_wall_ms'].mean()
+                stats['depth_infer_max'] = df['inference_wall_ms'].max()
+            else:
+                stats['depth_infer_mean'] = df['max_infer'].mean()
+                stats['depth_infer_max'] = df['max_infer'].max()
+
+            # NEW: Use max_cloud_ms if available (pre-computed in C++)
+            if 'max_cloud_ms' in df.columns:
+                stats['depth_cloud_mean'] = df['max_cloud_ms'].mean()
+                stats['depth_cloud_max'] = df['max_cloud_ms'].max()
+            else:
+                df['max_cloud'] = df[cloud_cols].max(axis=1)
+                stats['depth_cloud_mean'] = df['max_cloud'].mean()
+                stats['depth_cloud_max'] = df['max_cloud'].max()
+
+            # NEW: Combined pointcloud publish time
             if 'combined_publish_ms' in df.columns:
                 stats['depth_comb_mean'] = df['combined_publish_ms'].mean()
                 stats['depth_comb_max'] = df['combined_publish_ms'].max()
 
-            stats['depth_total_mean'] = df['total_wall_ms'].mean()
-            stats['depth_total_max'] = df['total_wall_ms'].max()
-        except Exception:
+            # NEW: Total wall time (end-to-end latency)
+            if 'total_wall_ms' in df.columns:
+                stats['depth_total_mean'] = df['total_wall_ms'].mean()
+                stats['depth_total_max'] = df['total_wall_ms'].max()
+            elif 'inference_wall_ms' in df.columns:
+                # Fallback: estimate total as inference_wall + max_cloud
+                if 'max_cloud_ms' in df.columns:
+                    df['total_approx'] = df['inference_wall_ms'] + df['max_cloud_ms']
+                else:
+                    df['total_approx'] = df['inference_wall_ms'] + df[cloud_cols].max(axis=1)
+                stats['depth_total_mean'] = df['total_approx'].mean()
+                stats['depth_total_max'] = df['total_approx'].max()
+
+        except Exception as e:
             pass
 
     # 3. Planner & Mapping Logs
@@ -109,8 +136,16 @@ def analyze_drone(drone_path):
                     stats[f'{metric}_mean'] = np.mean(data)
                     stats[f'{metric}_max'] = np.max(data)
 
-        # B. Mapping Pipeline
+        # B. Mapping Pipeline (with NEW detailed timing)
         map_files = {
+            # NEW: Detailed vision pipeline timing
+            'map_pcl': 'comp_time_pcl_transform_*.csv',
+            'map_count': 'comp_time_point_counting_*.csv',
+            'map_obsmap': 'comp_time_obstacle_map_*.csv',
+            'map_cam': 'comp_time_camera_update_*.csv',
+            'map_thresh': 'comp_time_threshold_*.csv',
+            'map_shift': 'comp_time_shift_*.csv',
+            # Existing timing
             'map_raycast': 'comp_time_raycast_*.csv',
             'map_merge': 'comp_time_merge_*.csv',
             'map_uncertain': 'comp_time_uncertain_*.csv',
@@ -126,6 +161,17 @@ def analyze_drone(drone_path):
                 if data.size > 0:
                     stats[f'{metric}_mean'] = np.mean(data)
                     stats[f'{metric}_max'] = np.max(data)
+
+        # Calculate "Other" time (should now be minimal with full instrumentation)
+        timed_keys = ['map_pcl', 'map_count', 'map_obsmap', 'map_cam', 'map_thresh',
+                      'map_shift', 'map_raycast', 'map_merge', 'map_uncertain',
+                      'map_inflate', 'map_pot', 'map_dyn']
+        timed_sum_mean = sum(stats.get(f'{k}_mean', 0) for k in timed_keys)
+        timed_sum_max = sum(stats.get(f'{k}_max', 0) for k in timed_keys)
+
+        if 'map_total_mean' in stats:
+            stats['map_other_mean'] = max(0, stats['map_total_mean'] - timed_sum_mean)
+            stats['map_other_max'] = max(0, stats['map_total_max'] - timed_sum_max)
 
     return stats, trajectory_df
 
@@ -144,7 +190,7 @@ def calculate_min_distances(trajectories):
         return None, None
 
     # 2. Interpolate to 1000Hz
-    common_time = np.arange(t_start, t_end, 0.001) # 10ms steps
+    common_time = np.arange(t_start, t_end, 0.001) # 1ms steps
     interpolated_pos = {}
 
     for name, df in trajectories.items():
@@ -257,21 +303,41 @@ def main():
         all_stats
     )
 
-    # 3. MAPPING PIPELINE (MapBuilder)
-    print_table(
-        "MAPPING PIPELINE (Mean / Max in ms)",
-        ["Raycast", "Uncertain", "Inflate", "Potential", "TOTAL"],
-        ["map_raycast", "map_uncertain", "map_inflate", "map_pot", "map_total"],
-        all_stats
-    )
+    # 3. MAPPING PIPELINE (MapBuilder) - DETAILED BREAKDOWN
+    # First show the detailed vision pipeline timing
+    has_vision_timing = any('map_pcl_mean' in s for s in all_stats.values())
 
-    # 4. DEPTH PIPELINE
+    if has_vision_timing:
+        print_table(
+            "MAPPING PIPELINE - DETAILED (Mean / Max in ms)",
+            ["PCL Xform", "Pt Count", "Obs Map", "Cam Upd", "Raycast", "Thresh", "Uncert", "Inflate", "Potent", "Shift", "TOTAL"],
+            ["map_pcl", "map_count", "map_obsmap", "map_cam", "map_raycast", "map_thresh", "map_uncertain", "map_inflate", "map_pot", "map_shift", "map_total"],
+            all_stats,
+            col_width=10
+        )
+        print("  * PCL Xform = fromROSMsg + transformPointCloud | Pt Count = swarm filter + point accumulation")
+        print("  * Obs Map = obstacle grid creation | Cam Upd = camera pose updates")
+    else:
+        # Fallback to original format if detailed timing not available
+        print_table(
+            "MAPPING PIPELINE (Mean / Max in ms)",
+            ["Raycast", "Uncertain", "Inflate", "Potential", "Other*", "TOTAL"],
+            ["map_raycast", "map_uncertain", "map_inflate", "map_pot", "map_other", "map_total"],
+            all_stats
+        )
+        print("  * Other = PCL transform, point counting, thresholding, camera updates, shift logic")
+
+    # 4. DEPTH PIPELINE - Shows proper parallel timing
     print_table(
-        "DEPTH PIPELINE (Mean / Max in ms)",
-        ["Rectify", "Inference", "Cloud", "Combine", "TOTAL"],
-        ["depth_rect", "depth_infer", "depth_cloud", "depth_comb", "depth_total"],
+        "DEPTH PIPELINE (Mean / Max in ms) [Parallel: showing wall time]",
+        ["Infer Wall", "Cloud (max)", "Combine", "TOTAL"],
+        ["depth_infer", "depth_cloud", "depth_comb", "depth_total"],
         all_stats
     )
+    print("  * Infer Wall = preprocess + rectify + inference (all parallel pairs)")
+    print("  * Cloud (max) = slowest pointcloud generation across pairs")
+    print("  * Combine = time to assemble and publish combined pointcloud")
+    print("  * TOTAL = end-to-end wall time from callback to publish")
 
     # 5. SAFETY CHECK
     if len(trajectories) > 1:

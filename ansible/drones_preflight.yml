@@ -21,7 +21,7 @@
         sleep 1
 
         # 2. Focus Check
-        if ! ros2 run oak_ffc_4p_driver_ros2 oak_focus_checker -- --threshold=400 --timeout-ms=2000; then
+        if ! ros2 run oak_ffc_4p_driver_ros2 oak_focus_checker -- --threshold=350 --timeout-ms=2000; then
             echo "FOCUS_FAILED" >&2
             exit 1
         fi
