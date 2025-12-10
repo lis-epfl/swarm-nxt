@@ -141,10 +141,7 @@ def analyze_drone(drone_path):
             # NEW: Detailed vision pipeline timing
             'map_pcl': 'comp_time_pcl_transform_*.csv',
             'map_count': 'comp_time_point_counting_*.csv',
-            'map_obsmap': 'comp_time_obstacle_map_*.csv',
-            'map_cam': 'comp_time_camera_update_*.csv',
             'map_thresh': 'comp_time_threshold_*.csv',
-            'map_shift': 'comp_time_shift_*.csv',
             # Existing timing
             'map_raycast': 'comp_time_raycast_*.csv',
             'map_merge': 'comp_time_merge_*.csv',
@@ -163,8 +160,8 @@ def analyze_drone(drone_path):
                     stats[f'{metric}_max'] = np.max(data)
 
         # Calculate "Other" time (should now be minimal with full instrumentation)
-        timed_keys = ['map_pcl', 'map_count', 'map_obsmap', 'map_cam', 'map_thresh',
-                      'map_shift', 'map_raycast', 'map_merge', 'map_uncertain',
+        timed_keys = ['map_pcl', 'map_count', 'map_thresh',
+                      'map_raycast', 'map_merge', 'map_uncertain',
                       'map_inflate', 'map_pot', 'map_dyn']
         timed_sum_mean = sum(stats.get(f'{k}_mean', 0) for k in timed_keys)
         timed_sum_max = sum(stats.get(f'{k}_max', 0) for k in timed_keys)
@@ -310,13 +307,12 @@ def main():
     if has_vision_timing:
         print_table(
             "MAPPING PIPELINE - DETAILED (Mean / Max in ms)",
-            ["PCL Xform", "Pt Count", "Obs Map", "Cam Upd", "Raycast", "Thresh", "Uncert", "Inflate", "Potent", "Shift", "TOTAL"],
-            ["map_pcl", "map_count", "map_obsmap", "map_cam", "map_raycast", "map_thresh", "map_uncertain", "map_inflate", "map_pot", "map_shift", "map_total"],
+            ["PCL Xform", "Pt Count", "Raycast", "Thresh", "Uncert", "Inflate", "Potent", "TOTAL"],
+            ["map_pcl", "map_count", "map_raycast", "map_thresh", "map_uncertain", "map_inflate", "map_pot", "map_total"],
             all_stats,
             col_width=10
         )
         print("  * PCL Xform = fromROSMsg + transformPointCloud | Pt Count = swarm filter + point accumulation")
-        print("  * Obs Map = obstacle grid creation | Cam Upd = camera pose updates")
     else:
         # Fallback to original format if detailed timing not available
         print_table(
@@ -325,7 +321,7 @@ def main():
             ["map_raycast", "map_uncertain", "map_inflate", "map_pot", "map_other", "map_total"],
             all_stats
         )
-        print("  * Other = PCL transform, point counting, thresholding, camera updates, shift logic")
+        print("  * Other = PCL transform, point counting, thresholding, etc.")
 
     # 4. DEPTH PIPELINE - Shows proper parallel timing
     print_table(
