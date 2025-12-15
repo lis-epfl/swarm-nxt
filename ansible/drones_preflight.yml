@@ -25,7 +25,7 @@
         fi
 
         # Wait for device to re-enumerate after sync checker releases it
-        sleep 1
+        sleep 2
 
         # 2. Focus Check
         if ! ros2 run oak_ffc_4p_driver_ros2 oak_focus_checker -- --threshold=100 --timeout-ms=2000; then
@@ -181,7 +181,7 @@
             jid: "{{ vision_job_id }}"
           register: vision_result
           until: vision_result.finished
-          retries: 180
+          retries: 20
           delay: 1
 
         - name: Check Vision Success

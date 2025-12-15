@@ -189,7 +189,7 @@ def generate_launch_description():
             "id": str(hdsm_idx),
             "n_rob": "{{ groups['drones'] | length }}",
             "goal_position": goal_position_str,
-            "use_vision": "{{ 'true' if enable_vision | default(false) else 'false' }}",
+            "use_vision": "{{ 'true' if enable_vision | default(false) | bool else 'false' }}",
             "pointcloud_topic": "/depth/pointcloud/combined",
             "agent_frame": drone_frame_name,
             "swarm_frames": swarm_frames_str,
@@ -198,7 +198,7 @@ def generate_launch_description():
 
     extra_nodes = []
 
-    {% if enable_vision is defined and enable_vision %}
+    {% if enable_vision | default(false) | bool %}
     # VISION MODE: Launch Camera and Depth Estimation
     extra_nodes.append(
         IncludeLaunchDescription(
