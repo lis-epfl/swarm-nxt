@@ -2,6 +2,29 @@
 
 #include <fstream>
 namespace safety_checker {
+std::string SafetyFlagsToString(uint8_t flags) {
+  if (flags == SafetyStatus::SAFE) {
+    return "SAFE";
+  }
+
+  std::vector<std::string> reasons;
+  if (flags & SafetyStatus::UNSAFE_OUT_OF_BOUNDS) {
+    reasons.push_back("OUT_OF_BOUNDS");
+  }
+  if (flags & SafetyStatus::UNSAFE_COMMAND_SEND_RATE) {
+    reasons.push_back("COMMAND_SEND_RATE");
+  }
+  if (flags & SafetyStatus::UNSAFE_HIGH_COVARIANCE) {
+    reasons.push_back("HIGH_COVARIANCE");
+  }
+
+  std::string result;
+  for (size_t i = 0; i < reasons.size(); ++i) {
+    if (i > 0) result += ", ";
+    result += reasons[i];
+  }
+  return result;
+}
 
 SafetyChecker::SafetyChecker()
     : ::rclcpp::Node("safety_checker"), current_nav_state_(0) {
@@ -276,8 +299,8 @@ void SafetyChecker::HandleControllerCommand(
   } else {
     RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                           "Not sending offboard messages because of "
-                          "unsafety. Code: %d. Landing!",
-                          safety_flags_);
+                          "unsafety. Code: %s. Landing!",
+                          SafetyFlagsToString(safety_flags_).c_str());
     LandNow();
   }
 }
@@ -307,8 +330,8 @@ void SafetyChecker::SetModeForwarder(
   } else {
     RCLCPP_WARN(get_logger(),
                 "Did not switch to offboard mode because we are in an unsafe "
-                "state. Unsafe code: %d",
-                safety_flags_);
+                "state. Unsafe code: %s",
+                SafetyFlagsToString(safety_flags_).c_str());
     resp->success = false;
     resp->message = "Unsafe state, cannot switch to offboard";
   }
@@ -333,8 +356,8 @@ void SafetyChecker::LandNow() {
   cmd.from_external = true;
 
   vehicle_command_pub_->publish(cmd);
-  RCLCPP_INFO(get_logger(), "Sent land command. SafetyFlag Code: %d",
-              safety_flags_);
+  RCLCPP_INFO(get_logger(), "Sent land command. SafetyFlag Code: %s",
+              SafetyFlagsToString(safety_flags_).c_str());
   safety_flags_ &= (~SafetyStatus::UNSAFE_COMMAND_SEND_RATE);
 }
 
