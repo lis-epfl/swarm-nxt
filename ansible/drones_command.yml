@@ -72,8 +72,8 @@
       ansible.builtin.copy:
         dest: /etc/security/limits.d/99-realtime.conf
         content: |
-          {{ ansible_user_id }}    -    rtprio   99
-          {{ ansible_user_id }}    -    memlock  unlimited
+          lis    -    rtprio   99
+          lis    -    memlock  unlimited
         owner: root
         group: root
         mode: '0644'
