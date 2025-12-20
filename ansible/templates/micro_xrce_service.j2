@@ -3,8 +3,10 @@ Description=MicroXRce
 After=multi-user.target
 
 [Service]
+CPUAffinity=0
 Type=simple
-ExecStart=MicroXRCEAgent serial --dev /dev/ttyTHS1 -b 3000000
+ExecStart=/usr/bin/chrt -f 98 MicroXRCEAgent serial --dev /dev/ttyTHS1 -b 3000000
+LimitRTPRIO=99
 
 [Install]
 WantedBy=multi-user.target

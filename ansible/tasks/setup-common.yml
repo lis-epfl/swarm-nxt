@@ -366,8 +366,9 @@
   become: false
   block:
     - name: Ensure workspace directory exists
+      become: true
       ansible.builtin.file:
-        path: /home/lis/ros2_ws/src
+        path: "{{ drone_ros_path }}/src"
         state: directory
         owner: lis
         group: lis
@@ -375,7 +376,7 @@
     - name: Clone vision_opencv (Humble)
       ansible.builtin.git:
         repo: 'https://github.com/ros-perception/vision_opencv.git'
-        dest: /home/lis/ros2_ws/src/vision_opencv
+        dest: "{{ drone_ros_path }}/src/vision_opencv"
         version: humble
         force: no
 
@@ -384,7 +385,7 @@
         source /opt/ros/humble/setup.bash
         colcon build --symlink-install --packages-select cv_bridge --allow-overriding cv_bridge --cmake-args -DOpenCV_DIR=/usr/local/lib/cmake/opencv4
       args:
-        chdir: /home/lis/ros2_ws
+        chdir: "{{ drone_ros_path }}"
         executable: /bin/bash
 
 - name: MicroXRCE
@@ -436,6 +437,17 @@
   async: 1
   poll: 0 # skip to next task
   ignore_errors: true # TODO: make this less fragile
+
+- name: Configure real-time priority limits for the current user
+  ansible.builtin.copy:
+    dest: /etc/security/limits.d/99-realtime.conf
+    content: |
+      {{ ansible_user_id }}    -    rtprio   99
+      {{ ansible_user_id }}    -    memlock  unlimited
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
 
 - name: Reboot system and wait for it to come back
   ansible.builtin.reboot:

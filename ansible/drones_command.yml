@@ -68,13 +68,23 @@
   #         args:
   #           executable: /bin/bash
 
-    - name: Copy Gurobi license file
+    - name: Configure real-time priority limits for the current user 
       ansible.builtin.copy:
-        src: secrets/gurobi.lic
-        dest: /opt/gurobi/gurobi.lic
-        mode: '0644'
+        dest: /etc/security/limits.d/99-realtime.conf
+        content: |
+          {{ ansible_user_id }}    -    rtprio   99
+          {{ ansible_user_id }}    -    memlock  unlimited
         owner: root
         group: root
+        mode: '0644'
+      become: true
+    # - name: Copy Gurobi license file
+    #   ansible.builtin.copy:
+    #     src: secrets/gurobi.lic
+    #     dest: /opt/gurobi/gurobi.lic
+    #     mode: '0644'
+    #     owner: root
+    #     group: root
 
     # - name: Send files
     #   ansible.builtin.template:

@@ -55,6 +55,7 @@ def generate_launch_description():
                 "namespace": "{{ ns }}"
             }
         ],
+        prefix=['chrt -f 50'],
         output="log",
     )
 
@@ -88,6 +89,7 @@ def generate_launch_description():
         package="safety_checker_ros2",
         executable="safety_checker_node",
         namespace="{{ ns }}",
+        prefix=['chrt -f 50'],
         parameters=[safety_params_file],
         output="log",
     )
@@ -102,6 +104,7 @@ def generate_launch_description():
         package="drone_state_manager_ros2",
         executable="drone_state_manager.py",
         namespace="{{ ns }}",
+        prefix=['chrt -f 50'],
         output="log",
         parameters=[dsm_params_file],
     )
@@ -116,6 +119,7 @@ def generate_launch_description():
         executable='mpc_controller_node',
         name='mpc_controller',
         namespace= "{{ ns }}",
+        prefix=['chrt -f 50'],
         output='screen',
         emulate_tty=True,
         parameters=[mpc_params_file],
@@ -136,6 +140,7 @@ def generate_launch_description():
         package='omninxt_bridge_ros2',
         executable='command_converter_node',
         name='command_converter',
+        prefix=['chrt -f 50'],
         output='screen',
         parameters=[bridge_config_file])
 
@@ -144,6 +149,7 @@ def generate_launch_description():
         package='omninxt_bridge_ros2',
         executable='trajectory_converter_node',
         name='trajectory_converter',
+        prefix=['chrt -f 50'],
         output='screen',
         parameters=[
             {
