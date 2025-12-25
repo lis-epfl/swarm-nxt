@@ -277,21 +277,6 @@ Go to the flight modes page and set the channels like the image:
 
 ![](images/flight_modes.png)
 
-
-#### Sensors
-
-On the sensors tab: 
-
-Click on the orientations sub-tab, and set the autopilot orientation to `ROTATION_ROLL_180_YAW_90`. Reboot if prompted.
-
-!!! important
-	This is true if the arrow on the flight controller is pointed to the right if looked at from the bottom (orin on the back)
-
-Calibrate the gyroscope by putting the drone on a level surface, and then clicking the gyroscope button and following the wizard. 
-
-Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. 
- 
-
 ## Software Setup
 
 <!-- TODO: Add photo for recovery port, REC button, RES button --> 
@@ -374,6 +359,17 @@ The DDS uses TELEM2 for communication with the FC, so we need to use the USB-C c
 !!! important
     Sometimes you need to connect at `/dev/ttyACM1` instead of `/dev/ttyACM0` especially after rebooting the FC.
 
+On the sensors tab: 
+
+Click on the orientations sub-tab, and set the autopilot orientation to `ROTATION_ROLL_180_YAW_90`. Reboot if prompted.
+
+!!! important
+	This is true if the arrow on the flight controller is pointed to the right if looked at from the bottom (orin on the back)
+
+Calibrate the gyroscope by putting the drone on a level surface, and then clicking the gyroscope button and following the wizard. 
+
+Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. 
+ 
 ## Vision Setup
 ### Enable Vision in Ansible
 

@@ -21,7 +21,7 @@ The takeoff altitude and other takeoff parameters are set in `ros_packages/drone
 You can run an update by going to the `ansible/` directory and running the following command: 
 
 ```bash
-ansible-playbook -i inventory.ini drones_update.yml -K 
+ansible-playbook -i inventory.ini drones_update.yml
 ```
 
 This will update apt repositories, pull the latest version of ros packages, and build them. 
