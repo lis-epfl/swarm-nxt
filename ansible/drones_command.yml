@@ -78,13 +78,13 @@
         group: root
         mode: '0644'
       become: true
-    # - name: Copy Gurobi license file
-    #   ansible.builtin.copy:
-    #     src: secrets/gurobi.lic
-    #     dest: /opt/gurobi/gurobi.lic
-    #     mode: '0644'
-    #     owner: root
-    #     group: root
+    - name: Copy Gurobi license file
+      ansible.builtin.copy:
+        src: secrets/gurobi.lic
+        dest: /opt/gurobi/gurobi.lic
+        mode: '0644'
+        owner: root
+        group: root
 
     # - name: Send files
     #   ansible.builtin.template:

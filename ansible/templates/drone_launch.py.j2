@@ -172,7 +172,7 @@ def generate_launch_description():
     # generate the frames to remove the pointcloud around their positions
     swarm_frames = [
     {% for host in groups['drones'] %}
-        "{{ host }}",
+        "{{ host | regex_replace('\\.local', '') }}",
     {% endfor %}
     ]
     swarm_frames_str = str(swarm_frames) # "[ 'nxt1', 'nxt2', ... ]"
