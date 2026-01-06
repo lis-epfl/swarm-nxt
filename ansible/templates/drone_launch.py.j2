@@ -59,15 +59,6 @@ def generate_launch_description():
         output="log",
     )
 
-    def _on_wait_exit(event: ProcessExited, *args, **kwargs):
-        if event.returncode == 0:
-            return [mocap_to_vision_pose]
-        return [
-            Shutdown(
-                reason="MAVROS did not start in time (did not publish {{ ns }}/mavros/imu/data)"
-            )
-        ]
-
     latency_checker = Node(
         package="latency_checker_ros2",
         executable="latency_checker_node",
