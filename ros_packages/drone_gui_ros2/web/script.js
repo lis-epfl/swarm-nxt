@@ -140,6 +140,11 @@ class DroneGUI {
                     <span class="info-value overall-status-value"></span>
                 </div>
 
+                <div class="info-row">
+                    <span class="info-label">Nodes:</span>
+                    <div class="node-health-container"></div>
+                </div>
+
                 <div class="stats-grid">
                     <span class="info-label">EKF</span>
                     <span></span> <span class="info-value stats-var"></span> <span class="info-value ekf-x"></span>
@@ -238,6 +243,20 @@ class DroneGUI {
         armedBadge.textContent = drone.armed ? 'ARMED' : 'DISARMED';
         armedBadge.classList.toggle('status-armed', drone.armed);
         armedBadge.classList.toggle('status-disarmed', !drone.armed);
+
+        // --- Update Node Health Dots (NEW) ---
+        const healthContainer = card.querySelector('.node-health-container');
+        healthContainer.innerHTML = ''; // Clear current dots
+        if (drone.node_health) {
+            // Mapping and Planner are requested specifically
+            ["Mapping", "Planner"].forEach(nodeName => {
+                const isOnline = drone.node_health[nodeName] || false;
+                const dot = document.createElement('span');
+                dot.className = `node-dot ${isOnline ? 'online' : 'offline'}`;
+                dot.title = nodeName; // Tooltip for hover
+                healthContainer.appendChild(dot);
+            });
+        }
 
         // --- Update Info Text ---
         card.querySelector('.flight-mode-value').textContent = this.formatModeName(drone.mode);

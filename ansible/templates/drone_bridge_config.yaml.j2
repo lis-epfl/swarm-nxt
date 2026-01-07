@@ -12,6 +12,9 @@ topics:
   /fmu/out/vehicle_local_position: 
     type: px4_msgs/msg/VehicleLocalPosition
     remap: {{ns}}/fmu/out/vehicle_local_position
+  /drone_health: 
+    type: std_msgs/msg/String
+    remap: {{ns}}/drone_health
   {{ns}}/manager/state:
     type: swarmnxt_msgs/msg/DroneState
   {{ns}}/latency_checker/heartbeat:

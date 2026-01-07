@@ -8,6 +8,7 @@ from typing import Dict, List
 import math
 import random
 import time
+from std_msgs.msg import String
 
 try:
     from flask import Flask, send_from_directory, request
@@ -61,6 +62,8 @@ class DroneGUINode(Node):
         self.drone_battery_statuses = {}
         self.drone_latencies = {}
         self.drone_list = []
+        self.node_timestamps = {}
+        self.monitored_nodes = ["Mapping", "Planner"]
         self.hdsm_mapping = {}
 
         # --- Connection State Tracking (NEW) ---
@@ -213,6 +216,10 @@ class DroneGUINode(Node):
                 BatteryStatus, f"/{drone}/fmu/out/battery_status",
                 lambda msg, d=drone: self.battery_status_callback(msg, d), best_effort_qos,
             )
+            self.create_subscription(
+                String, f"/{drone}/drone_health",
+                lambda msg, d=drone: self.node_health_callback(msg, d), 10
+            )
 
             # Ground Truth Subscription (RigidBodyStamped)
             if OPTITRACK_AVAILABLE:
@@ -351,6 +358,11 @@ class DroneGUINode(Node):
             "warning": msg.warning
         }
 
+    def node_health_callback(self, msg, drone_name):
+        if drone_name not in self.node_timestamps:
+            self.node_timestamps[drone_name] = {}
+        self.node_timestamps[drone_name][msg.data] = self.get_clock().now()
+
     def update_gui(self):
         gui_data = {}
         # NEW: Get current time for connection check
@@ -384,6 +396,18 @@ class DroneGUINode(Node):
                  self.drone_vehicle_statuses[drone]["connected"] = False
             # --- End Connection Timeout Check ---
 
+            # Calculate health status for all preset nodes
+            now = self.get_clock().now()
+            node_health = {}
+            drone_times = self.node_timestamps.get(drone, {})
+
+            for node_name in self.monitored_nodes:
+                last_seen = drone_times.get(node_name)
+                # True if seen in the last 2.0 seconds, False otherwise
+                is_active = False
+                if last_seen:
+                    is_active = (now - last_seen).nanoseconds / 1e9 < 2.0
+                node_health[node_name] = is_active
 
             nav_state = vehicle_status.get("nav_state", 0)
             mode_map = {
@@ -410,7 +434,8 @@ class DroneGUINode(Node):
                 "latency_ms": latency_ms,
                 "position": {"x": pos.x, "y": pos.y, "z": pos.z},
                 "ground_truth": {"x": gt.x, "y": gt.y, "z": gt.z},
-                "ekf_variance": ekf_var
+                "ekf_variance": ekf_var,
+                "node_health": node_health
             }
         self.socketio.emit("drone_update", gui_data)
 
