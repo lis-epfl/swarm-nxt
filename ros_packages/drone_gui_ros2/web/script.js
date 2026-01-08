@@ -269,12 +269,12 @@ class DroneGUI {
         const varStats = drone.ekf_variance || {h:0, v:0};
 
         // Format: If non-negative, add a leading space. This matches the width of '-' for negatives.
-        const fmtNum = (n) => (n >= 0 ? ' ' : '') + n.toFixed(2);
-        const fmtVar = (n) => n.toFixed(3);
+        const fmtNum = (n) => (n >= 0 ? ' ' : '') + n.toFixed(1);
+        const fmtVar = (n) => n.toFixed(1);
 
         // Variance (Horizontal Only)
         const varElem = card.querySelector('.stats-var');
-        varElem.textContent = `Var:${fmtVar(varStats.h)}`;
+        varElem.textContent = `V:${fmtVar(varStats.h)}`;
 
         // Color Logic for Variance
         const hVar = varStats.h;
@@ -287,13 +287,13 @@ class DroneGUI {
         }
 
         // Positions: Include a space after the colon for spacing
-        card.querySelector('.ekf-x').textContent = `X: ${fmtNum(pos.x)}`;
-        card.querySelector('.ekf-y').textContent = `Y: ${fmtNum(pos.y)}`;
-        card.querySelector('.ekf-z').textContent = `Z: ${fmtNum(pos.z)}`;
+        card.querySelector('.ekf-x').textContent = `X:${fmtNum(pos.x)}`;
+        card.querySelector('.ekf-y').textContent = `Y:${fmtNum(pos.y)}`;
+        card.querySelector('.ekf-z').textContent = `Z:${fmtNum(pos.z)}`;
 
-        card.querySelector('.gt-x').textContent = `X: ${fmtNum(gt.x)}`;
-        card.querySelector('.gt-y').textContent = `Y: ${fmtNum(gt.y)}`;
-        card.querySelector('.gt-z').textContent = `Z: ${fmtNum(gt.z)}`;
+        card.querySelector('.gt-x').textContent = `X:${fmtNum(gt.x)}`;
+        card.querySelector('.gt-y').textContent = `Y:${fmtNum(gt.y)}`;
+        card.querySelector('.gt-z').textContent = `Z:${fmtNum(gt.z)}`;
 
 
         // --- Update Button Disabled States ---

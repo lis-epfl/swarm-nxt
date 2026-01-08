@@ -277,7 +277,7 @@ header h1 {
 
 .cards-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(390px, 1fr));
     gap: 20px;
 }
 
@@ -449,9 +449,8 @@ header h1 {
 .stats-grid {
     display: grid;
     /* Columns: Label | Spacer | Variance | X | Y | Z */
-    /* Spacer (1fr) pushes data columns to the right.
-       Variance gets the same width (75px) as X, Y, Z for uniform spacing. */
-    grid-template-columns: 110px 1fr 75px 75px 75px 75px;
+    /* Reduced column widths from 75px to 55px to bring them closer together */
+    grid-template-columns: 110px 1fr 55px 55px 55px 55px;
     gap: 5px;
     margin-top: 12px;
     padding-top: 10px;
@@ -462,7 +461,8 @@ header h1 {
 
 .stats-grid .info-value {
     text-align: right;
-    white-space: pre; /* KEY CHANGE: Preserves spaces for alignment */
+    /* Removed white-space: pre; to prevent extra alignment spaces from appearing */
+    white-space: nowrap;
 }
 
 .stats-grid .info-label {
