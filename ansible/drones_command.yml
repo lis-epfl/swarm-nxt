@@ -9,12 +9,17 @@
   #     prompt: "What command do you want to run on all of the drones (WARNING: Runs as sudo!)?"
   #     private: false  
   # tasks:
-  #   - name: Command
-  #     ansible.builtin.command: '{{ command }}'
+    # - name: Command
+    #   ansible.builtin.command: '{{ command }}'
     # - name: "Common Components"
-    #   ansible.builtin.include_tasks: "tasks/install-microxrce.yml"
+    #   ansible.builtin.include_tasks: "tasks/install-gurobi13.yml"
 
   tasks:
+    - name: Set max power mode with confirmation
+      become: true
+      ansible.builtin.shell: echo "yes" | nvpmodel -m 0
+      register: nvpmodel_output
+      # We use shell because command doesn't support pipes (|)
   #   - name: Install nvidia toolkit (System Package)
   #     ansible.builtin.apt:
   #       name: nvidia-jetpack
@@ -68,23 +73,23 @@
   #         args:
   #           executable: /bin/bash
 
-    - name: Configure real-time priority limits for the current user 
-      ansible.builtin.copy:
-        dest: /etc/security/limits.d/99-realtime.conf
-        content: |
-          lis    -    rtprio   99
-          lis    -    memlock  unlimited
-        owner: root
-        group: root
-        mode: '0644'
-      become: true
-    - name: Copy Gurobi license file
-      ansible.builtin.copy:
-        src: secrets/gurobi.lic
-        dest: /opt/gurobi/gurobi.lic
-        mode: '0644'
-        owner: root
-        group: root
+    # - name: Configure real-time priority limits for the current user 
+    #   ansible.builtin.copy:
+    #     dest: /etc/security/limits.d/99-realtime.conf
+    #     content: |
+    #       lis    -    rtprio   99
+    #       lis    -    memlock  unlimited
+    #     owner: root
+    #     group: root
+    #     mode: '0644'
+    #   become: true
+    # - name: Copy Gurobi license file
+    #   ansible.builtin.copy:
+    #     src: secrets/gurobi.lic
+    #     dest: /opt/gurobi/gurobi.lic
+    #     mode: '0644'
+    #     owner: root
+    #     group: root
 
     # - name: Send files
     #   ansible.builtin.template:
@@ -96,5 +101,53 @@
         # - { src: "../ros_packages/drone_state_manager_ros2/config/drone_state_manager_params.yaml", dest: "{{ drone_ros_path }}/src/drone_state_manager_ros2/config/drone_state_manager_params.yaml"}
         # - { src: "/home/toumieh/ros2_ws/src/multi_agent_pkgs/multi_agent_planner/config/agent_omninxt_config.yaml", dest: "{{ drone_ros_path }}/src/multi_agent_pkgs/multi_agent_planner/config/agent_omninxt_config.yaml"}
         # - { src: "/home/toumieh/ros2_ws/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml", dest: "{{ drone_ros_path }}/src/mpc_controller_pkgs/mpc_controller_ros2/config/mpc_omninxt_params.yaml"}
+    # - name: Camera prereqs (DepthAI v3.2.1)
+    #   block:
+    #     - name: Ensure Movidius udev rule exists
+    #       ansible.builtin.copy:
+    #         content: 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"'
+    #         dest: /etc/udev/rules.d/80-movidius.rules
+    #         mode: '0644'
+    #       register: udev_rule_result
+
+    #     - name: Reload udev rules if changed
+    #       ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+    #       when: udev_rule_result.changed
+
+    #     - name: Check if DepthAI library headers exist (Simple check)
+    #       ansible.builtin.stat:
+    #         path: /usr/local/include/depthai/depthai.hpp
+    #       register: depthai_installed
+
+    #     - name: Download and install depthai-core v3.2.1 (Source)
+    #       when: not depthai_installed.stat.exists
+    #       block:
+    #         - name: Download depthai-core
+    #           ansible.builtin.get_url:
+    #             url: https://github.com/luxonis/depthai-core/releases/download/v3.2.1/depthai-core-v3.2.1.tar.gz
+    #             dest: /tmp/depthai-core-v3.2.1.tar.gz
+
+    #         - name: Extract depthai-core
+    #           ansible.builtin.unarchive:
+    #             src: /tmp/depthai-core-v3.2.1.tar.gz
+    #             dest: /tmp
+    #             remote_src: true
+
+    #         - name: Build depthai-core (Shared Libs)
+    #           ansible.builtin.shell: |
+    #             cmake -S . -B build -DBUILD_SHARED_LIBS=ON
+    #             cmake --build build --parallel $(nproc)
+    #           args:
+    #             chdir: /tmp/depthai-core-v3.2.1
+
+    #         - name: Install depthai-core
+    #           become: true
+    #           ansible.builtin.shell: cmake --install build
+    #           args:
+    #             chdir: /tmp/depthai-core-v3.2.1
+
+    #     - name: Run ldconfig
+    #       ansible.builtin.command: ldconfig
+
 
 

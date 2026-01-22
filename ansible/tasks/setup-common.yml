@@ -432,12 +432,6 @@
     autoconnect: true
     state: present
 
-- name: Set max power mode
-  ansible.builtin.command: nvpmodel -m 0
-  async: 1
-  poll: 0 # skip to next task
-  ignore_errors: true # TODO: make this less fragile
-
 - name: Configure real-time priority limits for the current user
   ansible.builtin.copy:
     dest: /etc/security/limits.d/99-realtime.conf
@@ -449,7 +443,13 @@
     mode: '0644'
   become: true
 
-- name: Reboot system and wait for it to come back
-  ansible.builtin.reboot:
-    reboot_timeout: 600
-    test_command: whoami
+- name: Set max power mode with confirmation
+  become: true
+  ansible.builtin.shell: echo "yes" | nvpmodel -m 0
+  register: nvpmodel_output
+  # We use shell because command doesn't support pipes (|)
+
+- name: Wait for the Orin NX to come back
+  ansible.builtin.wait_for_connection:
+    delay: 10
+    timeout: 600

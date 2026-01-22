@@ -336,7 +336,7 @@ For password free access to the Orin, follow these steps:
 
 #### Ansible 
 
-On the host computer, navigate to the `ansible/` directory of the omni-nxt repo and run the playbook: 
+On the host computer, navigate to the `ansible/` directory of the swarm-nxt repo and run the playbook: 
 
 ``ansible-playbook -i inventory.ini drone_setup.yml -K``
 
