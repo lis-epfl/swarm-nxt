@@ -60,7 +60,7 @@ LatencyChecker::LatencyChecker() : ::rclcpp::Node("latency_checker") {
       this->create_publisher<latency_checker_ros2::msg::Heartbeat>(
           "~/heartbeat", 10);
   heartbeat_timer_ = this->create_wall_timer(
-      std::chrono::seconds(10),
+      std::chrono::milliseconds(500),
       std::bind(&LatencyChecker::PublishHeartbeat, this));
 }
 
@@ -75,7 +75,6 @@ void LatencyChecker::HandleHeartbeatMessage(
 
 void LatencyChecker::PublishHeartbeat() {
   auto logger = this->get_logger();
-  RCLCPP_INFO(logger, "Sending heartbeat...");
   auto msg = latency_checker_ros2::msg::Heartbeat();
   msg.node_name = my_name_;
   msg.timestamp = this->get_clock()->now();

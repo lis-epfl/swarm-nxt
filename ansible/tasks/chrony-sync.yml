@@ -1,0 +1,27 @@
+- name: Chrony Stuff
+  become: yes
+  block:
+  - name: Remove all sources
+    become: yes
+    ansible.builtin.replace: 
+      path: /etc/chrony/chrony.conf
+      regexp: "^((pool)|(sourcedir))" 
+      replace: "# \\1"
+    
+  - name: Add host IPs
+    ansible.builtin.blockinfile:
+      path: /etc/chrony/chrony.conf
+      block: | # change the possible ips and chrony min/max poll in ansible/group_vars/all
+          server {{ gcs_url }}  iburst minpoll {{ chrony_minpoll }} maxpoll {{ chrony_maxpoll }}
+  - name: Restart chronyd
+    ansible.builtin.systemd:
+      name: chronyd
+      state: restarted
+
+  - name: Wait for chrony to be synchronized
+    ansible.builtin.command: chronyc tracking
+    register: chrony_status
+    until: "'Leap status     : Normal' in chrony_status.stdout"
+    retries: 15    # Try 15 times
+    delay: 1     # Wait 1 second between each try
+    changed_when: false # This command doesn't change the system

@@ -1,0 +1,55 @@
+- name: Download Gurobi 13
+  ansible.builtin.get_url:
+    url: https://packages.gurobi.com/13.0/gurobi13.0.0_armlinux64.tar.gz
+    dest: /tmp/gurobi13.0.0_armlinux64.tar.gz
+    checksum: md5:9698a57102028195763c7259f556cadb
+
+- name: Extract Gurobi to /opt
+  ansible.builtin.unarchive:
+    src: /tmp/gurobi13.0.0_armlinux64.tar.gz
+    dest: /opt
+    remote_src: true
+    creates: /opt/gurobi1300
+
+- name: Ensure /opt/gurobi directory exists
+  ansible.builtin.file:
+    path: /opt/gurobi
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Copy Gurobi license file
+  ansible.builtin.copy:
+    src: secrets/gurobi.lic
+    dest: /opt/gurobi/gurobi.lic
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Build Gurobi C++ library
+  ansible.builtin.command:
+    cmd: make
+    chdir: /opt/gurobi1300/armlinux64/src/build
+    creates: /opt/gurobi1300/armlinux64/src/build/libgurobi_c++.a
+
+- name: Copy C++ library to lib directory
+  ansible.builtin.copy:
+    src: /opt/gurobi1300/armlinux64/src/build/libgurobi_c++.a
+    dest: /opt/gurobi1300/armlinux64/lib/libgurobi_c++.a
+    remote_src: true
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Set Gurobi environment variables in bashrc
+  become: false
+  ansible.builtin.blockinfile:
+    path: /home/lis/.bashrc
+    block: |
+      # Gurobi environment variables
+      export GUROBI_HOME=/opt/gurobi1300/armlinux64
+      export PATH=$PATH:$GUROBI_HOME/bin
+      export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GUROBI_HOME/lib
+      export GRB_LICENSE_FILE=/opt/gurobi/gurobi.lic
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - Gurobi"

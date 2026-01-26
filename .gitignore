@@ -7,3 +7,5 @@ docs/.obsidian
 *.swp
 *.swo
 *.swn
+*.swm
+__pycache__/

@@ -1,0 +1,255 @@
+# swarm_stack.launch.py
+from launch import LaunchDescription
+from launch.actions import (
+    IncludeLaunchDescription,
+    ExecuteProcess,
+    OpaqueFunction,
+    Shutdown,
+    RegisterEventHandler,
+)
+from launch.events.process import ProcessExited
+from launch.event_handlers import OnProcessExit
+from launch.launch_description_sources import AnyLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+import math
+import os
+
+
+def generate_launch_description():
+    hdsm_idx = {{ groups['drones'].index(inventory_hostname) }}
+
+    bridge_node = Node(
+        package="domain_bridge",
+        executable="domain_bridge",
+        name="domain_bridge",
+        output="log",
+        arguments=["{{ drone_ros_path }}/config/bridge_config.yaml"],
+    )
+    bag_dir = os.path.join(os.environ.get("ROS_LOG_DIR"), "bag")
+    rosbag_start = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "bag",
+            "record",
+            "-b",
+            "1_073_741_824",  # 1GiB
+            "-s",
+            "mcap",
+            "-o",
+            bag_dir,
+            "--regex",
+            "{{ drone_rosbag_topics | map('regex_replace', '^(.*)$', '(\\1)') | join('|') if drone_rosbag_topics else '' }}",
+            "--storage-config-file", 
+            "{{ drone_ros_path }}/config/mcap_bag_options.yml"
+        ]
+    )
+
+    mocap_to_vision_pose = Node(
+        package="mocap_to_vision_pose_ros2",
+        executable="mocap_to_vision_pose_node",
+        parameters=[
+            {
+                "mocap_topic": "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
+                "namespace": "{{ ns }}"
+            }
+        ],
+        prefix=['chrt -f 50'],
+        output="log",
+    )
+
+    latency_checker = Node(
+        package="latency_checker_ros2",
+        executable="latency_checker_node",
+        namespace="{{ ns }}",
+        parameters=[
+            {
+                "peer_file_path": "{{ drone_ros_path }}/config/peer_list.yaml",
+            }
+        ],
+        output="log",
+    )
+
+    safety_params_file = PathJoinSubstitution([
+        FindPackageShare('safety_checker_ros2'),
+        'config',
+        'safety_params.yaml'
+    ])
+    safety_checker = Node(
+        package="safety_checker_ros2",
+        executable="safety_checker_node",
+        namespace="{{ ns }}",
+        prefix=['chrt -f 50'],
+        parameters=[safety_params_file],
+        output="log",
+    )
+
+    dsm_params_file = PathJoinSubstitution([
+        FindPackageShare('drone_state_manager_ros2'),
+        'config',
+        'drone_state_manager_params.yaml'
+    ])
+
+    drone_state_manager = Node(
+        package="drone_state_manager_ros2",
+        executable="drone_state_manager.py",
+        namespace="{{ ns }}",
+        prefix=['chrt -f 50'],
+        output="log",
+        parameters=[dsm_params_file],
+    )
+
+    mpc_params_file = PathJoinSubstitution([
+        FindPackageShare('mpc_controller_ros2'),
+        'config',
+        'mpc_omninxt_params.yaml'
+    ])
+    mpc_node = Node(
+        package='mpc_controller_ros2',
+        executable='mpc_controller_node',
+        name='mpc_controller',
+        namespace= "{{ ns }}",
+        prefix=['chrt -f 50'],
+        output='screen',
+        emulate_tty=True,
+        parameters=[mpc_params_file],
+        remappings=[
+            ('/fmu/in/vehicle_rates_setpoint', '/mpc/out/vehicle_rates_setpoint'),
+            ('/fmu/in/vehicle_torque_setpoint', '/mpc/out/vehicle_torque_setpoint'),
+            ('/fmu/in/vehicle_thrust_setpoint', '/mpc/out/vehicle_thrust_setpoint'),
+            ('/fmu/in/actuator_motors', '/mpc/out/actuator_motors'),
+        ]
+    )
+
+    bridge_config_file = PathJoinSubstitution([
+        FindPackageShare('omninxt_bridge_ros2'),
+        'config',
+        'command_converter_params.yaml'
+    ])
+    command_converter_node = Node(
+        package='omninxt_bridge_ros2',
+        executable='command_converter_node',
+        name='command_converter',
+        prefix=['chrt -f 50'],
+        output='screen',
+        parameters=[bridge_config_file])
+
+    planner_input_topic = '/agent_' + str(hdsm_idx) + '/traj_full'
+    trajectory_converter_node = Node(
+        package='omninxt_bridge_ros2',
+        executable='trajectory_converter_node',
+        name='trajectory_converter',
+        prefix=['chrt -f 50'],
+        output='screen',
+        parameters=[
+            {
+                'input_topic': planner_input_topic,
+                'output_topic': '/planner/trajectory',
+            }
+        ]
+    )
+
+    # Calculate goal position based on drone ID
+    angle_degrees = hdsm_idx * 36.0
+    angle_radians = math.radians(angle_degrees)
+    goal_x = 1.5 * math.cos(angle_radians)  # R=1.5, center_x=0
+    goal_y = 1.5 * math.sin(angle_radians)  # R=1.5, center_y=0
+    goal_z = 1.0                              # center_z=1.0
+
+    # Format as the required string: "[x, y, z]"
+    goal_position_str = f"[{goal_x}, {goal_y}, {goal_z}]"
+
+    # generate the frames to remove the pointcloud around their positions
+    swarm_frames = [
+    {% for host in groups['drones'] %}
+        "{{ host | regex_replace('\\.local', '') }}",
+    {% endfor %}
+    ]
+    swarm_frames_str = str(swarm_frames) # "[ 'nxt1', 'nxt2', ... ]"
+
+    # Current drone frame name (e.g., nxt7)
+    # Using 'ns' variable from Ansible which is usually the hostname
+    drone_frame_name = "{{ ns }}"
+    
+    multi_agent_planner_include = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("multi_agent_planner"),
+                    "launch",
+                    "omninxt_planner.launch.py",
+                ]
+            )
+        ),
+        launch_arguments={
+            "id": str(hdsm_idx),
+            "n_rob": "{{ groups['drones'] | length }}",
+            "goal_position": goal_position_str,
+            "use_vision": "{{ 'true' if enable_vision | default(false) | bool else 'false' }}",
+            "pointcloud_topic": "/depth/pointcloud/combined",
+            "agent_frame": drone_frame_name,
+            "swarm_frames": swarm_frames_str,
+        }.items(),
+    )
+
+    extra_nodes = []
+
+    {% if enable_vision | default(false) | bool %}
+    # VISION MODE: Launch Camera and Depth Estimation
+    extra_nodes.append(
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('oak_ffc_4p_driver_ros2'),
+                    'launch',
+                    'oak_ffc_4p_driver_omninxt.launch.py'
+                ])
+            )
+        )
+    )
+    extra_nodes.append(
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('depth_estimation_ros2'),
+                    'launch',
+                    'depth_estimation_omninxt.launch.py'
+                ])
+            ),
+            launch_arguments={
+                'pointcloud_frame_id': '{{ ns }}'
+            }.items()
+        )
+    )
+    {% else %}
+    # NO VISION MODE: Launch Env Builder (Synthetic)
+    extra_nodes.append(
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(
+                PathJoinSubstitution(
+                    [
+                        FindPackageShare("env_builder"),
+                        "launch",
+                        "env_builder_empty.launch.py",
+                    ]
+                )
+            ),
+        )
+    )
+    {% endif %}
+
+    return LaunchDescription(
+        [
+            bridge_node,
+            rosbag_start,
+            mocap_to_vision_pose,
+            latency_checker,
+            safety_checker,
+            drone_state_manager,
+            mpc_node,
+            command_converter_node,
+            trajectory_converter_node,
+            multi_agent_planner_include,
+        ] + extra_nodes
+    )

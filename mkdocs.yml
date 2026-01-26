@@ -6,6 +6,7 @@ nav:
   - Home: index.md
   - Infrastructure Setup: infra-setup.md
   - Drone Build Instructions: drone-setup.md
+  - Remote Control Setup: remote-control-setup.md
   - Flying: flying.md
   - Common Software Tasks: software-common-tasks.md
   - Manual Setup Instructions: manual-setup.md

@@ -69,30 +69,4 @@ This setup is out of scope for this guide.
 !!! danger
 	Take care in defining the bounds in this step to avoid drones flying where they should not fly
 
-This package has a safety module `bounds_checker_ros2` that ensures two things: 
-
-1. Generated trajectories stay within a polyhedron
-2. If the drone exits the polyhedron, executes a land command
-
-These bounds are defined by a `bounds.json` file that is in `ansible/templates`. Since this file is dependent on your particular environment, this file is NOT provided by default. An example file exists called `bounds.json.example` in `ansible/templates`, and is repeated here for demonstration: 
-
-```json
-[
-	[ 1.0,  0.0,  0.0,  3.0],  
-	[ -1.0,  0.0,  0.0,  3.0],  
-	[ 0.0,   1.0,  0.0,  3.0],  
-	[ 0.0,  -1.0,  0.0,  3.0],  
-	[ 0.0,   0.0,  1.0,  3.6],  
-	[ 0.0,   0.0,  1.0,  0.0]   
-]
-
-```
-This is a 6x6x3.6m rectangular prism with the x and y axes centered on the origin and the z axis bounded from 0.0m to 3.6m.  
-
-The format is an array of four dimensional arrays, with the first three elements defining the array normal vector, and the last element defining the offset from the origin: 
-
-$$
-\begin{bmatrix} \begin{bmatrix} \vec{n_0} & c_0 \end{bmatrix} \\ \vdots \\ \begin{bmatrix} \vec{n}_{N-1} & c_{N-1} \end{bmatrix} \end{bmatrix}
-$$
-
-Points are safe when the system of inequalities $\vec{p} \cdot \vec{n}_i - c_i \leq 0$ holds for all $i \in \{0, \dots, N-1\}$.
+You can modify the `safety_params.yaml` file the `safety_checker_ros2/config` to specify the linear constraints that define the bounding box/polyhedron of the environment. The drone will land as soon as she reaches this bounding box minus a safety margin also defined in the `safety_params.yaml` file.

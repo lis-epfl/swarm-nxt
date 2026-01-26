@@ -1,0 +1,10 @@
+- name: Copy build script
+  ansible.builtin.template:
+    src: templates/local_build.sh
+    dest: "{{ host_ros_path }}/local_build.sh"
+    mode: "755"
+
+- name: Execute build script
+  ansible.builtin.shell: ./local_build.sh
+  args:
+    chdir: "{{ host_ros_path }}"

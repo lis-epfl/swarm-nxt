@@ -1,0 +1,5 @@
+trajectory_converter:
+  ros__parameters:
+    input_topic: "/planner/trajectory"
+    output_topic: "/mpc/trajectory"
+

@@ -33,6 +33,14 @@ def generate_launch_description():
         '{{ groups["drones"] | map("regex_replace", "\\.local$", "") | join(",") }}',
     )
 
+    bridge_node = Node(
+        package="domain_bridge",
+        executable="domain_bridge",
+        name="domain_bridge",
+        output="log",
+        arguments=["{{ host_ros_path }}/config/bridge_config.yaml"],
+    )
+
     latency_checker_node = Node(
         package="latency_checker_ros2",
         executable="latency_checker_node",
@@ -42,11 +50,26 @@ def generate_launch_description():
         parameters=[{"peer_file_path": "{{ host_ros_path }}/config/peer_list.yaml"}]
     )
 
+    drone_gui_node = Node(
+        package="drone_gui_ros2",
+        executable="drone_gui_node.py",
+        name="drone_gui_node",
+        output="screen",
+        parameters=[
+            {"port": 8080},
+            {"peers_file": "{{ host_ros_path }}/config/peer_list.yaml"},
+            {"hdsm_mapping_file": "{{ host_ros_path }}/config/hdsm_planner_map.yaml"},
+            {"hostname": "{{ host_hostname }}"}
+        ]
+    )
+
     # collect nodes
     nodes = {
+        "domain_bridge": bridge_node,
         "latency_checker": latency_checker_node,
         "optitrack_wrapper": wrapper_node,
         "optitrack_multiplexer": multiplexer_node,
+        "drone_gui": drone_gui_node,
     }
 
     # Create exit handlers for each node so that we exit if of them exits

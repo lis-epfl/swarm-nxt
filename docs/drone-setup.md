@@ -229,35 +229,15 @@ Then, apply the [saved parameter file](https://raw.githubusercontent.com/lis-epf
 
 ### NXT Configuration and Calibration
 
-#### MAV System ID
+#### MAV System ID and DDS Domain ID
 
 The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. Follow a consistent naming scheme as described at the [top](#hardware-setup) of this document. Use the number that this drone ends with as your system ID. To set it:
 
-1. Search for `MAV_SYS_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
-2. Set it to the unique number of your drone. 
+1. Search for `MAV_SYS_ID` and `UXRCS_DDS_DOM_ID` in the parameters tab of QGroundControl's Vehicle Setup page.
+2. Set them to the unique number of your drone.
 
 !!! important   
     If this number is the same for two drones, things will **not** work and it will be very hard to debug. 
-
-#### Telemetry Streaming
-
-The flight controller needs to be configured to output data on a serial port so that the NVIDIA Orin can read and write commands. Here, when you load the params file,  telemetry is set up on the TELEM2 port. 
-
-!!! note 
-	You can optionally chose to use another port to do this telemetry streaming. See [Appendix > Flight Controller > Alternate Telemetry Port](appendix.md#alternate-telemetry-port) for further instructions
-
-Go to the home screen of QGroundControl, and click on the Q button in the top left again. Click on analyze tools, and MAVLink Console. 
-
-In the console, run the following commands: 
-```
-cd fs/microsd
-mkdir etc/
-cd etc
-echo "mavlink stream -d /dev/ttyS3 -s HIGHRES_IMU -r 1000" > extras.txt
-```
-
-If you run `cat extras.txt`, the mavlink stream line should be present. 
-
 
 #### Propeller Numbering and Spin Direction
 
@@ -297,27 +277,12 @@ Go to the flight modes page and set the channels like the image:
 
 ![](images/flight_modes.png)
 
-
-#### Sensors
-
-On the sensors tab: 
-
-Click on the orientations sub-tab, and set the autopilot orientation to `ROTATION_ROLL_180_YAW_90`. Reboot if prompted.
-
-!!! important
-	This is true if the arrow on the flight controller is pointed to the right if looked at from the bottom (orin on the back)
-
-Calibrate the gyroscope by putting the drone on a level surface, and then clicking the gyroscope button and following the wizard. 
-
-Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. 
- 
-
 ## Software Setup
 
 <!-- TODO: Add photo for recovery port, REC button, RES button --> 
 1. Plug the external power into the XT60 cable for the battery.
-1. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
-2. Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board
+2. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
+3. Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board
 4. Press the button labelled "RES" on the Devboard
 5. While pressing the RES button, press the REC button
 6. Release the RES button while still pressing the REC button
@@ -326,7 +291,7 @@ Calibrate the accelometer by clicking on the accelerometer sub-tab and completin
 9. Run the sdkmanager: `sdkmanager --cli`
 10. Login, and then select the following options: install -> jetson -> target hardware
 11. Select Jetson Orin NX, it should already be pre-selected
-12. Reply Y to showing all Jetson versions. Select JetPack 6.2
+12. Reply Y to showing all Jetson versions. Select JetPack 6.2.1
 13. Select both additional SDKs
 14. Do not customize install settings
 15. Reply N to flashing the Jetson Orin NX Module
@@ -371,7 +336,7 @@ For password free access to the Orin, follow these steps:
 
 #### Ansible 
 
-On the host computer, navigate to the `ansible/` directory of the omni-nxt repo and run the playbook: 
+On the host computer, navigate to the `ansible/` directory of the swarm-nxt repo and run the playbook: 
 
 ``ansible-playbook -i inventory.ini drone_setup.yml -K``
 
@@ -380,10 +345,93 @@ Enter the sudo password of the orin when prompted, as well as the hostname which
 !!! important
     It is very important that you set a unique hostname. You must follow the structured naming pattern described at the top of this document. The software depends on this assumption.
 
+Then install the packages with: 
+
+``ansible-playbook -i inventory.ini drones_update.yml``
+
+#### Connecting to QGC
+
+In QGC go to Application Settings, MAVLink, then make sure enable MAVLink forwarding is unchecked. 
+The DDS uses TELEM2 for communication with the FC, so we need to use the USB-C connection to communicate via MAVLINK. For this ssh into the drone and run:
+
+``mavproxy.py --master="/dev/ttyACM0" --baudrate 115200 --out="udp:<ipofhost>:14550"``
+
+!!! important
+    Sometimes you need to connect at `/dev/ttyACM1` instead of `/dev/ttyACM0` especially after rebooting the FC.
+
+On the sensors tab: 
+
+Click on the orientations sub-tab, and set the autopilot orientation to `ROTATION_ROLL_180_YAW_90`. Reboot if prompted.
+
+!!! important
+	This is true if the arrow on the flight controller is pointed to the right if looked at from the bottom (orin on the back)
+
+Calibrate the gyroscope by putting the drone on a level surface, and then clicking the gyroscope button and following the wizard. 
+
+Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. 
+ 
+## Vision Setup
+### Enable Vision in Ansible
+
+To launch the vision drivers and mapping nodes, set the `enable_vision` flag in your Ansible configuration.
+
+#### **Option A: Enable for All Drones**
+
+Edit `ansible/group_vars/all`:
+
+```yaml
+enable_vision: true
+```
+
+#### **Option B: Enable for Specific Drones**
+
+Edit `ansible/inventory.ini`:
+
+```ini
+[drones]
+nxt1.local enable_vision=true
+nxt2.local  # Vision disabled
+```
+
+---
+
+### Camera Calibration
+
+We use the **Quadcam Calibration Tool** to generate rectification maps for the depth estimation node.
+
+#### **Install the Tool**
+Ensure you have run the `host_computer.yml` playbook to install the calibration tool on your system. It will be in `~/data/repos/quadcam_calibration_tool`.
+
+#### **Perform Calibration**
+Follow the instructions in the Quadcam Calibration Tool README to collect data and generate the rectification maps.
+
+#### **Deploy Maps**
+
+Copy the output folder to the drone:
+
+```bash
+# Example: Deploying maps for 192x192 resolution to nxt1
+scp -r final_maps lis@nxt1.local:/home/lis/ros2_ws/src/depth_estimation_ros2/config/final_maps_192_192
+```
+
+#### **Fit baseline and disparity correction** 
+Even after the calibration, there can be errors, one way to correct for that is to fit the `baseline_scale` and `disparity_offset` parameters as detailed in [`depth_estimation_ros2`](https://github.com/lis-epfl/depth_estimation_ros2), **Depth Correction Calibration** Section.
+
+#### **Configure the Drone**
+
+SSH into the drone and edit:
+
+```
+~/ros2_ws/src/depth_estimation_ros2/config/depth_omninxt_params.yml
+```
+
+Modify the values if necessary: `calibration_resolution: 192_192` and the `onnx_model_path: "/home/lis/ros2_ws/src/depth_estimation_ros2/models/S2M2_S_192_192_v2_torch29.onnx"`.
 
 ## Flight Preparation 
 
 ### PID Tuning
+
+Usually not necessary - the default values for one drone work well for the others, and they are loaded when you load the params in QGC. But in case you have issues:
 
 1. Follow all the steps in the [Pre-Flight Checklist](flying.md#pre-flight-checklist)
 2. Launch the vehicle in position mode, and fly it slowly. Make sure that it feels decently well to operate. 
@@ -406,7 +454,6 @@ If the autotune fails, you can increase the `MC_AT_SYSID_AMP` parameter by steps
 3. Select the drone's markers on the screen, right click, and click on create rigid body. Give each drone the same name as the hostname. This allows the automated tooling to work properly.
 
 !!! warning
-	It is very important that the drone is facing the positive x direction (orin towards the negative x direction). 
-
+	It is very important that the drone is facing the positive x direction (orin towards the negative x direction). It is also important that the Optitrack streams at 120Hz and not 240Hz (otherwise ROS2 would have performance issue).
 
 

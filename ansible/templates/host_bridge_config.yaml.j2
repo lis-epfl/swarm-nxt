@@ -1,0 +1,48 @@
+name: host_domain_bridge
+
+from_domain: 0
+topics:
+{% for drone in groups['drones'] %}
+{% set num = drone | regex_replace('\\.local', '') | regex_search('[0-9]+$') %}
+{% set drone_idx = loop.index0 %}
+  /optitrack_multiplexer_node/rigid_body/nxt{{ num }}: 
+    type: optitrack_multiplexer_ros2_msgs/msg/RigidBodyStamped
+    to_domain: {{ num }}
+  /nxt{{ num }}/takeoff:
+    type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
+  /nxt{{ num }}/land:
+    type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
+  /nxt{{ num }}/arm:
+    type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
+  /nxt{{ num }}/kill:
+    type: swarmnxt_msgs/msg/Trigger
+    to_domain: {{ num }}
+  /tf:
+    type: tf2_msgs/msg/TFMessage
+    to_domain: {{ num }}
+  /nxt{{ num }}/goals:
+    type: nav_msgs/msg/Goals
+    to_domain: {{ num }}
+  /nxt{{ num }}/fmu/in/vehicle_command:
+    type: px4_msgs/msg/VehicleCommand
+    remap: /fmu/in/vehicle_command
+    to_domain: {{ num }}
+  /nxt{{ num }}/mpc_controller/enable:
+    type: std_msgs/msg/Bool
+    to_domain: {{ num }}
+  /agent_{{ drone_idx }}/start_planning: 
+    type: multi_agent_planner_msgs/msg/StartPlanning
+    to_domain: {{ num }}
+  /agent_{{ drone_idx }}/stop_planning: 
+    type: multi_agent_planner_msgs/msg/StopPlanning
+    to_domain: {{ num }}
+  /agent_{{ drone_idx }}/goal:
+    type: geometry_msgs/msg/PointStamped
+    to_domain: {{ num }}
+  /{{ host_hostname }}/latency_checker/heartbeat:
+    type: latency_checker_ros2/msg/Heartbeat
+    to_domain: {{ num }}
+{% endfor %}

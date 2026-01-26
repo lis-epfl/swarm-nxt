@@ -1,0 +1,22 @@
+<package format="2">
+  <name>drone_state_manager_ros2</name>
+  <version>0.0.1</version>
+  <description>A ROS2 package for managing the state of drones.</description>
+  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <license>MIT</license>
+  
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
+  
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>px4_ros_com</exec_depend>
+  <exec_depend>swarmnxt_msgs</exec_depend>
+  <exec_depend>mpc_controller_ros2_msgs</exec_depend>
+  
+  <test_depend>pytest</test_depend>
+  
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

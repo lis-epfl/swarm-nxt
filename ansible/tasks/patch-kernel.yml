@@ -16,13 +16,13 @@
       delegate_to: localhost
       become: no
     - name: Send and extract patched kernel if it does exist
-      when: patched_kernel_file.stat.exists and patched_kernel_file.stat.checksum == '54d7125a049bebc9393aa4af2a842c8584ebd683e6b89330ee8e6bfdcffc0dfc'
+      when: patched_kernel_file.stat.exists and patched_kernel_file.stat.checksum == 'd0937496c7e18b0283c09aac9f7ac548c26c0976b48ee0f0e41a7dbae600f1a3'
       ansible.builtin.unarchive: 
         src: patched-kernel/patched-kernel.tar.gz
         dest: /tmp
   
     - name: Create patched kernel if it does not exist
-      when: patched_kernel_file.stat.exists == false or patched_kernel_file.stat.checksum != '54d7125a049bebc9393aa4af2a842c8584ebd683e6b89330ee8e6bfdcffc0dfc'
+      when: patched_kernel_file.stat.exists == false or patched_kernel_file.stat.checksum != 'd0937496c7e18b0283c09aac9f7ac548c26c0976b48ee0f0e41a7dbae600f1a3'
       block: 
         - name: Get sources
           ansible.builtin.get_url:
@@ -76,7 +76,7 @@
             state: latest
             update_cache: yes
 
-        - name: Build the kernel (will take a long time!)
+        - name: Build the kernel (will take a long time only the first time! - it will be saved on the host pc for later)
           community.general.make: 
             chdir: /tmp/kernel
             params:

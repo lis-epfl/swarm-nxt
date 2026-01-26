@@ -1,0 +1,9 @@
+- name: Install geoids
+  block:
+    - name: Download GeographicLib datasets installer
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/mavlink/mavros/ros2/mavros/scripts/install_geographiclib_datasets.sh
+        dest: /tmp/install_geographiclib_datasets.sh
+        mode: '0755'
+    - name: Run GeographicLib datasets installer
+      ansible.builtin.shell: /tmp/install_geographiclib_datasets.sh

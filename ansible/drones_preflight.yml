@@ -1,99 +1,49 @@
 ---
-
-- name: Preflight
+# --- PLAY 1: KICK OFF VISION CHECKS ---
+- name: Start Vision Checks Early
   hosts: drones
   remote_user: lis
-  vars: 
-    gcs_url: "{{ host_hostname }}.local" 
-
+  gather_facts: no
   tasks:
-    - name: Chrony Stuff
-      become: yes
-      block:
-      - name: Remove all sources
-        become: yes
-        ansible.builtin.replace: 
-          path: /etc/chrony/chrony.conf
-          regexp: "^((pool)|(sourcedir))" 
-          replace: "# \\1"
-        
-      - name: Add host IPs
-        ansible.builtin.blockinfile:
-          path: /etc/chrony/chrony.conf
-          block: | # change the possible ips and chrony min/max poll in ansible/group_vars/all
-              server {{ gcs_url }}  iburst minpoll {{ chrony_minpoll }} maxpoll {{ chrony_maxpoll }}
-      - name: Restart chronyd
-        ansible.builtin.systemd:
-          name: chronyd
-          state: restarted
-
-    - name: Create config directory
-      ansible.builtin.file:
-        dest: "{{ drone_ros_path }}/config"
-        state: directory
-        mode: "755"
-    
-    - name: Send peer list
-      ansible.builtin.template: 
-        src: templates/peer_list.yaml.j2
-        dest: "{{ drone_ros_path }}/config/peer_list.yaml"
-        mode: "644"
-      vars:
-        peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
-
-    - name: Send launch file
-      ansible.builtin.template:
-        src: templates/drone_launch.yaml.j2
-        dest: "{{ drone_base_path }}/launch.py"
-
-    - name: Send 3D Bounds file
-      ansible.builtin.copy:
-        src: templates/bounds.json
-        dest: "{{ drone_ros_path }}/config/bounds.json"
-      
-
-    - name: Create ros_packages script 
-      vars: 
-        ros_path: "{{ drone_ros_path }}"
-        base_path: "{{ drone_base_path }}"
-      ansible.builtin.template: 
-        src: scripts/ros_packages_start.sh
-        dest: "{{ drone_base_path }}/ros_packages_start.sh"
-        mode: "755"
-      
-    - name: Create local services dir
-      ansible.builtin.file: 
-        dest: ~/.local/share/systemd/user
-        state: directory
-    
-    - name: Install ros_packages service 
-      vars:
-        base_path: "{{ drone_base_path }}"
-      ansible.builtin.template: 
-        src: templates/ros_packages_service.j2
-        dest: ~/.local/share/systemd/user/ros_packages.service
-
-    - name: Start ros_packages service
-      ansible.builtin.systemd: 
+    - name: Stop ros_packages service (release camera driver)
+      ansible.builtin.systemd:
         name: ros_packages
-        state: restarted
-        enabled: false
-        daemon_reload: true
+        state: stopped
         scope: user
-    
-    - name: Chrony Tracking Check
-      block: 
-        - name: Copy script
-          ansible.builtin.copy: 
-            src: scripts/chronyc_check.py
-            dest: /tmp/chronyc_check.py
-            mode: '0755'
-          
-        - name: Check if we're tracking
-          ansible.builtin.shell: /tmp/chronyc_check.py
-          register: chronyc_check
-          changed_when: false
+      ignore_errors: yes  # In case it's not running
 
+    - name: Launch Vision Tests (Async)
+      when: enable_vision | default(false) | bool
+      ansible.builtin.shell: |
+        source /opt/ros/humble/setup.bash
+        source {{ drone_ros_path }}/install/setup.bash
+
+        # 1. Sync Check
+        if ! ros2 run oak_ffc_4p_driver_ros2 oak_sync_checker; then
+            echo "SYNC_FAILED" >&2
+            exit 1
+        fi
+
+        # Wait for device to re-enumerate after sync checker releases it
+        sleep 2
+
+        # 2. Focus Check
+        if ! ros2 run oak_ffc_4p_driver_ros2 oak_focus_checker -- --threshold=0 --timeout-ms=2000; then
+            echo "FOCUS_FAILED" >&2
+            exit 1
+        fi
+      args:
+        executable: /bin/bash
+      async: 180   # 3 minutes timeout (covers local build + drone setup time)
+      poll: 0      # Fire and forget
+      register: vision_launch_job
+
+    - name: Save Job ID for Later
+      when: enable_vision | default(false) | bool
+      set_fact:
+        vision_job_id: "{{ vision_launch_job.ansible_job_id }}"
+
+# --- PLAY 2: LOCAL SETUP (Runs in parallel with Vision Checks) ---
 - name: Local Actions
   connection: local
   hosts: localhost
@@ -103,36 +53,40 @@
       delegate_to: 127.0.0.1
       connection: local
       block:
-      - name: Build local packages
-        ansible.builtin.shell: ". /opt/ros/humble/setup.sh && colcon build --symlink-install"
-        args:
-          chdir: "{{ host_ros_path }}"
+      - name: Build Local Packages
+        ansible.builtin.include_tasks: tasks/local-build.yml
 
       - name: Create local launch file
-        ansible.builtin.template: 
+        ansible.builtin.template:
           src: templates/host_launch.py.j2
           dest: "{{ host_base_path }}/launch.py"
-      - name: Create ros_packages script 
+
+      - name: Create ros_packages script
         become: false
-        vars: 
+        vars:
           ros_path: "{{ host_ros_path }}"
           base_path: "{{ host_base_path }}"
-        ansible.builtin.template: 
+          drone_num: 0
+        ansible.builtin.template:
           src: scripts/ros_packages_start.sh
           dest: "{{ host_base_path }}/ros_packages_start.sh"
           mode: "755"
-     
+
       - name: Create config directory
         ansible.builtin.file:
           dest: "{{ host_ros_path }}/config"
           state: directory
           mode: "755"
-    
-      - name: Copy peer list
-        ansible.builtin.template: 
-          src: templates/peer_list.yaml.j2
-          dest: "{{ host_ros_path }}/config/peer_list.yaml"
+
+      - name: Send configuration files
+        ansible.builtin.template:
+          src: "{{ item.src }}"
+          dest: "{{ item.dest }}"
           mode: "644"
+        loop:
+          - { src: "templates/peer_list.yaml.j2", dest: "{{ host_ros_path }}/config/peer_list.yaml" }
+          - { src: "templates/host_bridge_config.yaml.j2", dest: "{{ host_ros_path }}/config/bridge_config.yaml" }
+          - { src: "templates/hdsm_planner_map.yaml.j2", dest: "{{ host_ros_path }}/config/hdsm_planner_map.yaml" }
         vars:
           peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
 
@@ -140,13 +94,14 @@
         ansible.builtin.file:
           dest: "~/.local/share/systemd/user"
           state: directory
-          
-      - name: Copy ros_packages service 
+
+      - name: Copy ros_packages service
         vars:
           base_path: "{{ host_base_path }}"
-        ansible.builtin.template: 
+        ansible.builtin.template:
           src: templates/ros_packages_service.j2
           dest: ~/.local/share/systemd/user/ros_packages.service
+
       - name: Start ros_packages service
         ansible.builtin.systemd:
           name: "ros_packages"
@@ -155,6 +110,98 @@
           scope: user
           daemon_reload: true
 
+# --- PLAY 3: DRONE SETUP & VERIFICATION ---
+- name: Preflight Drone Setup
+  hosts: drones
+  remote_user: lis
+  vars:
+    gcs_url: "{{ host_hostname }}.local"
 
-# TODO: Add something about waiting and checking all the packages after :)
+  tasks:
+    - name: Setup chrony sync
+      ansible.builtin.include_tasks: "tasks/chrony-sync.yml"
 
+    - name: Create directories
+      ansible.builtin.file:
+        dest: "{{ item.dest }}"
+        state: directory
+        mode: "755"
+      loop:
+        - {dest: "{{ drone_ros_path }}/config"}
+        - {dest: "{{ drone_base_path }}/scripts"}
+        - {dest: "{{ drone_base_path }}/logs/scripts"}
+        - {dest: "~/.local/share/systemd/user"}
+
+    - name: Send files
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "644"
+      loop:
+        - { src: "templates/peer_list.yaml.j2", dest: "{{ drone_ros_path }}/config/peer_list.yaml" }
+        - { src: "templates/drone_bridge_config.yaml.j2", dest: "{{ drone_ros_path }}/config/bridge_config.yaml" }
+        - { src: "templates/mcap_bag_options.yml", dest: "{{ drone_ros_path }}/config/mcap_bag_options.yml"}
+        - { src: "templates/drone_launch.py.j2", dest: "{{ drone_base_path }}/launch.py"}
+        - { src: "templates/ros_packages_service.j2", dest: "~/.local/share/systemd/user/ros_packages.service"}
+        - { src: "templates/micro_xrce_service.j2", dest: "~/.local/share/systemd/user/micro_xrce.service"}
+      vars:
+        peers: "{{ groups['drones'] | map('regex_replace', '\\.local$', '') | join('\n') }}"
+        ros_path: "{{ drone_ros_path }}"
+        base_path: "{{ drone_base_path }}"
+
+    - name: Send executable files
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "0755"
+      vars:
+        ros_path: "{{ drone_ros_path }}"
+        base_path: "{{ drone_base_path }}"
+      loop:
+        - { src: "scripts/ros_packages_start.sh", dest: "{{ drone_base_path }}/ros_packages_start.sh"}
+
+    - name: Chrony Tracking Check
+      block:
+        - name: Copy script
+          ansible.builtin.copy:
+            src: scripts/chronyc_check.py
+            dest: /tmp/chronyc_check.py
+            mode: '0755'
+        - name: Check if we're tracking
+          ansible.builtin.shell: /tmp/chronyc_check.py
+          register: chronyc_check
+          changed_when: false
+
+    # --- WAIT FOR VISION RESULTS ---
+    - name: Verify Vision Checks
+      when: enable_vision | default(false) | bool
+      block:
+        - name: Wait for Vision Job
+          ansible.builtin.async_status:
+            jid: "{{ vision_job_id }}"
+          register: vision_result
+          until: vision_result.finished
+          retries: 20
+          delay: 1
+
+        - name: Check Vision Success
+          fail:
+             msg: "{{ (vision_result.stderr | regex_search('(SYNC_FAILED|FOCUS_FAILED|FAILED:.*|OUT_OF_FOCUS:.*)', multiline=True)) | default('Vision Checks Failed') }}"
+          when: vision_result.rc != 0
+    # -------------------------------
+
+    - name: Start & Enable MicroXRCE service
+      ansible.builtin.systemd:
+        name: "micro_xrce"
+        state: started
+        enabled: true
+        scope: user
+        daemon_reload: true
+
+    - name: Start ros_packages service
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: restarted
+        enabled: false
+        daemon_reload: true
+        scope: user

@@ -12,6 +12,7 @@
         state: directory
     - name: Add WiFi
       become: yes
+      when: add_wifi | default(false) | bool
       community.general.nmcli: 
         type: wifi
         conn_name: default_drones
@@ -22,7 +23,6 @@
           psk: "{{ wifi_password }}"
         autoconnect: true
         state: present
-        
     - name: Setup ROS
       become: yes
       block: 
@@ -49,24 +49,34 @@
               ansible.builtin.apt_repository:
                 repo: "deb [arch={{ deb_arch.stdout }} signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu {{ ansible_distribution_release }} main"
                 state: present
+            - name: Download base ROS 
+              ansible.builtin.include_tasks: "tasks/download-ros.yml"
             - name: Download ROS
               ansible.builtin.apt:
                 name: 
                   - ros-humble-desktop
-                  - ros-dev-tools
-                  - ros-humble-mavros
-                  - ros-humble-mavros-extras
                   - ros-humble-plotjuggler
                 update_cache: true
                 state: latest   
-            - name: Install geoids
-              ansible.builtin.shell: geographiclib-get-geoids all 
+            - name: Get Geographic Lib
+              ansible.builtin.include_tasks: "tasks/geographic-lib.yml"       
             
-    - name: Set domain id
+    - name: Set domain id and ROS aliases
       ansible.builtin.blockinfile: 
         path: ~/.bashrc
         block: |
-          export ROS_DOMAIN_ID={{ ros_domain_id }}
+          export ROS_DOMAIN_ID=0
+          
+          # ROS package systemctl aliases
+          alias ros_status='systemctl --user status ros_packages'
+          alias ros_start='systemctl --user start ros_packages'
+          alias ros_stop='systemctl --user stop ros_packages'
+          alias ros_restart='systemctl --user restart ros_packages'
+          
+          # ROS package logs function with argument support
+          ros_logs() {
+            journalctl --user -u ros_packages "$@"
+          }
     - name: VNC Viewer
       become: yes
       ansible.builtin.apt:
@@ -82,20 +92,20 @@
             path: /etc/chrony/chrony.conf
             regexp: "^((pool)|(sourcedir))"
             replace: "# \\1"
-        # - name: Set allowed subnets
-        #   ansible.builtin.blockinfile:
-        #     path: /etc/chrony/chrony.conf
-        #     marker: "# {mark} ANSIBLE MANAGED BLOCK"
-        #     block: | # change the allowed subnets in ansible/group_vars/all
-        #       {% for subnet in chrony_allowed_subnets %}
-        #       allow {{ subnet }}
-        #       {% endfor %}
-        #   register: chrony_conf
-        # - name: Restart the service
-        #   when: chrony_conf.changed
-        #   ansible.builtin.systemd_service:
-        #     name: chronyd
-        #     state: restarted
+        - name: Set allowed subnets
+          ansible.builtin.blockinfile:
+            path: /etc/chrony/chrony.conf
+            marker: "# {mark} ANSIBLE MANAGED BLOCK"
+            block: | # change the allowed subnets in ansible/group_vars/all
+              {% for subnet in chrony_allowed_subnets %}
+              allow {{ subnet }}
+              {% endfor %}
+          register: chrony_conf
+        - name: Restart the service
+          when: chrony_conf.changed
+          ansible.builtin.systemd_service:
+            name: chronyd
+            state: restarted
     - name: Optitrack Packages
       become: false
       block: 
@@ -108,21 +118,83 @@
             repo: https://github.com/lis-epfl/optitrack_packages_ros2/
             dest: "{{ host_ros_path }}/src/optitrack_packages_ros2"
             force: yes
+            version: master
+    - name: HDSM Planner Messages 
+      become: false
+      block:
+        - name: Get Planner
+          ansible.builtin.git:
+            repo: https://github.com/ctoumieh/multi_agent_pkgs
+            dest: "{{ host_ros_path }}/src/multi_agent_pkgs"
+            force: yes
+            version: niel/chill-dynamics
 
-    
-    - name: Latency Node
+        - name: Remove unwanted directories from planner packages
+          file:
+            path: "{{ host_ros_path }}/src/multi_agent_pkgs/{{ item }}"
+            state: absent
+          loop:
+            - convex_decomp_util
+            - decomp_ros
+            - env_builder
+            - jps3d
+            - mapping_util
+            - multi_agent_planner
+            - path_finding_util
+            - voxel_grid_util
+
+    - name: MPC Messages 
+      become: false
+      block:
+        - name: Get MPC
+          ansible.builtin.git:
+            repo: https://github.com/lis-epfl/mpc_controller_pkgs
+            dest: "{{ host_ros_path }}/src/mpc_controller_pkgs"
+            force: yes
+
+        - name: Remove unwanted directories from MPC controller packages
+          file:
+            path: "{{ host_ros_path }}/src/mpc_controller_pkgs/{{ item }}"
+            state: absent
+          loop:
+            - dockerfiles
+            - px4_sim_bridge_ros2
+            - mpc_controller_ros2
+
+    - name: Swarm Nodes
       block: 
-        - name: Get latency package 
+        - name: Get swarm package 
           ansible.builtin.git: 
             repo: https://github.com/lis-epfl/swarm-nxt
             dest: "{{ host_base_path }}/repos/swarm-nxt"
             force: yes
-        - name: Link to ros_ws
-          ansible.builtin.file: 
-            src: "{{ host_base_path }}/repos/swarm-nxt/ros_packages/latency_checker_ros2"
-            dest: "{{ host_ros_path }}/src/latency_checker_ros2"
+            version: dds
+
+        - name: Get px4 package
+          ansible.builtin.git:
+            repo: "{{ item.repo }}"
+            dest: "{{ host_ros_path}}/src/{{ item.name }}"
+            version: "{{ item.version }}"
+            force: yes
+          loop: 
+            - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
+            - { repo: "https://github.com/Auterion/px4-ros2-interface-lib", name: "px4_ros2_interface_lib", version: "1.6.1"}
+            
+        - name: List ros_packages directories
+          ansible.builtin.find:
+            paths: "{{ playbook_dir }}/../ros_packages"
+            file_type: directory
+            recurse: false
+          register: ros_packages_reg
+
+        - name: Link ros_packages directories to src
+          ansible.builtin.file:
+            src: "{{ item.path }}"
+            dest: "{{ host_ros_path }}/src/{{ item.path | basename }}"
             state: link
-      
+            force: true
+          loop: "{{ ros_packages_reg.files }}"
+    
     - name: Run rosdep
       become: yes
       ansible.builtin.shell: |
@@ -133,7 +205,7 @@
         rosdep install --from-paths src --ignore-src -r -y
 
     - name: Build ROS Packages
-      ansible.builtin.shell: "cd {{ host_ros_path }} && . /opt/ros/humble/setup.sh && colcon build"
+      ansible.builtin.include_tasks: tasks/local-build.yml
 
     - name: Make path
       ansible.builtin.file: 
@@ -145,15 +217,15 @@
       ansible.builtin.apt:
         update_cache: true
         name: 
-          - gcc-arm-none-eabi=15:10.3-2021.07-4
-          - fuse=2.9.9-5ubuntu3
-          - gstreamer1.0-plugins-bad=1.20.3-0ubuntu1.1
-          - gstreamer1.0-libav=1.20.3-0ubuntu1
-          - gstreamer1.0-gl=1.20.1-1ubuntu0.4
-          - libfuse2=2.9.9-5ubuntu3
-          - libxcb-xinerama0=1.14-3ubuntu3 
-          - libxkbcommon-x11-0=1.4.0-1 
-          - libxcb-cursor-dev=0.1.1-4ubuntu1
+          - gcc-arm-none-eabi
+          - fuse
+          - gstreamer1.0-plugins-bad
+          - gstreamer1.0-libav
+          - gstreamer1.0-gl
+          - libfuse2
+          - libxcb-xinerama0
+          - libxkbcommon-x11-0
+          - libxcb-cursor-dev
     - name: Allow rootless access to flight controller (needed for QGroundControl)
       become: true
       ansible.builtin.user: 
@@ -165,12 +237,13 @@
       ansible.builtin.apt:
         name: modemmanager
         state: absent
+
     - name: Download necessary items
       become: false
       block: 
       - name: Get QGroundControl
         ansible.builtin.get_url:
-          url: https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl.AppImage
+          url: https://github.com/mavlink/qgroundcontrol/releases/download/v4.4.5/QGroundControl.AppImage
           dest: "{{ host_fc_path }}/QGroundControl.AppImage"
           mode: '0755' # executable for us
       - name: Install required python packages for PX4
@@ -182,7 +255,7 @@
       - name: Clone px4 repository
         ansible.builtin.git: 
           repo: "https://github.com/PX4/PX4-Autopilot"
-          version: v1.15.4
+          version: 238dffcd1b
           dest: "{{ host_fc_path }}/PX4-Autopilot"
           force: yes
       - name: Build bootloader
@@ -194,4 +267,27 @@
           chdir: "{{ host_fc_path }}/PX4-Autopilot"
           target: hkust_nxt-dual        
           
+    - name: "Vision Calibration Tools"
+      block:
+        - name: Install Calibration Dependencies
+          pip:
+            name:
+              - opencv-python
+              - numpy
+              - scipy
+              - matplotlib
+              - pyyaml
+            state: present
+
+        - name: Clone Quadcam Calibration Tool
+          git:
+            repo: "https://github.com/lis-epfl/quadcam_calibration_tool.git"
+            dest: "{{ host_base_path }}/repos/quadcam_calibration_tool"
+            version: main
+            force: yes
+
+        - name: Install Tool Requirements
+          pip:
+            requirements: "{{ host_base_path }}/repos/quadcam_calibration_tool/requirements.txt"
+          ignore_errors: yes
 

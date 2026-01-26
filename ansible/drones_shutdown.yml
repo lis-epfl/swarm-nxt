@@ -1,0 +1,11 @@
+- name: Shutdown all drones
+  hosts: drones
+  remote_user: lis
+  become: yes
+
+  tasks:
+    - name: Shut down the system immediately
+      ansible.builtin.command: shutdown -h now
+      async: 1              # Allow the task to run asynchronously for 1 second
+      poll: 0               # Fire and forget (don't wait for completion)
+      ignore_errors: true   # Ignore errors if the connection drops instantly

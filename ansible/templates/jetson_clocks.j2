@@ -5,6 +5,7 @@ After=multi-user.target
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/jetson_clocks
+ExecStartPost=/bin/sh -c 'echo 612000000 > /sys/class/devfreq/17000000.gpu/max_freq'
 RemainAfterExit=yes
 
 [Install]

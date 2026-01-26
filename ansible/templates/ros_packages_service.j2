@@ -5,6 +5,11 @@ After=multi-user.target
 [Service]
 Type=simple
 ExecStart=/bin/bash {{ base_path }}/ros_packages_start.sh
+KillMode=control-group
+KillSignal=SIGTERM
+ExecStop=/bin/bash -c "pkill -f ros2cli.daemon.daemonize"
+TimeoutStopSec=5
+LimitRTPRIO=99
 
 [Install]
 WantedBy=multi-user.target

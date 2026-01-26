@@ -1,0 +1,50 @@
+- name: MicroXRCE Agent Source Setup and Build
+  vars:
+    microxrce_agent_path: "/home/lis/repos/Micro-XRCE-DDS-Agent"
+    microxrce_agent_repo: "https://github.com/eProsima/Micro-XRCE-DDS-Agent.git"
+    microxrce_agent_version: "v2.4.3" 
+  block:
+  - name: Install necessary build dependencies
+    ansible.builtin.apt:
+      # Required for compiling the agent from source
+      name: [cmake, g++, make, libasio-dev]
+      state: present
+      update_cache: yes
+      cache_valid_time: 3600
+    become: true
+
+  - name: Clone MicroXRCE Agent repository (git clone ...)
+    ansible.builtin.git:
+      repo: "{{ microxrce_agent_repo }}"
+      dest: "{{ microxrce_agent_path }}"
+      version: "{{ microxrce_agent_version }}"
+      # 'state: present' handles the clone or checkout/update
+      # 'force: yes' is generally not needed and defaults to no for safety
+
+  - name: Create 'build' directory (mkdir build && cd build)
+    ansible.builtin.file:
+      path: "{{ microxrce_agent_path }}/build"
+      state: directory
+
+  - name: Configure MicroXRCE Agent (cmake ..)
+    ansible.builtin.shell:
+      cmd: cmake ..
+    args:
+      chdir: "{{ microxrce_agent_path }}/build"
+
+  - name: Build MicroXRCE Agent (make)
+    ansible.builtin.shell:
+      cmd: make -j$(nproc)
+    args:
+      chdir: "{{ microxrce_agent_path }}/build"
+
+  - name: Install MicroXRCE Agent (sudo make install)
+    ansible.builtin.shell:
+      cmd: make install
+    args:
+      chdir: "{{ microxrce_agent_path }}/build"
+    become: true # 'sudo' equivalent when using become: true on the play
+
+  - name: Update dynamic linker cache (ldconfig)
+    ansible.builtin.command: sudo ldconfig /usr/local/lib/
+    become: true

@@ -1,4 +1,4 @@
-ros_domain_id: "1"
+# ansible_become_password: orin
 position_estimation: "optitrack"
 
 wifi_ssid: "WiFli"
@@ -17,7 +17,8 @@ drone_fcu_url: /dev/ttyTHS1:921600
 # Advanced Settings
 chrony_minpoll: 2
 chrony_maxpoll: 3
-
+chrony_allowed_subnets: 
+  - "192.168.194.1/24"
 
 host_hostname: lisB108931
 host_base_path: "/home/toumieh/data"
@@ -25,5 +26,17 @@ host_ros_path: "{{ host_base_path }}/ros2_swarmnxt_ws"
 host_fc_path: "{{ host_base_path }}/nxt_flight_controller"
 
 ns: "{{ ansible_hostname | map('regex_replace', '-', '_') | join('') }}" 
+drone_num: "{{ ns | regex_search('[0-9]+$') | default('0', true) }}"
 
-optitrack_server_address: "192.168.194.150"
+optitrack_server_address: "192.168.194.3"
+
+# if enabled the drones_update will install the vision driver and depth estimation
+# you can modify it for individual drones in inventory.ini by setting enable_vision after the drone name
+enable_vision: false
+
+drone_rosbag_topics: 
+  - "/{{ ns }}/*"
+  - "/agent_[0-9]+/*"
+  - "/fmu/*"
+  - "/depth/*"
+  - "/tf"

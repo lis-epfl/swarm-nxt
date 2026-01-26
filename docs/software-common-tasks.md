@@ -69,10 +69,145 @@ If you do not know the IP address of a drone, you can try these steps to find it
 
 ## VNC/Remote Desktop Setup
 
-On the host computer, go to terminal and type `gvncviewer lis@nxt1.local` where nxt1 is the hostname of the Orin on which is on the same network as the host computer. Then input the password 'orin'. This will allow you do remote desktop into the Orin. You can also replace `nxt1.local` with the full IP address of the orin e.g. `gvncviewer lis@192.168.55.1`.
+On the host computer, go to terminal and type `gvncviewer nxt1.local` where nxt1 is the hostname of the Orin on which is on the same network as the host computer. Then input the password 'orin'. This will allow you do remote desktop into the Orin. You can also replace `nxt1.local` with the full IP address of the orin e.g. `gvncviewer 192.168.55.1`.
 
 !!! important
     If you want to connect the Orin to an external monitor, you have to first modify `/etc/X11/xorg.conf` and comment all the the paragraph that starts with `Section "Device"` and contains `Identifier "Dummy0"`, as well as all the lines after it.
+
+## ROS Package Management
+
+The ansible setup automatically installs convenient bash aliases for managing the ROS packages systemd service on both host computers and drones. These aliases simplify common systemctl operations:
+
+### Available Aliases
+
+- `ros_status` - Check the status of the ros_packages service (`systemctl --user status ros_packages`)
+- `ros_start` - Start the ros_packages service (`systemctl --user start ros_packages`)
+- `ros_stop` - Stop the ros_packages service (`systemctl --user stop ros_packages`)
+- `ros_restart` - Restart the ros_packages service (`systemctl --user restart ros_packages`)
+
+### Log Viewing Function
+
+- `ros_logs [arguments]` - View logs from the ros_packages service with optional journalctl arguments
+
+Examples:
+```bash
+ros_logs                    # View all logs
+ros_logs -f                 # Follow logs in real-time
+ros_logs --this-boot        # Show logs from current boot only
+ros_logs -n 50              # Show last 50 lines
+ros_logs --since "1 hour ago"  # Show logs from last hour
+```
+
+### Updating Drone Software
+
+Use the `drones_update.yml` playbook to update and rebuild the ROS packages on drones:
+
+```bash
+cd ansible/
+
+# Regular update (incremental build)
+ansible-playbook -i inventory.ini drones_update.yml
+
+# Clean build (removes build/ and install/ directories first)
+ansible-playbook -i inventory.ini drones_update.yml -e clean_build=true
+```
+
+The clean build option is useful when:
+- Switching between branches with significant changes
+- Resolving build cache issues
+- After updating message definitions or package dependencies
+- Troubleshooting package discovery problems
+
+## Data Logging with ROS Bag
+
+The SwarmNXT system automatically records flight data using the standard ROS 2 bag recording functionality. This section covers how to configure and use the logging system.
+
+### Logging Overview
+
+The system uses `ros2 bag record` integrated into the drone launch files to automatically capture:
+- MAVROS topics (position, state, IMU data)
+- Drone planner commands
+- Safety checker outputs
+- Custom application topics
+
+All data is stored in MCAP format for efficient storage and playback.
+
+### Configuring Logged Topics
+
+Topics to log are configured in the Ansible inventory file `ansible/group_vars/all`:
+
+```yaml
+# Configure which topics to record
+drone_rosbag_topics: 
+  - "/{{ ns }}/*"                    # All topics in drone namespace
+  # Or specify individual topics:
+  # - "/{{ ns }}/mavros/local_position/pose"
+  # - "/{{ ns }}/mavros/state"
+  # - "/{{ ns }}/mavros/imu/data"
+```
+
+### Common Topic Configurations
+
+#### Basic Flight Logging
+```yaml
+drone_rosbag_topics:
+  - "/{{ ns }}/mavros/local_position/pose"
+  - "/{{ ns }}/mavros/state"
+  - "/{{ ns }}/mavros/setpoint_position/local"
+```
+
+#### Complete Mission Logging
+```yaml
+drone_rosbag_topics:
+  - "/{{ ns }}/mavros/*"
+  - "/{{ ns }}/drone_planner/*"
+  - "/{{ ns }}/swarmnxt_controller/*"
+  - "/{{ ns }}/latency_checker/*"
+```
+
+#### Debug Logging
+```yaml
+drone_rosbag_topics:
+  - "/{{ ns }}/*"                    # All drone topics
+  - "/optitrack_multiplexer_node/*"  # OptiTrack data
+```
+
+### Recorded Data Location
+
+Bag files are automatically saved to:
+- **Location**: `$ROS_LOG_DIR/bag/` on each drone
+- **Format**: MCAP (`.mcap` files)
+- **Size limit**: 1 GiB per file (automatically splits)
+
+### Viewing Recorded Data
+
+```bash
+# List available bag files
+ls $ROS_LOG_DIR/bag/
+
+# Get information about a bag file
+ros2 bag info /path/to/bag_file
+
+# Play back recorded data
+ros2 bag play /path/to/bag_file
+
+# Play specific topics only
+ros2 bag play /path/to/bag_file --topics /nxt1/mavros/local_position/pose /nxt1/mavros/state
+```
+
+### Data Analysis
+
+```bash
+# Convert MCAP to other formats
+ros2 bag convert -i input.mcap -o output_folder --output-options "format=rosbag2_storage_sqlite"
+
+# Extract data for analysis
+ros2 topic echo --bag /path/to/bag_file /topic_name > data.txt
+
+# Use with plotjuggler for visualization
+ros2 run plotjuggler plotjuggler --buffer-size 100000
+# Then: File -> Load Data -> Load ROS2 bag
+```
 
 ## Check EKF Tracking
 
@@ -86,3 +221,11 @@ To check EKF tracking, perform the following steps:
 	2. `/mavros/vision_pose/pose_cov` xyz, orientation quaternions (optitrack)
 5. Move the drone around in all directions and ensure there are no discontinuities, and the values are tracking each other. 
 6. Rotate the drone in different directions and ensure the values are tracking each other
+
+# Common Issues
+
+## Ansible Stuck 
+
+There are a few reasons that ansible can be stuck. Sometimes, the wrong BECOME password is provided. This may result in a long time without any feedback. 
+
+If the password is correct, it is possible that the host or target went to sleep or shutdown in the middle of a play. This can result in Ansible trying to use a dead ssh session. In this case, try deleting the `~/.ansible/cp` folder and restarting the play.

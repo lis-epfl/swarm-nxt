@@ -1,0 +1,45 @@
+{% set current_drone_idx = groups['drones'].index(inventory_hostname) %}
+name: domain_bridge
+from_domain: {{ drone_num }}
+to_domain: 0 
+topics: 
+  /fmu/out/vehicle_status_v1: 
+    type: px4_msgs/msg/VehicleStatus
+    remap: {{ns}}/fmu/out/vehicle_status_v1
+  /fmu/out/battery_status: 
+    type: px4_msgs/msg/BatteryStatus
+    remap: {{ns}}/fmu/out/battery_status
+  /fmu/out/vehicle_local_position: 
+    type: px4_msgs/msg/VehicleLocalPosition
+    remap: {{ns}}/fmu/out/vehicle_local_position
+  /drone_health: 
+    type: std_msgs/msg/String
+    remap: {{ns}}/drone_health
+  {{ns}}/manager/state:
+    type: swarmnxt_msgs/msg/DroneState
+  {{ns}}/latency_checker/heartbeat:
+    type: latency_checker_ros2/msg/Heartbeat
+  {{ns}}/mpc_controller/mpc_trajectory:
+    type: nav_msgs/msg/Path
+    type: latency_checker_ros2/msg/Heartbeat
+  agent_{{ current_drone_idx }}/traj_full: 
+    type: multi_agent_planner_msgs/msg/Trajectory
+  agent_{{ current_drone_idx }}/traj:
+    type: nav_msgs/msg/Path
+  agent_{{ current_drone_idx }}/position:
+    type: visualization_msgs/msg/Marker
+  agent_{{ current_drone_idx }}/path:
+    type: nav_msgs/msg/Path
+  agent_{{ current_drone_idx }}/polyhedra:
+    type: decomp_ros_msgs/msg/PolyhedronArray
+  agent_{{ current_drone_idx }}/seeds:
+    type: sensor_msgs/msg/PointCloud2
+{% for drone in groups['drones'] %}
+{% set drone_num_id = drone | regex_replace('\.local', '') | regex_search('[0-9]+$') %}
+{% set drone_idx = loop.index0 %}
+{% if drone_idx != current_drone_idx %}
+  agent_{{ current_drone_idx }}/traj_full:
+    type: multi_agent_planner_msgs/msg/Trajectory
+    to_domain: {{ drone_num_id }}
+{% endif %}
+{% endfor %}

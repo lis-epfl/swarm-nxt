@@ -2,14 +2,19 @@
   hosts: drones
   remote_user: lis
   become: false
-  
-  tasks: 
-  - name: Perform a safe upgrade # installs new packages if needed
-    become: yes
-    ansible.builtin.apt:
-      update_cache: yes
-      upgrade: "safe"
-  
+  vars: 
+    gcs_url: "{{ host_hostname }}.local" 
+    microxrce_agent_path: "{{ drone_base_path }}/repos"
+    microxrce_agent_repo: "https://github.com/eProsima/Micro-XRCE-DDS-Agent.git"
+    microxrce_agent_version: "v2.4.3" 
+
+  tasks:
+  - name: Ensure we are synced with chrony
+    ansible.builtin.include_tasks: "tasks/chrony-sync.yml"
+
+  - name: Stop ROS if exists
+    ansible.builtin.include_tasks: "tasks/ensure-ros-off.yml"
+    
   - name: Ensure ros2 ws exists
     ansible.builtin.file:
       path: "{{ drone_ros_path }}/src"
@@ -24,6 +29,7 @@
         repo: https://github.com/lis-epfl/optitrack_packages_ros2/
         dest: "{{ drone_ros_path }}/src/optitrack_packages_ros2"
         force: yes
+        version: master
 
     - name: Remove multiplexer
       ansible.builtin.file: 
@@ -35,50 +41,146 @@
         path: "{{ drone_ros_path }}/src/optitrack_packages_ros2/optitrack_wrapper_ros2"
         state: absent
     
-    - name: Get mocap to vision package
-      ansible.builtin.git: 
-        repo: https://github.com/lis-epfl/mocap_to_vision_pose_ros2
-        dest: "{{ drone_ros_path }}/src/mocap_to_vision_pose_ros2"
-        version: "niel/fix-check-launch" # TODO: temp
-        force: yes 
-        
-    - name: SwarmNXT Nodes
-      block: 
-        - name: Get repository 
-          ansible.builtin.git: 
-            repo: git@github.com:lis-epfl/swarm-nxt
-            dest: "{{ drone_base_path }}/repos/swarm-nxt"
-            key_file: /home/lis/.ssh/id_ed25519
-            accept_newhostkey: yes
-            force: yes
-          
-        - name: List ros_packages directories
-          ansible.builtin.find:
-            paths: "{{ drone_base_path }}/repos/swarm-nxt/ros_packages"
-            file_type: directory
-            recurse: false
-          register: ros_packages_reg
-        
+  - name: Get additional packages
+    ansible.builtin.git:
+      repo: "{{ item.repo }}"
+      dest: "{{ drone_ros_path }}/src/{{ item.name }}"
+      version: "{{ item.version }}"
+      force: yes
+    loop:
+      - { repo: "https://github.com/lis-epfl/mocap_to_vision_pose_ros2", name: "mocap_to_vision_pose_ros2", version: "dds" }
+      - { repo: "https://github.com/PX4/px4_ros_com", name: "px4_ros_com", version: "main"}
+      - { repo: "https://github.com/Auterion/px4-ros2-interface-lib", name: "px4_ros2_interface_lib", version: "1.6.1"}
+      - { repo: "https://github.com/lis-epfl/oak_ffc_4p_driver_ros2", name: "oak_ffc_4p_driver_ros2", version: "master" }
+      - { repo: "https://github.com/lis-epfl/depth_estimation_ros2", name: "depth_estimation_ros2", version: "main" }
 
-        - name: Link ros_packages directories to src
-          ansible.builtin.file:
-            src: "{{ item.path }}"
-            dest: "{{ drone_ros_path }}/src/{{ item.path | basename }}"
-            state: link
-            force: true
-          loop: "{{ ros_packages_reg.files }}"
+  - name: Download Depth Models
+    ansible.builtin.command: python3 scripts/download_models.py
+    args:
+      chdir: "{{ drone_ros_path }}/src/depth_estimation_ros2"
+    
+  - name: Get HDSM package
+    ansible.builtin.git: 
+      repo: https://github.com/ctoumieh/multi_agent_pkgs/
+      dest: "{{ drone_ros_path }}/src/multi_agent_pkgs"
+      force: yes
+      version: niel/chill-dynamics
+
+  - name: SwarmNXT Nodes
+    block: 
+      - name: Ensure repos directory exists with correct ownership
+        ansible.builtin.file:
+          path: "{{ drone_base_path }}/repos"
+          state: directory
+          owner: lis
+          group: lis
+          mode: '0755'
+        become: true
+
+      - name: Get repository 
+        ansible.builtin.git: 
+            repo: https://github.com/lis-epfl/swarm-nxt
+            dest: "{{ drone_base_path }}/repos/swarm-nxt"
+            version: mpc
+            force: yes
         
-    - name: Install rosdeps
-      become: true
-      ansible.builtin.shell: |
-        cd {{ drone_ros_path }}
-        . /opt/ros/humble/setup.sh
-        rosdep init
-        rosdep update
-        rosdep install --from-paths {{ drone_ros_path }}/src -y --ignore-src -r
-             
-    - name: Build ros packages
-      ansible.builtin.shell: . /opt/ros/humble/setup.sh && colcon build --symlink-install 
+      - name: List ros_packages directories
+        ansible.builtin.find:
+          paths: "{{ drone_base_path }}/repos/swarm-nxt/ros_packages"
+          file_type: directory
+          recurse: false
+        register: ros_packages_reg
+      
+
+      - name: Link ros_packages directories to src
+        ansible.builtin.file:
+          src: "{{ item.path }}"
+          dest: "{{ drone_ros_path }}/src/{{ item.path | basename }}"
+          state: link
+          force: true
+        loop: "{{ ros_packages_reg.files }}"
+      
+  - name: MPC controller Task
+    block:
+
+    - name: Clone MPC controller packages
+      git:
+        repo: https://github.com/lis-epfl/mpc_controller_pkgs
+        dest: "{{ drone_ros_path }}/src/mpc_controller_pkgs"
+        force: yes
+
+    - name: Remove unwanted directories from MPC controller packages
+      file:
+        path: "{{ drone_ros_path }}/src/mpc_controller_pkgs/{{ item }}"
+        state: absent
+      loop:
+        - dockerfiles
+        - px4_sim_bridge_ros2
+
+    - name: Generate acados solvers
+      command: "{{ drone_base_path }}/mpc_env/bin/python generate_acados_solvers.py"
       args:
-        chdir: "{{ drone_ros_path }}"
+        chdir: "{{ drone_ros_path }}/src/mpc_controller_pkgs/mpc_controller_ros2/scripts"
+      environment:
+        ACADOS_SOURCE_DIR: "/opt/acados"
+        LD_LIBRARY_PATH: "/opt/acados/lib:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+        PYTHONPATH: "/opt/acados/interfaces/acados_template:{{ ansible_env.PYTHONPATH | default('') }}"
+
+  - name: Install rosdeps
+    become: true
+    ansible.builtin.shell: |
+      cd {{ drone_ros_path }}
+      . /opt/ros/humble/setup.sh
+      rosdep init
+      rosdep update
+      rosdep install --from-paths {{ drone_ros_path }}/src -y --ignore-src -r --rosdistro humble
+            
+  - name: Clean previous build
+    when: clean_build | default(false) | bool
+    ansible.builtin.file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - "{{ drone_ros_path }}/build"
+      - "{{ drone_ros_path }}/install"
+
+
+  - name: Copy drone build script
+    ansible.builtin.template:
+      src: templates/drone_build.sh
+      dest: "{{ drone_ros_path }}/drone_build.sh"
+      mode: "755"
+
+  - name: Execute drone build script
+    ansible.builtin.shell: ./drone_build.sh
+    args:
+      chdir: "{{ drone_ros_path }}"
+      executable: /bin/bash
+    environment:
+     # These variables are sourced from your ~/.bashrc file
+     GUROBI_HOME: /opt/gurobi1003/armlinux64
+     PATH: "{{ ansible_env.PATH }}:/opt/gurobi1003/armlinux64/bin"
+     LD_LIBRARY_PATH: "/opt/gurobi1003/armlinux64/lib:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+     ACADOS_SOURCE_DIR: /opt/acados
+     PYTHONPATH: "/opt/acados/interfaces/acados_template:{{ ansible_env.PYTHONPATH | default('') }}"
+    async: 2400
+    poll: 0
+    register: ros_build_async
+
+  - name: Wait for ros build to finish 
+    ansible.builtin.async_status: 
+      jid: "{{ ros_build_async.ansible_job_id }}"
+    register: build_ros_result
+    until: build_ros_result.finished
+    retries: 100
+    delay: 10
+
+  - name: Cleanup async
+    ansible.builtin.async_status:
+      jid: "{{ ros_build_async.ansible_job_id }}"
+      mode: cleanup
+    changed_when: false
+    
+
+      
     
