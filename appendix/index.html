@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Appendix - SwarmNxt</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/custom.css" rel="stylesheet" />
+        <link href="../css/terminal-player.css" rel="stylesheet" />
+        <link href="../css/asciinema-player.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Appendix";
+        var mkdocs_page_input_path = "appendix.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SwarmNxt
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../infra-setup/">Infrastructure Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../drone-setup/">Drone Build Instructions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../remote-control-setup/">Remote Control Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../flying/">Flying</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../software-common-tasks/">Common Software Tasks</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../manual-setup/">Manual Setup Instructions</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Appendix</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#flight-controller">Flight Controller</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#alternate-telemetry-port">Alternate Telemetry Port</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#hardware-changes">Hardware Changes</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#flight-controller-configuration-changes">Flight Controller Configuration Changes</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SwarmNxt</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Appendix</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/lis-epfl/swarm-nxt/edit/main/docs/appendix.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="appendix">Appendix</h1>
+<h2 id="flight-controller">Flight Controller</h2>
+<h3 id="alternate-telemetry-port">Alternate Telemetry Port</h3>
+<p>If the TELEM2 port is broken, you can use the TELEM1 port instead. </p>
+<h4 id="hardware-changes">Hardware Changes</h4>
+<p>Plug the cable that is connected to the serial port on the Orin to the port labelled TEL1 on the flight controller. It is the middle connector on the right side of the board on the picture below:</p>
+<p><img alt="" src="../images/fc_top.png" /></p>
+<h4 id="flight-controller-configuration-changes">Flight Controller Configuration Changes</h4>
+<p>On the parameter screen of QGroundControl, change <code>MAV_0_CONFIG</code> to TELEM 1.</p>
+<p>Then, open the MAVLink console under "Analyze Tools", and run the following commands: </p>
+<pre><code>param set SER_TEL1_BAUD 921600
+cd fs/microsd
+mkdir etc/
+cd etc
+echo &quot;mavlink stream -d /dev/ttyS1 -s HIGHRES_IMU -r 1000&quot; &gt; extras.txt
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The HKUST GitHub suggests that the correct port is /dev/ttyS2 for TELEM1, but /dev/ttyS1 is tested and works. An <a href="https://github.com/HKUST-Aerial-Robotics/Nxt-FC/issues/22">issue</a> has been filed </p>
+</div>
+<p>If you run <code>cat extras.txt</code>, the mavlink stream line should be present. </p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../manual-setup/" class="btn btn-neutral float-left" title="Manual Setup Instructions"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/lis-epfl/swarm-nxt" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../manual-setup/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../js/mathjax.js"></script>
+      <script src="../js/copy-button.js"></script>
+      <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../js/asciinema-player.min.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

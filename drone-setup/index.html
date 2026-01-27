@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Drone Build Instructions - SwarmNxt</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/custom.css" rel="stylesheet" />
+        <link href="../css/terminal-player.css" rel="stylesheet" />
+        <link href="../css/asciinema-player.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Drone Build Instructions";
+        var mkdocs_page_input_path = "drone-setup.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SwarmNxt
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../infra-setup/">Infrastructure Setup</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Drone Build Instructions</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#hardware-setup">Hardware Setup</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#flight-controller-and-esc">Flight Controller and ESC</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#soldering">Soldering</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fastening-assembly-to-frame">Fastening Assembly to Frame</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#rc-receiver">RC Receiver</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#orin-connection">Orin Connection</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#frame-preparation">Frame Preparation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#optitrack-markers">Optitrack Markers</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#camera-assembly">Camera Assembly</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#cameras">Cameras</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#camera-mounts">Camera Mounts</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#oak-board">OAK Board</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#flight-controller-setup">Flight Controller Setup</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#flashing-firmware">Flashing Firmware</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#bootloader">Bootloader</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#main-program">Main Program</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#apply-parameter-file">Apply Parameter File</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#nxt-configuration-and-calibration">NXT Configuration and Calibration</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#mav-system-id-and-dds-domain-id">MAV System ID and DDS Domain ID</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#propeller-numbering-and-spin-direction">Propeller Numbering and Spin Direction</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#propeller-installation">Propeller Installation</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#remote-control">Remote Control</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#software-setup">Software Setup</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#post-flash-setup">Post-Flash Setup</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#password-free-access">Password-Free Access</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ansible">Ansible</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#connecting-to-qgc">Connecting to QGC</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#vision-setup">Vision Setup</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#enable-vision-in-ansible">Enable Vision in Ansible</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#option-a-enable-for-all-drones">Option A: Enable for All Drones</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#option-b-enable-for-specific-drones">Option B: Enable for Specific Drones</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#camera-calibration">Camera Calibration</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#install-the-tool">Install the Tool</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#perform-calibration">Perform Calibration</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#deploy-maps">Deploy Maps</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fit-baseline-and-disparity-correction">Fit baseline and disparity correction</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#configure-the-drone">Configure the Drone</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#flight-preparation">Flight Preparation</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#pid-tuning">PID Tuning</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#optitrack-setup">Optitrack Setup</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../remote-control-setup/">Remote Control Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../flying/">Flying</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../software-common-tasks/">Common Software Tasks</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../manual-setup/">Manual Setup Instructions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../appendix/">Appendix</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SwarmNxt</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Drone Build Instructions</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/lis-epfl/swarm-nxt/edit/main/docs/drone-setup.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="drone-setup">Drone Setup</h1>
+<h2 id="hardware-setup">Hardware Setup</h2>
+<p>This section takes you through the hardware setup process for the OmniNXT Drone. The bill of materials can be found <a href="https://docs.google.com/spreadsheets/d/1Fz7-T5uy2s32OVq4LXnWk0O-DXqRzYW_szNTOHq70fw/edit">here</a>. </p>
+<p>3D print all of the necessary items that are labelled with the manufacturer "Self". </p>
+<p>Drone Naming: Establish a consistent naming scheme with the following requirements: </p>
+<ul>
+<li>starts with a letter (requirement for hostnames)</li>
+<li>ends with a non-negative integer</li>
+<li>less than 32 characters in length (requirement for hostnames)</li>
+<li>only ascii lowercase alphanumeric characters</li>
+<li>no other numbers in the name except for the last characters</li>
+</ul>
+<p>We use <code>nxt#</code> for our drones, where <code>#</code> is replaced with an integer</p>
+<h3 id="flight-controller-and-esc">Flight Controller and ESC</h3>
+<h4 id="soldering">Soldering</h4>
+<ol>
+<li>Insert the antivibration rubber pieces into the four holes of both the ESC and the flight controller. On the ESC, the shorter side should be on the side with the eight pin connection port.  On the flight controller, the shorter side of the rubber piece should be on the SD card side. </li>
+<li>Cut each of the motor wires to 55mm. Measure from the foot of the heatshrink.</li>
+<li>Cut a orin power cable from the base of the male side: <ol>
+<li>9.0cm on the red wire</li>
+<li>8.5cm on the black wire</li>
+</ol>
+</li>
+<li>Take the XT60 Cable (CAB-004) and cut it to the following lengths: <ol>
+<li>Red: 8.5cm from the edge of the connector</li>
+<li>Black: 9.0cm from the edge of the connector </li>
+</ol>
+</li>
+<li>Strip around 5mm from each wire of CAB-004 and add solder to each wire</li>
+<li>Strip around 5mm from each wire of the orin power cable and add solder to each wire</li>
+<li>Solder the red wires of CAB-004 and the orin power cable together on the positive pad of the ESC</li>
+<li>Solder the black wires of CAB-004 and the orin power cable together on the negative pad of the ESC.</li>
+<li>Visually inspect the solder joints to ensure no stray wires could cause a short between the pads. Use a digital multimeter in ohmmeter mode to measure the resistance between the + and - port of the ESC. The value should be &gt;100kΩ.</li>
+<li>Solder each of the motors to one triad of pins on the ESC. </li>
+<li>Use CAB-001 to connect the eight pin connectors on the flight controller and ESC. <strong>Do not use the eight pin cable that comes with the flight controller</strong></li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Be very careful to avoid shorts between pads, especially on the big + and - pads for the power. Even a single wire strand connecting is dangerous! Visually inspect the solder connections after soldering to be confident, as well as perform a multimeter check betwen the +/- pads. </p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Ensure that each motor's wires are connected to three consecutive pads on the ESC, with one of them in the corner. It does not matter which motor wire goes on which pin other than this. </p>
+</div>
+<p><img alt="" src="../images/hw/motor_lengths.jpg" />
+<img alt="" src="../images/hw/battery_length.jpg" /></p>
+<h4 id="fastening-assembly-to-frame">Fastening Assembly to Frame</h4>
+<ol>
+<li>Stack the ESC and flight controller such that the big side of the rubber stoppers are touching. The MicroSD Card slot should be above the ESC power connection. </li>
+<li>Prepare the assembly: <ol>
+<li>With the flight controller on the bottom, insert two M2X25 bolts on the side with the USB-C port. The head of the bolt should be on the same side as the flight controller</li>
+<li>Insert two M2x20 bolts on the opposite side of the USB-C port. </li>
+<li>Place the 6mm nylon spacers over all of the bolts. </li>
+</ol>
+</li>
+<li>Orient the center of the frame over the assembly. The USB-C port should be facing towards the side if the frame with the cutout. The side with the divets for the nuts should be on the top. </li>
+<li>Loosely thread the M2 nuts onto each of the bolts </li>
+<li>For each of the bolts, hold the nut with your finger in the divet, and use a screwdriver to tighten the bolt. It should be snug, and equally tight across the four bolts. Do not overtighten, the ESC can contact the flight controller!</li>
+<li>Fasten the motors to the frame with the shorter bolts that were included in the packaging. Ensure that the cables are close to the frame, you can twist them together to ensure this. </li>
+</ol>
+<h3 id="rc-receiver">RC Receiver</h3>
+<ol>
+<li>Unpack the receiver and extract the following items: <ul>
+<li>NanoRX PCB</li>
+<li>Clear Heatshrink</li>
+<li>Open ended antenna</li>
+</ul>
+</li>
+<li>Retrieve a 4 Pin JST Cable from the flight controller box</li>
+<li>Cut the JST cable to a length of 5.5cm, from the base of the connector. </li>
+<li>Solder the four pin cable. Looking from the side with the antenna U.Fl Port towards you, and at the bottom. In order from the left pad to the right pad: <ul>
+<li>GND (Black Wire*)</li>
+<li>5V (Red Wire*) </li>
+<li>FC RCIn (Green Wire*)</li>
+<li>FC TX (Yellow Wire*)</li>
+</ul>
+</li>
+<li>Attach the antenna wire to the U.Fl Connector </li>
+<li>Cut 2cm of the clear heatshrink off and dispose of this length </li>
+<li>Put the rest of the clear heatshrink around the assembly and use a heatgun at 165℃ to protect the connections</li>
+<li>Connect the RC receiver to the appropriate port on the flight controller. Use zipties to fasten the radio module and data cable to the frame. Take care not to ziptie over the binding button the RC Module. Tape the antenna down to the frame as shown.
+   <!-- TODO: Insert picture --></li>
+</ol>
+<p><img alt="" src="../images/radio-wires.jpg" /></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>*: The wire colours may not be reliable. Look at the silkscreen on the FC PCB to ensure the correct connection</p>
+</div>
+<div class="admonition todo">
+<p class="admonition-title">Todo</p>
+<p>Put SBUS link and make the RC page visible</p>
+</div>
+<h3 id="orin-connection">Orin Connection</h3>
+<ol>
+<li>Remove the protective film over the screw holes for the NVME SSD and the WiFi Adapters</li>
+<li>Insert the NVME SSD to the corresponding port, and bolt it down with an M2x4 bolt. </li>
+<li>Attach the Wi-Fi antenna to the adapter. It does not matter which port goes into which antenna. <a href="https://youtu.be/8tzWKIt1v1E?t=40">YouTube Video</a></li>
+<li>Insert the Wi-Fi adapter to the corresponding port, and bolt it down using an M2x4 bolt. </li>
+<li>Insert the CR1025 coin cell battery in the slot on the carrier board. The positive side faces away from the board.</li>
+<li>Attach the carrier board and Orin to the other side of the frame as the flight controller.  Use 5mm nylon spacers between the carrier board and the frame, and M3x12 bolts from the side with the board. Before putting the nut on, put some Loctite 243 Threadlocker on the bolt so the assembly does not become unattached with vibrations </li>
+<li>Remove the orange covers off of the bolt holes on the carrier board.</li>
+<li>Assemble the heatsink/fan onto the orin:<ol>
+<li>Remove the fan from its protective casing, place it fan up to not smear the thermal paste</li>
+<li>Align the orin over the fan, using the bolt holes on the fan as a guide. If the edge connector is facing you, the holes on the fan to accomodate the inductors should be near you, and the fan wire should be on the left side.</li>
+<li>Bolt the frame down with the metal back. Use the provided bolts and screw them in with an X pattern using a T6 screwdriver bit </li>
+</ol>
+</li>
+<li>Bolt the orin down to the carrier board with 2 M2x6 Nylon bolts.</li>
+<li>Attach the fan cable to the orin carrier board </li>
+<li>Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front (other side of the orin) of the drone. Take care not to cover the hole at the front of the frame. It will be over the motor bolts.  </li>
+<li>Connect CAB-002 to the orin. It should go in the connector closest to the power connector on the long side of the carrier board. Route it between the orin and the frame and connect the other end to the flight controller port underneath the MicroSD card. </li>
+</ol>
+<h3 id="frame-preparation">Frame Preparation</h3>
+<ol>
+<li>Bolt (M3x8 Nylon) the five oddity RC standoffs at the marked locations in the image below. They should be protruding on the side with the flight controller. 
+<img alt="" src="../images/oddity-holes.png" /></li>
+<li>Put an M2x4 metal bolt in the marked slot below, protruding towards the orin. Use an M2 bolt to secure it. 
+<img alt="" src="../images/m2-slot.png" /></li>
+<li>Bolt four M3 40mm standoffs with M3x10 nylon bolts. These should be on the Orin side.
+<img alt="" src="../images/camera-frame-holes.png" /></li>
+<li>Bolt the prop guard onto the Oddity RC standoffs with M3x12 metal bolts. </li>
+<li>Use a labelmaker to print the drone name on a label. Place it somewhere on the drone that is visible, such as one of the camera frame mounting posts (the aluminum M3 40mm standoffs)</li>
+</ol>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p>Do not install the propellers yet! They will be installed during the software setup section.  </p>
+</div>
+<h3 id="optitrack-markers">Optitrack Markers</h3>
+<p>If the optitrack system is used for odometry, five markers (MSC-008) must be placed on the drone. </p>
+<ol>
+<li>Identify the locations that you will place the five markers. The pattern they are in <em>must</em> be: <ol>
+<li>assymmetric</li>
+<li>sufficiently unique compared to the other drones</li>
+</ol>
+</li>
+<li>For each marker, use hot glue to adhere it to the drone body.</li>
+</ol>
+<h3 id="camera-assembly">Camera Assembly</h3>
+<h4 id="cameras">Cameras</h4>
+<p>For each of the cameras, perform the following tasks: </p>
+<h5 id="cable-preparation">Cable Preparation</h5>
+<ol>
+<li>Insert the camera cable into the camera. The side with the pads labelled FSIN and STROBE should be on the side of the camera. <ol>
+<li>Use a flathead screwdriver to pull out the retaining clip from the connector. </li>
+<li>Insert the cable with the exposed contacts facing the PCB, push until it hits the back of the connector</li>
+<li>Secure the cable by pushing the retaining clip back in</li>
+</ol>
+</li>
+<li>Cut the microwire to a length of 30mm. </li>
+<li>Scratch around 4mm of coating off of both ends. The colour should change, and you can check with a magnifying glass or microscope. </li>
+<li>Apply some solder to both sides of the microwire</li>
+<li>Solder one side of the microwire to the port labelled <code>F</code> on the camera board. The wire should come out on the opposite side of the camera.</li>
+<li>Solder the other side to the pad lablled <code>FSIN</code> on the cable. </li>
+<li>Check the connection using the continuity mode between the <code>FSIN</code> and <code>F</code> pads.</li>
+<li>Use the Kapton tape to secure the microwire, ensuring that the tape is providing strain relief for the solder connection</li>
+</ol>
+<h5 id="lens-switch">Lens Switch</h5>
+<ol>
+<li>Unscrew the lens that the camera ships with, and discard.</li>
+<li>Unbolt the existing lens mount. </li>
+<li>Bolt the lens mount that came with the fisheye lens. </li>
+<li>Screw in the fisheye lens into the mount. </li>
+</ol>
+<h5 id="test-and-focus">Test and Focus</h5>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This step can be done anytime. However, it is suggested to test the camera setup now before things are bolted in more permanently. </p>
+</div>
+<ol>
+<li>Insert all of the camera cables into the OAK camera board.</li>
+<li>Plug in the OAK camera board via USB-C to a laptop computer with ROS installed</li>
+<li>Download and install the driver package: <a href="https://github.com/lis-epfl/oak_ffc_4p_driver_ros2">GitHub Repository</a> </li>
+<li>Check for focus on each of the cameras, and change the focus by turning the lenses on their holders. </li>
+</ol>
+<!--5. If continuing in this order, disconnect the cameras from the OAK camera board.-->
+
+<h4 id="camera-mounts">Camera Mounts</h4>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Be careful not to tug on the cables too much. They can tear.</p>
+</div>
+<ol>
+<li>Use a soldering iron at 215℃ to insert the M2 threaded inserts into the six holes of each camera mount</li>
+<li>Bolt each camera to a mount by using four M2x8 bolts. The cables should be exiting towards the flange on the mount. </li>
+<li>Bolt the camera mounts to the camera holder frame. </li>
+</ol>
+<h4 id="oak-board">OAK Board</h4>
+<ol>
+<li>Connect the four camera cables to the OAK board. Ensure that the orientation of the board is as it would be in the final assembly, and do not allow any camera cable to be twisted. </li>
+<li>Put the two halves of the cover around the OAK board, and bolt the assembly to the frame with 4 M2x14 bolts. </li>
+<li>Put the camera frame on the metal standoffs above the orin, and bolt down with four M3x6 bolts.</li>
+</ol>
+<h2 id="flight-controller-setup">Flight Controller Setup</h2>
+<h3 id="flashing-firmware">Flashing Firmware</h3>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Ensure you have fully run the host computer setup in the <a href="../infra-setup/">IT Infrastructure Setup Guide</a></p>
+</div>
+<h4 id="bootloader">Bootloader</h4>
+<ol>
+<li>Ensure the flight controller is powered off, unplug any power from the drone. </li>
+<li>While pressing the BOOT button beside the MicroSD card, connect the USB-C cable to the PC and release the boot button. </li>
+<li>Open the STM32CubeProgrammer by navigating to where it was installed in a terminal (<code>/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin</code> by default), and running <code>sudo ./STM32CubeProgrammer</code></li>
+<li>On the blue dropdown next to the green connect button, select USB. </li>
+<li>Click the refresh button until a port is automatically selected under port. If it doesn't show up, ensure the board is in DFU mode by unplugging the USB-C cable, and holding the BOOT button while plugging it in again. </li>
+<li>Click Connect.</li>
+<li>Open the menu on the left side and select "Erasing &amp; Programming"</li>
+<li>Under file path, click browse and find the bootloader bin file. It was built in the automatable dependencies playbook. It will be in <code>{host_fc_path}/PX4-Autopilot/build/hkust_nxt-dual_bootloader/hkust_nxt-dual_bootloader.bin</code> where <code>{host_fc_path}</code> is specified in the <code>ansible/group_vars/all</code>.</li>
+<li>Check Verify programming, and Run after programming. Ensure the start address is <code>0x08000000</code>.</li>
+<li>Click on Start Programming. </li>
+</ol>
+<h4 id="main-program">Main Program</h4>
+<ol>
+<li>Navigate to <code>{host_fc_path}</code> in a terminal </li>
+<li>Open QGroundControl: <code>./QGroundControl.AppImage</code>. </li>
+<li>Click on the Q symbol on the top left, and click on vehicle setup. </li>
+<li>Click on the firmware tab, and unplug and replug the USB cable to the flight controller. </li>
+<li>A pop-up should come up named "Firmware Setup". Select PX4 Pro, and check advanced settings. Select "Custom firmware file..." and click Ok</li>
+<li>In the file picker, navigate to <code>{host_fc_path}/PX4-Autopilot/build/hkust_nxt-dual_default</code> and select the <code>hkust_nxt-dual_default.px4</code> file. </li>
+<li>You should see tabs such as "Airframe" and "Sensors" once the flash is complete. </li>
+</ol>
+<h3 id="apply-parameter-file">Apply Parameter File</h3>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>If you do not have a parameter file or want to create a new one, you can follow the steps in the <a href="../manual-setup/#nxt-flight-controller-setup">Manual Setup &gt; NXT Flight Controller Setup</a> document instead of applying the parameter file as described below. </p>
+</div>
+<p>First, ensure that the units in QGroundControl are set to SI Units: </p>
+<ol>
+<li>Click on the Q on the top left</li>
+<li>Click on application settings</li>
+<li>In the general tab under units, ensure that they are Meters, Meters, SquareMeters, Meters/second, Celsius. </li>
+</ol>
+<p>Then, apply the <a href="https://raw.githubusercontent.com/lis-epfl/swarm-nxt/refs/heads/main/docs/params/nxt_params.params">saved parameter file</a> (which you can find in the swarm-nxt cloned repo: <code>swarm-nxt/docs/params/nxt_params.params</code>) by following the steps below: </p>
+<ol>
+<li>Click on the Q button on the top left, click on Vehicle Setup, and parameters. </li>
+<li>Click the tools button and select "Load from file". </li>
+<li>Select the parameter file that can be found on github.</li>
+<li>Click okay to confirm </li>
+</ol>
+<h3 id="nxt-configuration-and-calibration">NXT Configuration and Calibration</h3>
+<h4 id="mav-system-id-and-dds-domain-id">MAV System ID and DDS Domain ID</h4>
+<p>The MAV System ID needs to be setup for every drone individually. This ID is a positive number that is associated with the drone. Follow a consistent naming scheme as described at the <a href="#hardware-setup">top</a> of this document. Use the number that this drone ends with as your system ID. To set it:</p>
+<ol>
+<li>Search for <code>MAV_SYS_ID</code> and <code>UXRCS_DDS_DOM_ID</code> in the parameters tab of QGroundControl's Vehicle Setup page.</li>
+<li>Set them to the unique number of your drone.</li>
+</ol>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>If this number is the same for two drones, things will <strong>not</strong> work and it will be very hard to debug. </p>
+</div>
+<h4 id="propeller-numbering-and-spin-direction">Propeller Numbering and Spin Direction</h4>
+<p>First make sure the power is connected to the ESC and the ESC is connected to the FC. No need to power the Orin at this point, so you can unplug the power cable from the orin before powering the ESC. Ensure that the photo under "Actuator Testing" looks correct: </p>
+<p><img alt="" src="../images/actuator_setting.png" /></p>
+<p>Under PWM MAIN, select DShot600 for MAIN 1-4. Click on "Identify &amp; Assign Motors" and follow the process. For collision safety, ensure that the Onix is located closer to the rear rotors (rotors 2 and 4 in the image). </p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The top of the quadroter is the side with the Orin. </p>
+</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Ensure the propellers are unmounted before the next step</p>
+</div>
+<p>Set the spin direction for each motor so that it matches the image. Enable the slider, slide it  up a bit and ensure the rotation direction is correct. </p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Manually verify the spin direction individually for each motor, since the spin direction may not match QGroundControl</p>
+</div>
+<h4 id="propeller-installation">Propeller Installation</h4>
+<ol>
+<li>Observe the rotation direction in the propeller setup image. The Orin is on the back (near propeller #2 and #4). </li>
+<li>Using the long bolts that came with the propellers, bolt the propellers in. Verify that the propellers on the diagonals are the same type. Make sure that the blade orientation is in such a manner that as it turns in the rotor direction, it pushes the air down instead of up i.e. the air slides off of it downwards. </li>
+</ol>
+<p><img alt="" src="../images/actuator_setting.png" /></p>
+<p><img alt="" src="../images/hw/prop_direction_rear.jpg" /></p>
+<h4 id="remote-control">Remote Control</h4>
+<p>Ensure the Taranis has been setup following the <a href="../remote-control-setup/">Remote Control Setup Instructions</a>. </p>
+<p>Go to the radio tab and follow the calibration procedure. </p>
+<p>Go to the flight modes page and set the channels like the image: </p>
+<p><img alt="" src="../images/flight_modes.png" /></p>
+<h2 id="software-setup">Software Setup</h2>
+<!-- TODO: Add photo for recovery port, REC button, RES button -->
+
+<ol>
+<li>Plug the external power into the XT60 cable for the battery.</li>
+<li>Connect the host computer to the USB C port called "Recovery Port" on the carrier board. </li>
+<li>Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board</li>
+<li>Press the button labelled "RES" on the Devboard</li>
+<li>While pressing the RES button, press the REC button</li>
+<li>Release the RES button while still pressing the REC button</li>
+<li>Release the REC button after the power is connected</li>
+<li>On the host computer, run <code>lsusb</code>. This sequence was a success if an entry with NVIDIA Corp. APX is visible (<code>ID 0955:7323 NVIDIA Corp. APX</code>)</li>
+<li>Run the sdkmanager: <code>sdkmanager --cli</code></li>
+<li>Login, and then select the following options: install -&gt; jetson -&gt; target hardware</li>
+<li>Select Jetson Orin NX, it should already be pre-selected</li>
+<li>Reply Y to showing all Jetson versions. Select JetPack 6.2.1</li>
+<li>Select both additional SDKs</li>
+<li>Do not customize install settings</li>
+<li>Reply N to flashing the Jetson Orin NX Module</li>
+<li>Accept the license, then press enter twice for the installation to start. </li>
+<li>Enter your password for administrative tasks.</li>
+<li>It will install host components (on the PC) and target components. It will ask you whether to install or skip the installation on the Orin, choose skip.</li>
+<li>Press enter to Exit.</li>
+</ol>
+<h3 id="post-flash-setup">Post-Flash Setup</h3>
+<p>On the host computer, you should be able to SSH into the Orin now: <code>ssh lis@192.168.55.1</code>. This connection is provided through the USB Recovery port. These are the default credentials: </p>
+<pre><code>username: lis
+password: orin
+</code></pre>
+<h4 id="password-free-access">Password-Free Access</h4>
+<p>For password free access to the Orin, follow these steps: </p>
+<ol>
+<li>Ensure that you have an SSH key in ~/.ssh<ol>
+<li>If not, run <code>ssh-keygen -t ed25519 -C &lt;yourCommentHere&gt;</code></li>
+</ol>
+</li>
+<li>With the USB connected, run <code>ssh-copy-id lis@192.168.55.1</code></li>
+<li>Make sure that the ssh-agent is on: <code>eval `ssh-agent`</code> </li>
+<li>Add your key to the agent: <code>ssh-add</code></li>
+<li>Ensure that you can access the device without a password: <code>ssh lis@192.168.55.1</code></li>
+</ol>
+<h4 id="ansible">Ansible</h4>
+<p>On the host computer, navigate to the <code>ansible/</code> directory of the swarm-nxt repo and run the playbook: </p>
+<p><code>ansible-playbook -i inventory.ini drone_setup.yml -K</code></p>
+<p>Enter the sudo password of the orin when prompted, as well as the hostname which should end with the same number that you set <code>MAV_SYS_ID</code> to in <a href="#nxt-configuration-and-calibration">NXT Configuration and Calibration</a>. </p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>It is very important that you set a unique hostname. You must follow the structured naming pattern described at the top of this document. The software depends on this assumption.</p>
+</div>
+<p>Then install the packages with: </p>
+<p><code>ansible-playbook -i inventory.ini drones_update.yml</code></p>
+<h4 id="connecting-to-qgc">Connecting to QGC</h4>
+<p>In QGC go to Application Settings, MAVLink, then make sure enable MAVLink forwarding is unchecked. 
+The DDS uses TELEM2 for communication with the FC, so we need to use the USB-C connection to communicate via MAVLINK. For this ssh into the drone and run:</p>
+<p><code>mavproxy.py --master="/dev/ttyACM0" --baudrate 115200 --out="udp:&lt;ipofhost&gt;:14550"</code></p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Sometimes you need to connect at <code>/dev/ttyACM1</code> instead of <code>/dev/ttyACM0</code> especially after rebooting the FC.</p>
+</div>
+<p>On the sensors tab: </p>
+<p>Click on the orientations sub-tab, and set the autopilot orientation to <code>ROTATION_ROLL_180_YAW_90</code>. Reboot if prompted.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>This is true if the arrow on the flight controller is pointed to the right if looked at from the bottom (orin on the back)</p>
+</div>
+<p>Calibrate the gyroscope by putting the drone on a level surface, and then clicking the gyroscope button and following the wizard. </p>
+<p>Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. </p>
+<h2 id="vision-setup">Vision Setup</h2>
+<h3 id="enable-vision-in-ansible">Enable Vision in Ansible</h3>
+<p>To launch the vision drivers and mapping nodes, set the <code>enable_vision</code> flag in your Ansible configuration.</p>
+<h4 id="option-a-enable-for-all-drones"><strong>Option A: Enable for All Drones</strong></h4>
+<p>Edit <code>ansible/group_vars/all</code>:</p>
+<pre><code class="language-yaml">enable_vision: true
+</code></pre>
+<h4 id="option-b-enable-for-specific-drones"><strong>Option B: Enable for Specific Drones</strong></h4>
+<p>Edit <code>ansible/inventory.ini</code>:</p>
+<pre><code class="language-ini">[drones]
+nxt1.local enable_vision=true
+nxt2.local  # Vision disabled
+</code></pre>
+<hr />
+<h3 id="camera-calibration">Camera Calibration</h3>
+<p>We use the <strong>Quadcam Calibration Tool</strong> to generate rectification maps for the depth estimation node.</p>
+<h4 id="install-the-tool"><strong>Install the Tool</strong></h4>
+<p>Ensure you have run the <code>host_computer.yml</code> playbook to install the calibration tool on your system. It will be in <code>~/data/repos/quadcam_calibration_tool</code>.</p>
+<h4 id="perform-calibration"><strong>Perform Calibration</strong></h4>
+<p>Follow the instructions in the Quadcam Calibration Tool README to collect data and generate the rectification maps.</p>
+<h4 id="deploy-maps"><strong>Deploy Maps</strong></h4>
+<p>Copy the output folder to the drone:</p>
+<pre><code class="language-bash"># Example: Deploying maps for 192x192 resolution to nxt1
+scp -r final_maps lis@nxt1.local:/home/lis/ros2_ws/src/depth_estimation_ros2/config/final_maps_192_192
+</code></pre>
+<h4 id="fit-baseline-and-disparity-correction"><strong>Fit baseline and disparity correction</strong></h4>
+<p>Even after the calibration, there can be errors, one way to correct for that is to fit the <code>baseline_scale</code> and <code>disparity_offset</code> parameters as detailed in <a href="https://github.com/lis-epfl/depth_estimation_ros2"><code>depth_estimation_ros2</code></a>, <strong>Depth Correction Calibration</strong> Section.</p>
+<h4 id="configure-the-drone"><strong>Configure the Drone</strong></h4>
+<p>SSH into the drone and edit:</p>
+<pre><code>~/ros2_ws/src/depth_estimation_ros2/config/depth_omninxt_params.yml
+</code></pre>
+<p>Modify the values if necessary: <code>calibration_resolution: 192_192</code> and the <code>onnx_model_path: "/home/lis/ros2_ws/src/depth_estimation_ros2/models/S2M2_S_192_192_v2_torch29.onnx"</code>.</p>
+<h2 id="flight-preparation">Flight Preparation</h2>
+<h3 id="pid-tuning">PID Tuning</h3>
+<p>Usually not necessary - the default values for one drone work well for the others, and they are loaded when you load the params in QGC. But in case you have issues:</p>
+<ol>
+<li>Follow all the steps in the <a href="../flying/#pre-flight-checklist">Pre-Flight Checklist</a></li>
+<li>Launch the vehicle in position mode, and fly it slowly. Make sure that it feels decently well to operate. </li>
+<li>Hover the drone at 1.5 m, and ensure that it the drone is in the center of a 2x2x2m cube of free space. </li>
+<li>In QGroundControl, click on the Q on the top left and open the vehicle setup menu</li>
+<li>Click on PID Tuning</li>
+<li>Enable autotune</li>
+<li>Autotune the rate controller. </li>
+<li>Land, and save the parameters</li>
+<li>Takeoff again in a safety volume of 2x2x2m. </li>
+<li>Autotune the attitude controller.</li>
+<li>Land. </li>
+</ol>
+<p>If the autotune fails, you can increase the <code>MC_AT_SYSID_AMP</code> parameter by steps of 0.5, and trigger the autotune again. </p>
+<h3 id="optitrack-setup">Optitrack Setup</h3>
+<ol>
+<li>Bring the drone into view of the OptiTrack sensors</li>
+<li>Place the drone in view of the OptiTrack cameras, and ensure that the drone is facing the positive x direction of the coordinate system. </li>
+<li>Select the drone's markers on the screen, right click, and click on create rigid body. Give each drone the same name as the hostname. This allows the automated tooling to work properly.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is very important that the drone is facing the positive x direction (orin towards the negative x direction). It is also important that the Optitrack streams at 120Hz and not 240Hz (otherwise ROS2 would have performance issue).</p>
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../infra-setup/" class="btn btn-neutral float-left" title="Infrastructure Setup"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../remote-control-setup/" class="btn btn-neutral float-right" title="Remote Control Setup">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/lis-epfl/swarm-nxt" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../infra-setup/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../remote-control-setup/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../js/mathjax.js"></script>
+      <script src="../js/copy-button.js"></script>
+      <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../js/asciinema-player.min.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Infrastructure Setup - SwarmNxt</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/custom.css" rel="stylesheet" />
+        <link href="../css/terminal-player.css" rel="stylesheet" />
+        <link href="../css/asciinema-player.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Infrastructure Setup";
+        var mkdocs_page_input_path = "infra-setup.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SwarmNxt
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Infrastructure Setup</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#networking">Networking</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#host-computer">Host Computer</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#ansible-installation">Ansible Installation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#host-computer-setup">Host Computer Setup</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#visual-odometry-optitrack">Visual Odometry (Optitrack)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#safety-bounds">Safety Bounds</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../drone-setup/">Drone Build Instructions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../remote-control-setup/">Remote Control Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../flying/">Flying</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../software-common-tasks/">Common Software Tasks</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../manual-setup/">Manual Setup Instructions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../appendix/">Appendix</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SwarmNxt</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Infrastructure Setup</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/lis-epfl/swarm-nxt/edit/main/docs/infra-setup.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="infrastructure-setup">Infrastructure Setup</h1>
+<p>These instructions need to be followed once to setup the infrastructure to setup and operate the drones. </p>
+<h2 id="networking">Networking</h2>
+<p>We recommend using the Ubiquiti Amplifi configured with the following settings (<em>verify these</em>): </p>
+<ul>
+<li>Dual Band Enabled</li>
+<li>Band optimization enabled</li>
+<li>WPA2/WPA3 PSK Authentication</li>
+</ul>
+<p>Ensure you edit the ssid and password variables in the <code>ansible/group_vars/all</code> file as described in <a href="#host-computer-setup">Host Computer Setup</a></p>
+<h2 id="host-computer">Host Computer</h2>
+<p>We recommend having a consistent and dedicated host computer that is used to run the central controller and manage the drone swarm. The requirements of this computer are as follows: </p>
+<ul>
+<li>A reliable Wi-Fi connection </li>
+<li>CPU: Performance of i7-5600U or better </li>
+<li>RAM: 8GB minimum</li>
+<li>Ubuntu 22.04 installed</li>
+</ul>
+<h3 id="ansible-installation">Ansible Installation</h3>
+<p>On the computer, run the host computer ansible by running the following commands (if $HOME/.local/bin is already in PATH (<code>echo $PATH</code>), no need for last command):</p>
+<pre><code>sudo apt update &amp;&amp; sudo apt install python3 python3-pip 
+python3 -m pip install --user ansible
+echo 'export PATH=&quot;$HOME/.local/bin:$PATH&quot;' &gt;&gt; ~/.bashrc
+</code></pre>
+<p>For troubleshooting or more information, see the <a href="https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-and-upgrading-ansible-with-pip">Ansible Documentation</a>. </p>
+<h3 id="host-computer-setup">Host Computer Setup</h3>
+<p>This procedure will install required packages on the host computer and configure some networking. </p>
+<p>First, clone the swarm nxt <a href="https://github.com/lis-epfl/omni-nxt">repository</a> in an easy to access place on the host computer, and install the requirements. </p>
+<pre><code>sudo apt install git
+git clone https://github.com/lis-epfl/swarm-nxt
+</code></pre>
+<ol>
+<li>Navigate to the <code>ansible/</code> folder inside the repository </li>
+<li>Edit the variables in the <code>ansible/group_vars/all</code> file<ol>
+<li><code>wifi_ssid</code>: Enter the name of the Unifi SSID</li>
+<li><code>wifi_password</code>: Enter the name of the Unifi password</li>
+<li><code>host_hostname</code>: Enter the string you get when you type <code>hostname</code> in the terminal</li>
+<li><code>host_base_path</code>: Enter the base path to where all the downloaded packages/files will be added.</li>
+</ol>
+</li>
+<li>Run the host computer ansible: <code>ansible-playbook -i inventory.ini host_computer.yml -K</code>. </li>
+<li>Enter the sudo password of the host computer when prompted. </li>
+<li>Restart the PC, then check that <code>dialout</code> is there when you type <code>groups</code> in the terminal.</li>
+<li>Download <a href="https://www.st.com/en/development-tools/stm32cubeprog.html?cache=nocache#get-software">STM32CubeProgrammer</a> if you do not have it. </li>
+<li>Extract the folder, open it in terminal, and run <code>sudo ./SetupSTM32CubeProgrammer-&lt;version&gt;.linux</code> (replace <code>&lt;version&gt;</code> with the version you've downloaded)</li>
+<li>Walk through the wizard and install the program. </li>
+<li>Download the SDK Manager from the <a href="https://developer.nvidia.com/sdk-manager">NVIDIA Website</a>. Install it by running <code>sudo dpkg -i /path/to/sdkmanager.deb</code>. If required, install any missing dependencies with <code>sudo apt --fix-broken install</code></li>
+</ol>
+<h2 id="visual-odometry-optitrack">Visual Odometry (Optitrack)</h2>
+<p>If using Optitrack as the odometry source, you must setup and configure an instance of Motive that is connected to the Optitrack system. This computer must also connect to the network described in the <a href="#networking">networking</a> section via ethernet. </p>
+<p>This setup is out of scope for this guide. </p>
+<h2 id="safety-bounds">Safety Bounds</h2>
+<div class="admonition danger">
+<p class="admonition-title">Danger</p>
+<p>Take care in defining the bounds in this step to avoid drones flying where they should not fly</p>
+</div>
+<p>You can modify the <code>safety_params.yaml</code> file the <code>safety_checker_ros2/config</code> to specify the linear constraints that define the bounding box/polyhedron of the environment. The drone will land as soon as she reaches this bounding box minus a safety margin also defined in the <code>safety_params.yaml</code> file.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../drone-setup/" class="btn btn-neutral float-right" title="Drone Build Instructions">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/lis-epfl/swarm-nxt" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../drone-setup/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../js/mathjax.js"></script>
+      <script src="../js/copy-button.js"></script>
+      <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../js/asciinema-player.min.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Remote Control Setup - SwarmNxt</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/custom.css" rel="stylesheet" />
+        <link href="../css/terminal-player.css" rel="stylesheet" />
+        <link href="../css/asciinema-player.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Remote Control Setup";
+        var mkdocs_page_input_path = "remote-control-setup.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SwarmNxt
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../infra-setup/">Infrastructure Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../drone-setup/">Drone Build Instructions</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Remote Control Setup</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#profile-creation">Profile Creation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#crossfire-binding">Crossfire Binding</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mixes-setting">Mixes Setting</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../flying/">Flying</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../software-common-tasks/">Common Software Tasks</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../manual-setup/">Manual Setup Instructions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../appendix/">Appendix</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SwarmNxt</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Remote Control Setup</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/lis-epfl/swarm-nxt/edit/main/docs/remote-control-setup.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="remote-control-setup">Remote Control Setup</h1>
+<p>We use the Taranis Remote Control. Download the latest version of OpenTX for your RC from <a href="https://www.open-tx.org/downloads">their website</a>. To install it, unzip the files into the root directory of the MicroSD card, and plug the MicroSD card into the slot in the RC. The slot is above the battery. </p>
+<p>Ensure the TBX Nano RX is plugged into the RC slot on the flight controller. Plug in the TBS Micro TX into the controller.</p>
+<h2 id="profile-creation">Profile Creation</h2>
+<p>Once the Taranis has booted up, click on Menu. Then, follow the steps: </p>
+<ol>
+<li>Use the scroll wheel to the right of the screen to select an empty spot. Click and hold the scroll wheel until a menu comes up.</li>
+<li>Select Create model</li>
+<li>Scroll to the Quadcopter/Multi and select</li>
+<li>Click page repeatedly, keeping the default channels. </li>
+<li>On the main menu, ensure you're hovering over the newly created model. Click the Page button. </li>
+<li>Press the scroll wheel to enter the name field. Use the scroll wheel to select a character. Press the scroll wheel to move to the next character. Once the name is input, press and hold the scroll wheel over a blank character to save the name. </li>
+<li>Use the scroll wheel to scroll down to "Internal RF", and ensure it is set to "None"</li>
+<li>Use the scroll wheel to scroll down to "External RF", and ensure it is set to "CSRF".</li>
+</ol>
+<h2 id="crossfire-binding">Crossfire Binding</h2>
+<p>This is only required if you're binding a new pair of transmitters and receivers. </p>
+<ol>
+<li>Turn the drone on, and press the small button on the Nano RX. The light should turn turn blinking green. </li>
+<li>On the Taranis, ensure you're on the home page for the desired profile. The name of the profile should be present in a large font. </li>
+<li>Press and hold menu, and use the scroll wheel to navigate down to "Crossfire config". Click on it. </li>
+<li>Click on "XF Micro TX"</li>
+<li>Click on bind. It should turn to "Binding OK", and the light on the Nano RX should turn to solid green. </li>
+<li>Click Exit to go back, and then click on the "XF Nano RX V3"</li>
+<li>Ensure channels is set to 12. </li>
+<li>Ensure failsafe mode is set to the desired value: "Cut" if operating a single drone, disabled if swarm <!-- FC pos? --></li>
+<li>Scroll down to "Output map" and set Output 1 to SBUS</li>
+<li>Click exit until you're back at the main screen for your profile. There should be a radio link strength indicator beside the battery indicator. </li>
+</ol>
+<h2 id="mixes-setting">Mixes Setting</h2>
+<ol>
+<li>Move back one level to the profile selection screen by pressing menu. Move the cursor over the profile you want to edit. </li>
+<li>Keep clicking page until mixes is seen. </li>
+<li>Keep CH1-4 as-is</li>
+<li>Change the source of CH5-CH8 by clicking and holding the scroll wheel, clicking edit, navigating to source, and clicking the scroll wheel. Then, flip the appropriate switch. Click exit twice to go back to the mixes screen.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th><strong>Channel</strong></th>
+<th><strong>Source</strong></th>
+<th><strong>Name</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CH5</td>
+<td>SF</td>
+<td>Arm/Disarm</td>
+</tr>
+<tr>
+<td>CH6</td>
+<td>SC</td>
+<td>Offboard</td>
+</tr>
+<tr>
+<td>CH7</td>
+<td>SD</td>
+<td>Modes</td>
+</tr>
+<tr>
+<td>CH8</td>
+<td>SA</td>
+<td>Kill</td>
+</tr>
+</tbody>
+</table>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../drone-setup/" class="btn btn-neutral float-left" title="Drone Build Instructions"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../flying/" class="btn btn-neutral float-right" title="Flying">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/lis-epfl/swarm-nxt" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../drone-setup/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../flying/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../js/mathjax.js"></script>
+      <script src="../js/copy-button.js"></script>
+      <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../js/asciinema-player.min.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

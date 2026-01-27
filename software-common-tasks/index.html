@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Common Software Tasks - SwarmNxt</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/custom.css" rel="stylesheet" />
+        <link href="../css/terminal-player.css" rel="stylesheet" />
+        <link href="../css/asciinema-player.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Common Software Tasks";
+        var mkdocs_page_input_path = "software-common-tasks.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SwarmNxt
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../infra-setup/">Infrastructure Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../drone-setup/">Drone Build Instructions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../remote-control-setup/">Remote Control Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../flying/">Flying</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Common Software Tasks</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#password-free-access">Password-Free Access</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#wi-fi-setup">Wi-Fi Setup</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#get-ip-of-computer">Get IP of Computer</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#wireless-connection-to-qgroundcontrol">Wireless Connection to QGroundControl</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#rescue-unreachable-device">Rescue Unreachable Device</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#vncremote-desktop-setup">VNC/Remote Desktop Setup</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#ros-package-management">ROS Package Management</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#available-aliases">Available Aliases</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#log-viewing-function">Log Viewing Function</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#updating-drone-software">Updating Drone Software</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#data-logging-with-ros-bag">Data Logging with ROS Bag</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#logging-overview">Logging Overview</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#configuring-logged-topics">Configuring Logged Topics</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#recorded-data-location">Recorded Data Location</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#viewing-recorded-data">Viewing Recorded Data</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../manual-setup/">Manual Setup Instructions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../appendix/">Appendix</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SwarmNxt</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Common Software Tasks</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/lis-epfl/swarm-nxt/edit/main/docs/software-common-tasks.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="common-software-tasks">Common Software Tasks</h1>
+<p>The various subheadings of this document are linked in other pages. This page is meant as a reference for commonly performed tasks.</p>
+<h2 id="password-free-access">Password-Free Access</h2>
+<p>For password free access to the Orin, follow these steps: </p>
+<ol>
+<li>Ensure that you have an SSH key in ~/.ssh<ol>
+<li>If not, run <code>ssh-keygen -t ed25519 -C &lt;yourCommentHere&gt;</code></li>
+</ol>
+</li>
+<li>With the USB connected, run <code>ssh-copy-id lis@192.168.55.1</code></li>
+<li>Make sure that the ssh-agent is on: <code>eval `ssh-agent`</code> </li>
+<li>Add your key to the agent: <code>ssh-add</code></li>
+<li>Ensure that you can access the device without a password: <code>ssh lis@192.168.55.1</code></li>
+</ol>
+<h2 id="wi-fi-setup">Wi-Fi Setup</h2>
+<p>SSH into the Orin. The following is a reference for commands that you can use with <code>nmcli</code>: </p>
+<p>To see available Wi-Fi networks: <code>nmcli device wifi list</code></p>
+<p>To connect to a network with simple auth (open or WPA2/WPA3 password): <code>sudo nmtui</code> -&gt; Activate Connection, or: </p>
+<pre><code class="language-shell">sudo nmcli connection add type wifi \ 
+con-name &quot;NetworkName&quot; \
+ssid &quot;SSID&quot; \
+wifi-sec.psk &quot;password&quot; \
+wifi-sec.key-mgmt &quot;wpa-psk&quot;
+</code></pre>
+<p>To connect to a more complicated network (eduroam/epfl): </p>
+<pre><code class="language-bash">sudo nmcli connection add type wifi \
+con-name &quot;epfl&quot; \
+ssid &quot;epfl&quot; \
+wifi-sec.key-mgmt wpa-eap \
+802-1x.eap ttls \
+802-1x.phase2-auth mschapv2 \
+802-1x.identity &quot;YourUsername&quot; \
+802-1x.password &quot;YourPassword&quot; \
+802-11-wireless.bssid &quot;AA:BB:CC:DD:EE:FF&quot;
+</code></pre>
+<p>Replace YourUsername, YourPassword with your GASPAR credentials. You can find the bssid of your local router by <code>nmcli device wifi list</code>. Use that instead of <code>AA:BB:CC:DD:EE:FF</code>.</p>
+<p>To activate a connection, you can either use <code>sudo nmtui</code>, or: </p>
+<p>`nmcli con up <Name></p>
+<h2 id="get-ip-of-computer">Get IP of Computer</h2>
+<p>You can get the internet protocol address of a Linux computer by running <code>ifconfig</code> and looking for the four numbers after <code>inet</code> under the interface that you care about. Wireless interfaces typically begin with <code>w</code>, and ethernet interfaces typically begin with <code>e</code>. </p>
+<p>On most networks, you can usually use <code>hostname.local</code> in place of the IP address if the two computers are on the same network. Replace <code>hostname</code> with the hostname of the computer. You can get the hostname by running: <code>hostname</code> or <code>hostnamectl</code> on the computer. </p>
+<h2 id="wireless-connection-to-qgroundcontrol">Wireless Connection to QGroundControl</h2>
+<p>This is done with mavproxy <code>mavproxy.py --master="/dev/ttyACM0" --baudrate 115200 --out="udp:&lt;ipofhost&gt;:14550"</code>.</p>
+<h3 id="rescue-unreachable-device">Rescue Unreachable Device</h3>
+<p>If you do not know the IP address of a drone, you can try these steps to find it's IP: </p>
+<ol>
+<li>Try restarting everything first. </li>
+<li>Try running <code>avahi-resolve -n hostname.local</code> while on the same network. </li>
+<li>Try running <code>avahi-resolve -n hostname-2.local</code>. Sometimes, the original hostname gets reserved and this becomes a fallback. If this works, you can run <code>avahi-publish</code> in the background with the original hostname to force it to work. </li>
+<li>Connect to the recovery port using a USB-C cable. You should be able to SSH into the device at <code>192.168.55.1</code> and use <code>ifconfig</code> to find the IP.<ol>
+<li>Then, you can use <code>avahi-resolve -a &lt;ip&gt;</code> to find the mDNS hostname. </li>
+</ol>
+</li>
+</ol>
+<h2 id="vncremote-desktop-setup">VNC/Remote Desktop Setup</h2>
+<p>On the host computer, go to terminal and type <code>gvncviewer nxt1.local</code> where nxt1 is the hostname of the Orin on which is on the same network as the host computer. Then input the password 'orin'. This will allow you do remote desktop into the Orin. You can also replace <code>nxt1.local</code> with the full IP address of the orin e.g. <code>gvncviewer 192.168.55.1</code>.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>If you want to connect the Orin to an external monitor, you have to first modify <code>/etc/X11/xorg.conf</code> and comment all the the paragraph that starts with <code>Section "Device"</code> and contains <code>Identifier "Dummy0"</code>, as well as all the lines after it.</p>
+</div>
+<h2 id="ros-package-management">ROS Package Management</h2>
+<p>The ansible setup automatically installs convenient bash aliases for managing the ROS packages systemd service on both host computers and drones. These aliases simplify common systemctl operations:</p>
+<h3 id="available-aliases">Available Aliases</h3>
+<ul>
+<li><code>ros_status</code> - Check the status of the ros_packages service (<code>systemctl --user status ros_packages</code>)</li>
+<li><code>ros_start</code> - Start the ros_packages service (<code>systemctl --user start ros_packages</code>)</li>
+<li><code>ros_stop</code> - Stop the ros_packages service (<code>systemctl --user stop ros_packages</code>)</li>
+<li><code>ros_restart</code> - Restart the ros_packages service (<code>systemctl --user restart ros_packages</code>)</li>
+</ul>
+<h3 id="log-viewing-function">Log Viewing Function</h3>
+<ul>
+<li><code>ros_logs [arguments]</code> - View logs from the ros_packages service with optional journalctl arguments</li>
+</ul>
+<p>Examples:</p>
+<pre><code class="language-bash">ros_logs                    # View all logs
+ros_logs -f                 # Follow logs in real-time
+ros_logs --this-boot        # Show logs from current boot only
+ros_logs -n 50              # Show last 50 lines
+ros_logs --since &quot;1 hour ago&quot;  # Show logs from last hour
+</code></pre>
+<h3 id="updating-drone-software">Updating Drone Software</h3>
+<p>Use the <code>drones_update.yml</code> playbook to update and rebuild the ROS packages on drones:</p>
+<pre><code class="language-bash">cd ansible/
+
+# Regular update (incremental build)
+ansible-playbook -i inventory.ini drones_update.yml
+
+# Clean build (removes build/ and install/ directories first)
+ansible-playbook -i inventory.ini drones_update.yml -e clean_build=true
+</code></pre>
+<p>The clean build option is useful when:
+- Switching between branches with significant changes
+- Resolving build cache issues
+- After updating message definitions or package dependencies
+- Troubleshooting package discovery problems</p>
+<h2 id="data-logging-with-ros-bag">Data Logging with ROS Bag</h2>
+<p>The SwarmNXT system automatically records flight data using the standard ROS 2 bag recording functionality. This section covers how to configure and use the logging system.</p>
+<h3 id="logging-overview">Logging Overview</h3>
+<p>The system uses <code>ros2 bag record</code> integrated into the drone launch files to automatically capture:
+- Drone planner commands
+- Custom application topics</p>
+<p>All data is stored in MCAP format for efficient storage and playback.</p>
+<h3 id="configuring-logged-topics">Configuring Logged Topics</h3>
+<p>Topics to log are configured in the Ansible inventory file <code>ansible/group_vars/all</code>:</p>
+<pre><code class="language-yaml"># Configure which topics to record
+drone_rosbag_topics: 
+  - &quot;/{{ ns }}/*&quot;                    # All topics in drone namespace
+  - &quot;/agent_[0-9]+/*&quot;                # All topics in/out by the planner/mapper
+  - &quot;/fmu/*&quot;                         # All topics in/out of the FC
+  - &quot;/depth/*&quot;                       # All topics in/out of depth estimator
+  - &quot;/tf&quot;                            # Transforms
+</code></pre>
+<h3 id="recorded-data-location">Recorded Data Location</h3>
+<p>Bag files are automatically saved to:
+- <strong>Location</strong>: <code>$ROS_LOG_DIR/bag/</code> on each drone
+- <strong>Format</strong>: MCAP (<code>.mcap</code> files)
+- <strong>Size limit</strong>: 1 GiB per file (automatically splits)</p>
+<h3 id="viewing-recorded-data">Viewing Recorded Data</h3>
+<pre><code class="language-bash"># List available bag files
+ls $ROS_LOG_DIR/bag/
+
+# Get information about a bag file
+ros2 bag info /path/to/bag_file
+
+# Play back recorded data
+ros2 bag play /path/to/bag_file
+
+## Check EKF Tracking
+
+To check EKF tracking, perform the following steps:
+</code></pre>
+<p>source ~/data/ros2_swarmnxt_ws/install/setup.bash
+ROS_DOMAIN_ID=5 ros2 launch foxglove_bridge foxglove_bridge_launch.xml # (assuming it is nxt5, for nxt7, the ros domain ID would be 7)
+```</p>
+<p>In Foxglove you can add plots and select the topic you want to visualize. In this case visualize <code>/mocap_to_vision_pose</code>.</p>
+<h1 id="common-issues">Common Issues</h1>
+<h2 id="ansible-stuck">Ansible Stuck</h2>
+<p>There are a few reasons that ansible can be stuck. Sometimes, the wrong BECOME password is provided. This may result in a long time without any feedback. </p>
+<p>If the password is correct, it is possible that the host or target went to sleep or shutdown in the middle of a play. This can result in Ansible trying to use a dead ssh session. In this case, try deleting the <code>~/.ansible/cp</code> folder and restarting the play.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../flying/" class="btn btn-neutral float-left" title="Flying"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../manual-setup/" class="btn btn-neutral float-right" title="Manual Setup Instructions">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/lis-epfl/swarm-nxt" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../flying/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../manual-setup/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../js/mathjax.js"></script>
+      <script src="../js/copy-button.js"></script>
+      <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../js/asciinema-player.min.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
