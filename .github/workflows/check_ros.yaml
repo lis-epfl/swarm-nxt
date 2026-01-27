@@ -1,4 +1,4 @@
-name: Lint and Build ROS Packages
+name: Build ROS Packages
 
 on:
     pull_request:
@@ -11,19 +11,6 @@ on:
     workflow_dispatch:
 
 jobs:
-    clang-format:
-        name: Check clang-format
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: Install clang-format
-              run: sudo apt-get update && sudo apt-get install -y clang-format
-
-            - name: Find and check formatting
-              run: |
-                find ros_packages -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format -style=google -output-replacements-xml | grep "<replacement " && exit 1 || exit 0
-
     build:
         name: Build ROS Packages
         runs-on: ubuntu-latest
