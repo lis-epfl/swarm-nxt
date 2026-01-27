@@ -280,6 +280,7 @@ Go to the flight modes page and set the channels like the image:
 ## Software Setup
 
 <!-- TODO: Add photo for recovery port, REC button, RES button --> 
+
 1. Plug the external power into the XT60 cable for the battery.
 2. Connect the host computer to the USB C port called "Recovery Port" on the carrier board. 
 3. Provide the carrier board with an internet connection via an Ethernet dongle on one of the three host USB-C ports on the long side of the carrier board
