@@ -47,15 +47,17 @@ Replace YourUsername, YourPassword with your GASPAR credentials. You can find th
 To activate a connection, you can either use `sudo nmtui`, or: 
 
 `nmcli con up <Name>
-## Wireless Connection to QGroundControl
-
-This is done with mavros. This should be done with the preflight Ansible. You can inspect the script in `ansible/scripts/mavros_start.sh` and the lines related to Mavros in `ansible/drones_preflight.yml`. 
 
 ## Get IP of Computer
 
 You can get the internet protocol address of a Linux computer by running `ifconfig` and looking for the four numbers after `inet` under the interface that you care about. Wireless interfaces typically begin with `w`, and ethernet interfaces typically begin with `e`. 
 
 On most networks, you can usually use `hostname.local` in place of the IP address if the two computers are on the same network. Replace `hostname` with the hostname of the computer. You can get the hostname by running: `hostname` or `hostnamectl` on the computer. 
+
+## Wireless Connection to QGroundControl
+
+This is done with mavproxy `mavproxy.py --master="/dev/ttyACM0" --baudrate 115200 --out="udp:<ipofhost>:14550"`.
+
 
 ### Rescue Unreachable Device
 
@@ -125,9 +127,7 @@ The SwarmNXT system automatically records flight data using the standard ROS 2 b
 ### Logging Overview
 
 The system uses `ros2 bag record` integrated into the drone launch files to automatically capture:
-- MAVROS topics (position, state, IMU data)
 - Drone planner commands
-- Safety checker outputs
 - Custom application topics
 
 All data is stored in MCAP format for efficient storage and playback.
@@ -140,36 +140,10 @@ Topics to log are configured in the Ansible inventory file `ansible/group_vars/a
 # Configure which topics to record
 drone_rosbag_topics: 
   - "/{{ ns }}/*"                    # All topics in drone namespace
-  # Or specify individual topics:
-  # - "/{{ ns }}/mavros/local_position/pose"
-  # - "/{{ ns }}/mavros/state"
-  # - "/{{ ns }}/mavros/imu/data"
-```
-
-### Common Topic Configurations
-
-#### Basic Flight Logging
-```yaml
-drone_rosbag_topics:
-  - "/{{ ns }}/mavros/local_position/pose"
-  - "/{{ ns }}/mavros/state"
-  - "/{{ ns }}/mavros/setpoint_position/local"
-```
-
-#### Complete Mission Logging
-```yaml
-drone_rosbag_topics:
-  - "/{{ ns }}/mavros/*"
-  - "/{{ ns }}/drone_planner/*"
-  - "/{{ ns }}/swarmnxt_controller/*"
-  - "/{{ ns }}/latency_checker/*"
-```
-
-#### Debug Logging
-```yaml
-drone_rosbag_topics:
-  - "/{{ ns }}/*"                    # All drone topics
-  - "/optitrack_multiplexer_node/*"  # OptiTrack data
+  - "/agent_[0-9]+/*"                # All topics in/out by the planner/mapper
+  - "/fmu/*"                         # All topics in/out of the FC
+  - "/depth/*"                       # All topics in/out of depth estimator
+  - "/tf"                            # Transforms
 ```
 
 ### Recorded Data Location
@@ -191,36 +165,16 @@ ros2 bag info /path/to/bag_file
 # Play back recorded data
 ros2 bag play /path/to/bag_file
 
-# Play specific topics only
-ros2 bag play /path/to/bag_file --topics /nxt1/mavros/local_position/pose /nxt1/mavros/state
-```
-
-### Data Analysis
-
-```bash
-# Convert MCAP to other formats
-ros2 bag convert -i input.mcap -o output_folder --output-options "format=rosbag2_storage_sqlite"
-
-# Extract data for analysis
-ros2 topic echo --bag /path/to/bag_file /topic_name > data.txt
-
-# Use with plotjuggler for visualization
-ros2 run plotjuggler plotjuggler --buffer-size 100000
-# Then: File -> Load Data -> Load ROS2 bag
-```
-
 ## Check EKF Tracking
 
 To check EKF tracking, perform the following steps:
+```
+source ~/data/ros2_swarmnxt_ws/install/setup.bash
+ROS_DOMAIN_ID=5 ros2 launch foxglove_bridge foxglove_bridge_launch.xml # (assuming it is nxt5, for nxt7, the ros domain ID would be 7)
+```
 
-1. On the host computer, make sure ros is sourced: `source /opt/ros/humble/setup.bash`
-2. Ensure the `ROS_DOMAIN_ID` is set to the same value as the drones. By default, this is 1. You can check in `ansible/group_vars/all`: `export ROS_DOMAIN_ID=<domain id>`
-3. Run plotjuggler: `ros2 run plotjuggler plotjuggler`
-4. In plotjuggler, add:
-	1. `/mavros/local_position/pose`  xyz, orientation quaternions (EKF Output)
-	2. `/mavros/vision_pose/pose_cov` xyz, orientation quaternions (optitrack)
-5. Move the drone around in all directions and ensure there are no discontinuities, and the values are tracking each other. 
-6. Rotate the drone in different directions and ensure the values are tracking each other
+In Foxglove you can add plots and select the topic you want to visualize. In this case visualize `/mocap_to_vision_pose`.
+
 
 # Common Issues
 

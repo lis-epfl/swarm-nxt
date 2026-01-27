@@ -5,7 +5,6 @@ project(drone_state_manager_ros2)
 find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(mavros_msgs REQUIRED)
 find_package(swarmnxt_msgs REQUIRED)
 find_package(mpc_controller_ros2_msgs REQUIRED)
 
