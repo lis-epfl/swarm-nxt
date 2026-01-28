@@ -36,6 +36,9 @@ jobs:
                 git sparse-checkout set multi_agent_planner_msgs
                 mv multi_agent_planner_msgs ${GITHUB_WORKSPACE}/ros_packages/
 
+                # Clone px4_ros_com
+                git clone --depth 1 --branch main https://github.com/PX4/px4_ros_com.git ${GITHUB_WORKSPACE}/ros_packages/px4_ros_com
+
             - name: Install dependencies
               run: |
                 sudo apt update
