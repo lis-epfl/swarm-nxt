@@ -24,10 +24,17 @@ jobs:
 
             - name: Clone mpc_controller_ros2_msgs
               run: |
+                # Clone mpc_controller_ros2_msgs (sparse checkout)
                 git clone --depth 1 --filter=blob:none --sparse https://github.com/lis-epfl/mpc_controller_pkgs.git /tmp/mpc_pkgs
                 cd /tmp/mpc_pkgs
                 git sparse-checkout set mpc_controller_ros2_msgs
                 mv mpc_controller_ros2_msgs ${GITHUB_WORKSPACE}/ros_packages/
+
+                # Clone multi_agent_planner_msgs (sparse checkout)
+                git clone --depth 1 --filter=blob:none --sparse https://github.com/ctoumieh/multi_agent_pkgs.git /tmp/multi_agent_pkgs
+                cd /tmp/multi_agent_pkgs
+                git sparse-checkout set multi_agent_planner_msgs
+                mv multi_agent_planner_msgs ${GITHUB_WORKSPACE}/ros_packages/
 
             - name: Install dependencies
               run: |
