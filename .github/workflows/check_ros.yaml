@@ -22,6 +22,13 @@ jobs:
               with:
                 submodules: recursive
 
+            - name: Clone mpc_controller_ros2_msgs
+              run: |
+                git clone --depth 1 --filter=blob:none --sparse https://github.com/lis-epfl/mpc_controller_pkgs.git /tmp/mpc_pkgs
+                cd /tmp/mpc_pkgs
+                git sparse-checkout set mpc_controller_ros2_msgs
+                mv mpc_controller_ros2_msgs ${GITHUB_WORKSPACE}/ros_packages/
+
             - name: Install dependencies
               run: |
                 sudo apt update
