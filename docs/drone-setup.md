@@ -212,9 +212,6 @@ For each of the cameras, perform the following tasks:
 
 ### Apply Parameter File
 
-!!! info
-	If you do not have a parameter file or want to create a new one, you can follow the steps in the [Manual Setup > NXT Flight Controller Setup](manual-setup.md#nxt-flight-controller-setup) document instead of applying the parameter file as described below. 
-
 First, ensure that the units in QGroundControl are set to SI Units: 
 
 1. Click on the Q on the top left
