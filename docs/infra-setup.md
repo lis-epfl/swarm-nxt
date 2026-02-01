@@ -62,7 +62,7 @@ git clone https://github.com/lis-epfl/swarm-nxt
 
 If using Optitrack as the odometry source, you must setup and configure an instance of Motive that is connected to the Optitrack system. This computer must also connect to the network described in the [networking](#networking) section via ethernet. 
 
-This setup is out of scope for this guide. 
+This setup of the Optitrack itself is out of scope for this guide. 
 
 ## Safety Bounds
 
