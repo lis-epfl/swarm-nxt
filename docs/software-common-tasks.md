@@ -46,7 +46,7 @@ Replace YourUsername, YourPassword with your GASPAR credentials. You can find th
 
 To activate a connection, you can either use `sudo nmtui`, or: 
 
-`nmcli con up <Name>
+`nmcli con up <Name>`
 
 ## Get IP of Computer
 
