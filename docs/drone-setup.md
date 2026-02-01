@@ -102,6 +102,7 @@ We use `nxt#` for our drones, where `#` is replaced with an integer
 7. Attach the fan cable to the orin carrier board 
 7. Remove the protective film from the double sided tape on the Wi-Fi antenna, and attach it to the front (other side of the orin) of the drone. Take care not to cover the hole at the front of the frame. It will be over the motor bolts.  
 8. Connect CAB-002 to the orin. It should go in the connector closest to the power connector on the long side of the carrier board. Route it between the orin and the frame and connect the other end to the flight controller port underneath the MicroSD card. 
+9. Connect CAB-006 to the FC and to the orin. This allows Mavlink connection later to QGC in case it is needed.
 
 ### Frame Preparation 
 
