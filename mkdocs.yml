@@ -9,7 +9,6 @@ nav:
   - Remote Control Setup: remote-control-setup.md
   - Flying: flying.md
   - Common Software Tasks: software-common-tasks.md
-  - Manual Setup Instructions: manual-setup.md
 theme: readthedocs
 markdown_extensions:
   - admonition
