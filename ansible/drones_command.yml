@@ -14,11 +14,11 @@
     # - name: "Common Components"
     #   ansible.builtin.include_tasks: "tasks/install-gurobi13.yml"
 
-  tasks:
-    - name: Set max power mode with confirmation
-      become: true
-      ansible.builtin.shell: echo "yes" | nvpmodel -m 0
-      register: nvpmodel_output
+  # tasks:
+  #   - name: Set max power mode with confirmation
+  #     become: true
+  #     ansible.builtin.shell: echo "yes" | nvpmodel -m 0
+  #     register: nvpmodel_output
       # We use shell because command doesn't support pipes (|)
   #   - name: Install nvidia toolkit (System Package)
   #     ansible.builtin.apt:
