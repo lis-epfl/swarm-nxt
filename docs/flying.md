@@ -35,4 +35,5 @@ This will update apt repositories, pull the latest version of ros packages (only
 ## Post-Flight Checklist
 
 After the flight is done and you have disarmed the drones, you can run the post-flight script to copy the rosbags and logging files from the drones to the host PC `ansible-playbook -i inventory.ini drones_postflight.yml`. They will be in `{host_base_path}/consolidated_logs`. The topics recorded by the rosbags are defined in `group_vas/all` under `drone_rosbag_topics`.
+
 To shutdown the drones before changing the batteries, you can run `ansible-playbook -i inventory.ini drones_shutdown.yml`.
