@@ -393,7 +393,7 @@ We use the **Quadcam Calibration Tool** to generate rectification maps for the d
 Ensure you have run the `host_computer.yml` playbook to install the calibration tool on your system. It will be in `~/data/repos/quadcam_calibration_tool`.
 
 #### **Perform Calibration**
-Follow the instructions in the Quadcam Calibration Tool README to collect data and generate the rectification maps.
+Follow the instructions in the [Quadcam Calibration Tool](https://github.com/lis-epfl/quadcam_calibration_tool) README to collect data and generate the rectification maps.
 
 #### **Deploy Maps**
 
@@ -401,7 +401,7 @@ Copy the output folder to the drone:
 
 ```bash
 # Example: Deploying maps for 192x192 resolution to nxt1
-scp -r final_maps lis@nxt1.local:/home/lis/ros2_ws/src/depth_estimation_ros2/config/final_maps_192_192
+scp -r final_maps lis@nxt1.local:/home/lis/ros2_ws/src/depth_estimation_ros2/config/final_maps_256_160
 ```
 
 #### **Fit baseline and disparity correction** 
@@ -415,7 +415,7 @@ SSH into the drone and edit:
 ~/ros2_ws/src/depth_estimation_ros2/config/depth_omninxt_params.yml
 ```
 
-Modify the values if necessary: `calibration_resolution: 192_192` and the `onnx_model_path: "/home/lis/ros2_ws/src/depth_estimation_ros2/models/S2M2_S_192_192_v2_torch29.onnx"`.
+Modify the values if necessary: `calibration_resolution: 256_160` and the `onnx_model_path: "/home/lis/ros2_ws/src/depth_estimation_ros2/models/S2M2_S_256_160_v2_torch29.onnx"`.
 
 ## Flight Preparation 
 
