@@ -155,26 +155,7 @@ Bag files are automatically saved to:
 
 ### Viewing Recorded Data
 
-```bash
-# List available bag files
-ls $ROS_LOG_DIR/bag/
-
-# Get information about a bag file
-ros2 bag info /path/to/bag_file
-
-# Play back recorded data
-ros2 bag play /path/to/bag_file
-
-## Check EKF Tracking
-
-To check EKF tracking, perform the following steps:
-```
-source ~/data/ros2_swarmnxt_ws/install/setup.bash
-ROS_DOMAIN_ID=5 ros2 launch foxglove_bridge foxglove_bridge_launch.xml # (assuming it is nxt5, for nxt7, the ros domain ID would be 7)
-```
-
-In Foxglove you can add plots and select the topic you want to visualize. In this case visualize `/mocap_to_vision_pose`.
-
+After running the post-flight script, you can open the bags with Foxglove or just run them from the terminal.
 
 # Common Issues
 
