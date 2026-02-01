@@ -45,8 +45,8 @@ git clone https://github.com/lis-epfl/swarm-nxt
 ```
 1. Navigate to the `ansible/` folder inside the repository 
 2. Edit the variables in the `ansible/group_vars/all` file
-    1. `wifi_ssid`: Enter the name of the Unifi SSID
-    2. `wifi_password`: Enter the name of the Unifi password
+    1. `wifi_ssid`: Enter the name of the Amplifi SSID
+    2. `wifi_password`: Enter the name of the Amplifi password
     3. `host_hostname`: Enter the string you get when you type `hostname` in the terminal
     4. `host_base_path`: Enter the base path to where all the downloaded packages/files will be added.
 3. Run the host computer ansible: `ansible-playbook -i inventory.ini host_computer.yml -K`. 
