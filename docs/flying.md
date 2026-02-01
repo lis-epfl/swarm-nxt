@@ -14,6 +14,7 @@ The takeoff altitude and other takeoff parameters are set in `ros_packages/drone
 4. Check that the EKF output is working well for each drone (only needed the first time you fly the drone): `ROS_DOMAIN_ID=1 ros2 launch foxglove_bridge foxglove_bridge_launch.xml` (domain id = 1 to check for nxt1). Then launch Foxglove and subscribe to the ekf output and to the MoCap output and make sure they match as you move the drone around manually.
 5. Use the dashboard to arm, take off, and land each drone individually before sending global commands.
 
+![](images/dashboard.png)
 
 ## Optional: Run an Update
 
@@ -30,3 +31,8 @@ This will update apt repositories, pull the latest version of ros packages (only
 <!--     "file": "/swarm-nxt/demos/drones_update.cast" -->
 <!-- } -->
 <!-- ``` -->
+
+## Post-Flight Checklist
+
+After the flight is done and you have disarmed the drones, you can run the post-flight script to copy the rosbags and logging files from the drones to the host PC `ansible-playbook -i inventory.ini drones_postflight.yml`. They will be in `{host_base_path}/consolidated_logs`.
+To shutdown the drones before changing the batteries, you can run `ansible-playbook -i inventory.ini drones_shutdown.yml`.

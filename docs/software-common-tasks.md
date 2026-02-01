@@ -59,7 +59,7 @@ On most networks, you can usually use `hostname.local` in place of the IP addres
 This is done with mavproxy `mavproxy.py --master="/dev/ttyACM0" --baudrate 115200 --out="udp:<ipofhost>:14550"`.
 
 
-### Rescue Unreachable Device
+## Rescue Unreachable Device
 
 If you do not know the IP address of a drone, you can try these steps to find it's IP: 
 
