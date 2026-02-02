@@ -4,3 +4,5 @@ A system to setup and manage drones for swarming research, with [OmniNxt](https:
 
 ![](docs/images/overall.png)
 
+![](docs/images/gif_swarmnxt.gif)
+
