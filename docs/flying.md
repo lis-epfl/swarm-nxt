@@ -1,5 +1,7 @@
 # Flying
 
+When connecting your Host PC via LAN to the router, make sure to turn off the WiFi of the Host PC to avoid interference with ROS2.
+
 ## Pre-Flight Checklist
 The takeoff altitude and other takeoff parameters are set in `ros_packages/drone_state_manager_ros2/config/drone_state_manager_params.yml`. You need to change it on all the drones before you run the preflight check. For this you can change it locally on your host, and then modify the `drones_command.yml` playbook to send the files to all drones (examples of sending files exist already in the playbook), and then run the playbook. Then you can proceed to the next steps.
 
