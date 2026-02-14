@@ -12,7 +12,7 @@
     # - name: Command
     #   ansible.builtin.command: '{{ command }}'
     # - name: "Common Components"
-    #   ansible.builtin.include_tasks: "tasks/install-gurobi13.yml"
+    #   ansible.builtin.include_tasks: "tasks/install-gurobi.yml"
 
     # - name: Remove multi_agent_planner build directory
     #   ansible.builtin.file:
