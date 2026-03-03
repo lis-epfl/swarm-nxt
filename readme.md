@@ -4,5 +4,7 @@ A system to setup and manage drones for swarming research, with [OmniNxt](https:
 
 ![](docs/images/overall.png)
 
+The full video can be watched at [https://youtu.be/9aOr5EDLQEo](https://youtu.be/9aOr5EDLQEo).
+
 ![](docs/images/gif_swarmnxt.gif)
 
