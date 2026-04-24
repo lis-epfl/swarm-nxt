@@ -64,7 +64,7 @@
       repo: https://github.com/ctoumieh/multi_agent_pkgs/
       dest: "{{ drone_ros_path }}/src/multi_agent_pkgs"
       force: yes
-      version: actual_state
+      version: d36726058b950e283dc85a1f73d61a4155aa8daf
 
   - name: SwarmNXT Nodes
     block: 
