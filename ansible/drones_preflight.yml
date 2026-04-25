@@ -12,8 +12,8 @@
         scope: user
       ignore_errors: yes  # In case it's not running
 
-    - name: Launch Vision Tests (Async)
-      when: enable_vision | default(false) | bool
+    - name: Launch Camera Tests (Async)
+      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool)
       ansible.builtin.shell: |
         source /opt/ros/humble/setup.bash
         source {{ drone_ros_path }}/install/setup.bash
@@ -39,7 +39,7 @@
       register: vision_launch_job
 
     - name: Save Job ID for Later
-      when: enable_vision | default(false) | bool
+      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool)
       set_fact:
         vision_job_id: "{{ vision_launch_job.ansible_job_id }}"
 
@@ -172,11 +172,11 @@
           register: chronyc_check
           changed_when: false
 
-    # --- WAIT FOR VISION RESULTS ---
-    - name: Verify Vision Checks
-      when: enable_vision | default(false) | bool
+    # --- WAIT FOR CAMERA RESULTS ---
+    - name: Verify Camera Checks
+      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool)
       block:
-        - name: Wait for Vision Job
+        - name: Wait for Camera Job
           ansible.builtin.async_status:
             jid: "{{ vision_job_id }}"
           register: vision_result
@@ -184,9 +184,9 @@
           retries: 20
           delay: 1
 
-        - name: Check Vision Success
+        - name: Check Camera Success
           fail:
-             msg: "{{ (vision_result.stderr | regex_search('(SYNC_FAILED|FOCUS_FAILED|FAILED:.*|OUT_OF_FOCUS:.*)', multiline=True)) | default('Vision Checks Failed') }}"
+             msg: "{{ (vision_result.stderr | regex_search('(SYNC_FAILED|FOCUS_FAILED|FAILED:.*|OUT_OF_FOCUS:.*)', multiline=True)) | default('Camera Checks Failed') }}"
           when: vision_result.rc != 0
     # -------------------------------
 

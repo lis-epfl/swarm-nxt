@@ -357,17 +357,23 @@ Calibrate the gyroscope by putting the drone on a level surface, and then clicki
 
 Calibrate the accelometer by clicking on the accelerometer sub-tab and completing the procedure as prompted. 
  
-## Vision Setup
-### Enable Vision in Ansible
+## Camera & Vision Setup
+### Enable Cameras / Depth in Ansible
 
-To launch the vision drivers and mapping nodes, set the `enable_vision` flag in your Ansible configuration.
+There are two independent flags:
+
+- **`enable_cameras`** — launches just the OAK camera driver and records its topics into the rosbag. Use this when you only need raw images (e.g. data collection).
+- **`enable_depth`** — launches the camera driver **and** the depth estimation node, and tells the planner to consume the depth pointcloud. Implies cameras.
+
+Either flag enables the camera sync/focus preflight checks. If neither is set, the planner falls back to a synthetic environment (`env_builder_empty`).
 
 #### **Option A: Enable for All Drones**
 
 Edit `ansible/group_vars/all`:
 
 ```yaml
-enable_vision: true
+enable_cameras: false   # cameras only (raw bag recording)
+enable_depth:   true    # cameras + depth estimation
 ```
 
 #### **Option B: Enable for Specific Drones**
@@ -376,8 +382,9 @@ Edit `ansible/inventory.ini`:
 
 ```ini
 [drones]
-nxt1.local enable_vision=true
-nxt2.local  # Vision disabled
+nxt1.local enable_depth=true       # full vision pipeline
+nxt2.local enable_cameras=true     # cameras only, no depth
+nxt3.local                         # neither — synthetic env
 ```
 
 ---

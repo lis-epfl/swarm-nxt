@@ -186,7 +186,7 @@ def generate_launch_description():
             "id": str(hdsm_idx),
             "n_rob": "{{ groups['drones'] | length }}",
             "goal_position": goal_position_str,
-            "use_vision": "{{ 'true' if enable_vision | default(false) | bool else 'false' }}",
+            "use_vision": "{{ 'true' if enable_depth | default(false) | bool else 'false' }}",
             "pointcloud_topic": "/depth/pointcloud/combined",
             "agent_frame": drone_frame_name,
             "swarm_frames": swarm_frames_str,
@@ -195,8 +195,8 @@ def generate_launch_description():
 
     extra_nodes = []
 
-    {% if enable_vision | default(false) | bool %}
-    # VISION MODE: Launch Camera and Depth Estimation
+    {% if (enable_cameras | default(false) | bool) or (enable_depth | default(false) | bool) %}
+    # Camera driver (needed by enable_cameras and enable_depth)
     extra_nodes.append(
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(
@@ -208,6 +208,10 @@ def generate_launch_description():
             )
         )
     )
+    {% endif %}
+
+    {% if enable_depth | default(false) | bool %}
+    # Depth estimation (consumes camera frames, produces /depth/* pointclouds)
     extra_nodes.append(
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(
@@ -223,7 +227,7 @@ def generate_launch_description():
         )
     )
     {% else %}
-    # NO VISION MODE: Launch Env Builder (Synthetic)
+    # No depth → planner uses synthetic env from env_builder
     extra_nodes.append(
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(

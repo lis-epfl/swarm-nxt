@@ -30,13 +30,17 @@ drone_num: "{{ ns | regex_search('[0-9]+$') | default('0', true) }}"
 
 optitrack_server_address: "192.168.194.3"
 
-# if enabled the drones_update will install the vision driver and depth estimation
-# you can modify it for individual drones in inventory.ini by setting enable_vision after the drone name
-enable_vision: false
+# Camera/vision modes — independent flags. Either flag enables the oak camera driver
+# and the camera sync/focus preflight checks. enable_depth additionally launches the
+# depth estimation node (and its consumers in the planner). You can override per-drone
+# in inventory.ini, e.g.: nxt1.local enable_depth=true
+enable_cameras: false
+enable_depth: false
 
-drone_rosbag_topics: 
+drone_rosbag_topics:
   - "/{{ ns }}/*"
   - "/agent_[0-9]+/*"
   - "/fmu/*"
   - "/depth/*"
+  - "/oak_ffc_4p_driver_node/*"
   - "/tf"

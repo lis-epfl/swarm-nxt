@@ -11,7 +11,7 @@ The takeoff altitude and other takeoff parameters are set in `ros_packages/drone
     1. The `micro_xrce` agent to get ROS2 access to PX4 outputs/inputs.
     2. The autonomy stack (MPC, Planner, ...).
     3. Checks if chronyc is tracking.
-    4. Checks camera clocks are synced and in focus (if vision is enabled).
+    4. Checks camera clocks are synced and in focus (if `enable_cameras` or `enable_depth` is set).
 3. On the host PC open a web browser and go to `localhost:8080`, where you will see a dashboard (picture below) for controlling the drones along with other important information (latency, battery level, ...). Check that the latency is stable between each drone and the ground station, and that the batteries are at least 80%. 
 4. Check that the EKF output is working well for each drone (only needed the first time you fly the drone): `ROS_DOMAIN_ID=1 ros2 launch foxglove_bridge foxglove_bridge_launch.xml` (domain id = 1 to check for nxt1). Then launch Foxglove and subscribe to the ekf output and to the MoCap output and make sure they match as you move the drone around manually.
 5. Use the dashboard to arm, take off, and land each drone individually before sending global commands.

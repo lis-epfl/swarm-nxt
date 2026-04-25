@@ -78,7 +78,7 @@
         - { src: "/tmp/planner_logs/", name: "planner_logs" }
 
     - name: Pull Depth logs
-      when: enable_vision | default(false) | bool
+      when: enable_depth | default(false) | bool
       ansible.posix.synchronize:
         mode: pull
         src: "/tmp/depth_logs/"
