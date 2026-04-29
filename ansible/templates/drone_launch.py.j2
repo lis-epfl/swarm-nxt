@@ -208,6 +208,24 @@ def generate_launch_description():
             )
         )
     )
+
+    # Zero-loss camera recorder (libmcap direct).  Writes to <ROS_LOG_DIR>/cams/
+    # alongside the regular rosbag at <ROS_LOG_DIR>/bag/.  ros2 bag can't sustain
+    # 4 x 30 Hz x ~260 KB CompressedImage on this Orin (drops ~10 %), so the cam
+    # topics are routed here instead of through ros2 bag's regex.
+    cams_dir = os.path.join(os.environ.get("ROS_LOG_DIR"), "cams")
+    extra_nodes.append(
+        ExecuteProcess(
+            cmd=[
+                "chrt", "-f", "50",
+                "ros2", "run", "oak_ffc_4p_driver_ros2", "oak_compressed_recorder",
+                "--ros-args",
+                "-p", "output_dir:=" + cams_dir,
+                "-p", "chunk_mb:=8",
+            ],
+            output="log",
+        )
+    )
     {% endif %}
 
     {% if enable_depth | default(false) | bool %}

@@ -59,6 +59,9 @@
         compress: yes
         rsync_opts:
           - "--mkpath"
+          # mcap (cams/recording.mcap) and db3 (rosbag2 sqlite) are already
+          # compressed; skip wire-compression for them to save CPU on both ends.
+          - "--skip-compress=mcap,db3,jpg,jpeg,png,zst,gz"
       delegate_to: localhost
 
     - name: Pull MPC and Planner logs
@@ -71,6 +74,9 @@
         compress: yes
         rsync_opts:
           - "--mkpath"
+          # mcap (cams/recording.mcap) and db3 (rosbag2 sqlite) are already
+          # compressed; skip wire-compression for them to save CPU on both ends.
+          - "--skip-compress=mcap,db3,jpg,jpeg,png,zst,gz"
       delegate_to: localhost
       ignore_errors: true
       loop:
@@ -88,6 +94,9 @@
         compress: yes
         rsync_opts:
           - "--mkpath"
+          # mcap (cams/recording.mcap) and db3 (rosbag2 sqlite) are already
+          # compressed; skip wire-compression for them to save CPU on both ends.
+          - "--skip-compress=mcap,db3,jpg,jpeg,png,zst,gz"
       delegate_to: localhost
       ignore_errors: true
 

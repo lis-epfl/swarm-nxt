@@ -42,5 +42,6 @@ drone_rosbag_topics:
   - "/agent_[0-9]+/*"
   - "/fmu/*"
   - "/depth/*"
-  - "/oak_ffc_4p_driver_node/*"
+  # /oak_ffc_4p_driver_node/* is recorded separately by oak_compressed_recorder
+  # (libmcap direct, zero-loss). See drone_launch.py.j2.
   - "/tf"
