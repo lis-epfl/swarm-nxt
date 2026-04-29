@@ -8,13 +8,15 @@ ExecStart=/bin/bash {{ base_path }}/ros_packages_start.sh
 KillMode=control-group
 KillSignal=SIGTERM
 ExecStop=/bin/bash -c "pkill -f ros2cli.daemon.daemonize"
-# 60s headroom for graceful shutdown.  oak_compressed_recorder may need to
-# write the mcap footer/index for a multi-GB recording before exiting; the
-# default 5s was tight and risked SIGKILL truncating the mcap mid-close.
-# 30s was enough for the recorder itself but not for some other launch
-# children to drain — bumping to 60s eliminates the SIGKILL spam in
-# journalctl during postflight stops.
-TimeoutStopSec=60
+# Graceful shutdown of the cam recorder is impossible under the current
+# ros2 launch + systemd cgroup architecture (the recorder gets SIGKILL'd
+# mid-finalize when the main PID exits).  Rather than fight that,
+# drones_postflight.yml runs scripts/recover_mcap.py on every recording
+# to rewrite the truncated file with a proper mcap footer.  That makes
+# graceful shutdown unnecessary, so we use SIGKILL and a tiny timeout
+# for instant, predictable stops.
+KillSignal=SIGKILL
+TimeoutStopSec=2
 LimitRTPRIO=99
 
 [Install]
