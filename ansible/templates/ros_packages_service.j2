@@ -8,7 +8,10 @@ ExecStart=/bin/bash {{ base_path }}/ros_packages_start.sh
 KillMode=control-group
 KillSignal=SIGTERM
 ExecStop=/bin/bash -c "pkill -f ros2cli.daemon.daemonize"
-TimeoutStopSec=5
+# 30s headroom for graceful shutdown.  oak_compressed_recorder may need to
+# write the mcap footer/index for a multi-GB recording before exiting; the
+# default 5s was tight and risked SIGKILL truncating the mcap mid-close.
+TimeoutStopSec=30
 LimitRTPRIO=99
 
 [Install]
