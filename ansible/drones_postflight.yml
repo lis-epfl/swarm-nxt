@@ -107,7 +107,34 @@
         state: started
         scope: user
 
-    # 5. Run Analysis
+    # 5. Recover any cam recordings whose mcap footer wasn't written
+    #    (oak_compressed_recorder is sometimes SIGKILL'd by systemd's
+    #    cgroup cleanup mid-finalize).  The data records are intact;
+    #    this rewrites them into a well-formed mcap with a proper
+    #    footer/index so Foxglove and `mcap info` can open it directly.
+    - name: Recover truncated cam mcaps
+      ansible.builtin.shell: |
+        for src in "{{ host_base_path }}/consolidated_logs/latest"/*/cams/recording.mcap; do
+          [ -f "$src" ] || continue
+          dst="${src%.mcap}_fixed.mcap"
+          # Skip if a fresh _fixed already exists for this src
+          if [ -f "$dst" ] && [ "$dst" -nt "$src" ]; then
+            echo "skip (already recovered): $src"
+            continue
+          fi
+          echo "recovering: $src"
+          python3 "{{ playbook_dir }}/scripts/recover_mcap.py" "$src" "$dst" \
+            && rm -f "$src" \
+            && mv "$dst" "$src" \
+            && echo "  -> $src is now valid"
+        done
+      args:
+        executable: /bin/bash
+      delegate_to: localhost
+      run_once: true
+      changed_when: false
+
+    # 6. Run Analysis
     - name: Analyze consolidated logs
       ansible.builtin.command: >
         python3 scripts/analyze_logs.py --log-dir "{{ host_base_path }}/consolidated_logs/latest"
