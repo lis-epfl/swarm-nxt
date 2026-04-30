@@ -107,14 +107,19 @@
         state: started
         scope: user
 
-    # 5. Recover any cam recordings whose mcap footer wasn't written
-    #    (oak_compressed_recorder is sometimes SIGKILL'd by systemd's
-    #    cgroup cleanup mid-finalize).  The data records are intact;
-    #    this rewrites them into a well-formed mcap with a proper
-    #    footer/index so Foxglove and `mcap info` can open it directly.
-    - name: Recover truncated cam mcaps
+    # 5. Recover any mcap files whose footer wasn't written.
+    #    Both oak_compressed_recorder (cams/recording.mcap) and ros2 bag
+    #    (bag/bag_*.mcap) get SIGKILL'd by systemd's cgroup cleanup before
+    #    finalize, so the trailing summary/index is missing.  Data records
+    #    are intact; recover_mcap.py re-streams them into a well-formed
+    #    mcap that Foxglove / mcap-cli can open without any further work.
+    - name: Recover truncated mcaps (cams + bag)
       ansible.builtin.shell: |
-        for src in "{{ host_base_path }}/consolidated_logs/latest"/*/cams/recording.mcap; do
+        set -u
+        # Match cams/recording.mcap AND bag/bag_*.mcap under any drone subdir.
+        for src in \
+            "{{ host_base_path }}/consolidated_logs/latest"/*/cams/recording.mcap \
+            "{{ host_base_path }}/consolidated_logs/latest"/*/bag/bag_*.mcap; do
           [ -f "$src" ] || continue
           dst="${src%.mcap}_fixed.mcap"
           # Skip if a fresh _fixed already exists for this src
@@ -123,10 +128,12 @@
             continue
           fi
           echo "recovering: $src"
-          python3 "{{ playbook_dir }}/scripts/recover_mcap.py" "$src" "$dst" \
-            && rm -f "$src" \
-            && mv "$dst" "$src" \
-            && echo "  -> $src is now valid"
+          if python3 "{{ playbook_dir }}/scripts/recover_mcap.py" "$src" "$dst"; then
+            mv -f "$dst" "$src" && echo "  -> $src is now valid"
+          else
+            echo "  -> WARN: recovery failed for $src (left original in place)"
+            rm -f "$dst"
+          fi
         done
       args:
         executable: /bin/bash

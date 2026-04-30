@@ -47,36 +47,55 @@ def main():
         w.start(profile="ros2", library="oak_compressed_recorder.recover")
 
         rdr = StreamReader(src, skip_magic=False)
-        try:
-            for rec in rdr.records:
-                if isinstance(rec, Schema):
-                    schema_id_map[rec.id] = w.register_schema(
-                        name=rec.name, encoding=rec.encoding, data=bytes(rec.data)
-                    )
-                elif isinstance(rec, Channel):
-                    new_sid = schema_id_map.get(rec.schema_id, 0)
-                    channel_id_map[rec.id] = w.register_channel(
-                        topic=rec.topic,
-                        message_encoding=rec.message_encoding,
-                        schema_id=new_sid,
-                    )
-                elif isinstance(rec, Message):
-                    new_cid = channel_id_map.get(rec.channel_id)
-                    if new_cid is None:
-                        continue
-                    w.add_message(
-                        channel_id=new_cid,
-                        log_time=rec.log_time,
-                        publish_time=rec.publish_time,
-                        sequence=rec.sequence,
-                        data=bytes(rec.data),
-                    )
-                    n_msgs += 1
-                    if n_msgs % 1000 == 0:
-                        print(f"  {n_msgs} msgs", end="\r", flush=True)
-        except (EndOfFile, McapError) as e:
-            # Expected: original file lacked footer.
-            print(f"\nreader stopped at end-of-stream ({type(e).__name__})")
+        rec_iter = iter(rdr.records)
+
+        # Iterate one record at a time so a single bad record doesn't kill the
+        # whole recovery.  On EOF we stop cleanly; on any other read error we
+        # log the count and stop (the StreamReader is forward-only and once a
+        # record fails to parse we can't safely seek past it).
+        while True:
+            try:
+                rec = next(rec_iter)
+            except StopIteration:
+                break
+            except (EndOfFile, McapError) as e:
+                # Expected end of a footer-less file.
+                print(f"\nreader stopped at end-of-stream ({type(e).__name__})")
+                break
+            except Exception as e:
+                # Corrupt record (e.g. truncated mid-record from SIGKILL).
+                # Stop here — anything before is intact.
+                print(
+                    f"\nrecovery stopped at corrupt record after {n_msgs} msgs: "
+                    f"{type(e).__name__}: {str(e)[:120]}"
+                )
+                break
+
+            if isinstance(rec, Schema):
+                schema_id_map[rec.id] = w.register_schema(
+                    name=rec.name, encoding=rec.encoding, data=bytes(rec.data)
+                )
+            elif isinstance(rec, Channel):
+                new_sid = schema_id_map.get(rec.schema_id, 0)
+                channel_id_map[rec.id] = w.register_channel(
+                    topic=rec.topic,
+                    message_encoding=rec.message_encoding,
+                    schema_id=new_sid,
+                )
+            elif isinstance(rec, Message):
+                new_cid = channel_id_map.get(rec.channel_id)
+                if new_cid is None:
+                    continue
+                w.add_message(
+                    channel_id=new_cid,
+                    log_time=rec.log_time,
+                    publish_time=rec.publish_time,
+                    sequence=rec.sequence,
+                    data=bytes(rec.data),
+                )
+                n_msgs += 1
+                if n_msgs % 1000 == 0:
+                    print(f"  {n_msgs} msgs", end="\r", flush=True)
 
         w.finish()
 
