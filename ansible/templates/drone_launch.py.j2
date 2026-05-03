@@ -196,7 +196,9 @@ def generate_launch_description():
     extra_nodes = []
 
     {% if (enable_cameras | default(false) | bool) or (enable_depth | default(false) | bool) %}
-    # Camera driver (needed by enable_cameras and enable_depth)
+    # Camera driver (needed by enable_cameras and enable_depth).
+    # usb_speed is per-drone-overridable in inventory.ini via oak_usb_speed=super
+    # for drones whose OAK link is marginal at 10 Gbps SuperSpeed Plus.
     extra_nodes.append(
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(
@@ -205,7 +207,10 @@ def generate_launch_description():
                     'launch',
                     'oak_ffc_4p_driver_omninxt.launch.py'
                 ])
-            )
+            ),
+            launch_arguments={
+                'usb_speed': '{{ oak_usb_speed | default("super_plus") }}',
+            }.items(),
         )
     )
 
