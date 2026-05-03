@@ -37,10 +37,16 @@ optitrack_server_address: "192.168.194.3"
 enable_cameras: false
 enable_depth: false
 
-# OAK USB speed cap.  Default is super_plus (10 Gbps).  If a specific drone's
-# USB link is marginal at 10 Gbps (X_LINK_ERROR / USB-disconnect stalls in the
-# kernel log = signal integrity, usually a bad cable or connector), override
-# per-drone in inventory.ini:  nxt10.local enable_cameras=true oak_usb_speed=super
+# OAK USB speed cap.  Default super_plus (10 Gbps).  In short tests nxt10's
+# link was marginal at SUPER_PLUS (X_LINK_ERROR / USB-disconnect stalls)
+# while nxt6 auto-negotiated to SUPER (5 Gbps) anyway and was clean.  In a
+# real flight (heavy ROS load: planner, MPC, depth, mocap, bridge, etc.)
+# both drones recorded clean 30 Hz on cams for 60+ seconds with super_plus
+# default — the synthetic driver+recorder-only soak test that exposed the
+# X_LINK issue isn't representative of operational load.
+# Per-drone override in inventory.ini if a specific drone shows the
+# X_LINK pattern in dmesg under real load:
+#   nxt1.local enable_cameras=true oak_usb_speed=super
 oak_usb_speed: super_plus
 
 drone_rosbag_topics:
