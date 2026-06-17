@@ -127,7 +127,7 @@
             repo: https://github.com/ctoumieh/multi_agent_pkgs
             dest: "{{ host_ros_path }}/src/multi_agent_pkgs"
             force: yes
-            version: niel/chill-dynamics
+            version: d36726058b950e283dc85a1f73d61a4155aa8daf
 
         - name: Remove unwanted directories from planner packages
           file:
