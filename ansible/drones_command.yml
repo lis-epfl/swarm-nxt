@@ -11,21 +11,36 @@
   tasks:
     # - name: Command
     #   ansible.builtin.command: '{{ command }}'
-    - name: "Common Components"
-      ansible.builtin.include_tasks: "tasks/install-gurobi.yml"
+    # - name: "Common Components"
+    #   ansible.builtin.include_tasks: "tasks/install-gurobi.yml"
 
-    - name: Remove multi_agent_planner build directory
+    # - name: Remove multi_agent_planner build directory
+    #   ansible.builtin.file:
+    #     path: /home/lis/ros2_swarmnxt_ws/build/multi_agent_planner
+    #     state: absent
+
+    # - name: Remove multi_agent_planner install directory
+    #   ansible.builtin.file:
+    #     path: /home/lis/ros2_swarmnxt_ws/install/multi_agent_planner
+    #     state: absent
+    - name: Stop ROS packages to flush logs
+      become: false  # user-scope systemd needs the lis session bus, not root's
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: stopped
+        scope: user
+
+    - name: Wait for shutdown flush
+      ansible.builtin.pause:
+        seconds: 3
+
+    - name: Remove logs directory
       ansible.builtin.file:
-        path: /home/lis/ros2_swarmnxt_ws/build/multi_agent_planner
+        path: /home/lis/logs
         state: absent
 
-    - name: Remove multi_agent_planner install directory
-      ansible.builtin.file:
-        path: /home/lis/ros2_swarmnxt_ws/install/multi_agent_planner
-        state: absent
-
-    - name: Reboot
-      ansible.builtin.reboot:
+    # - name: Reboot
+    #   ansible.builtin.reboot:
 
   # tasks:
   #   - name: Set max power mode with confirmation
