@@ -181,7 +181,7 @@
             jid: "{{ vision_job_id }}"
           register: vision_result
           until: vision_result.finished
-          retries: 20
+          retries: 30
           delay: 1
 
         - name: Check Camera Success
