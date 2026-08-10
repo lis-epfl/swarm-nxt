@@ -21,9 +21,15 @@
       state: directory
 
   - name: Optitrack
-    when: "position_estimation == 'optitrack'"
-    block: 
-    
+    # Deliberately unconditional. Only the two *node* packages are optitrack-specific
+    # and they are removed below; what stays are the message packages, and
+    # optitrack_multiplexer_ros2_msgs is what self-calibration needs to read
+    # RigidBodyStamped out of a flight recording for its ground-truth auto-detection.
+    # Gating this on position_estimation == 'optitrack' meant that switching to vio
+    # would stop installing the msgs, and the ATE certificate and mount solve would
+    # then be skipped silently — no error, just a quieter report.
+    block:
+
     - name: Get optitrack package
       ansible.builtin.git:
         repo: https://github.com/lis-epfl/optitrack_packages_ros2/
