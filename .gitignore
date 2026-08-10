@@ -8,4 +8,5 @@ docs/.obsidian
 *.swo
 *.swn
 *.swm
+*.swl
 __pycache__/
