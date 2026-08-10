@@ -253,11 +253,18 @@
             - pyros-genmsg==0.5.8
             - jsonschema==4.24.0
       - name: Clone px4 repository
-        ansible.builtin.git: 
+        ansible.builtin.git:
           repo: "https://github.com/PX4/PX4-Autopilot"
           version: 238dffcd1b
           dest: "{{ host_fc_path }}/PX4-Autopilot"
           force: yes
+      - name: Patch PX4 dds_topics.yaml with fleet config
+        # Fleet-managed dds_topics.yaml — adds rate_limit fields (e.g. sensor_combined
+        # at 300 Hz for VIO/calibration). Without this, the upstream YAML caps high-rate
+        # topics at the 100 Hz uxrce_dds_client poll-loop ceiling.
+        ansible.builtin.template:
+          src: templates/dds_topics.yaml.j2
+          dest: "{{ host_fc_path }}/PX4-Autopilot/src/modules/uxrce_dds_client/dds_topics.yaml"
       - name: Build bootloader
         community.general.make:
           chdir: "{{ host_fc_path }}/PX4-Autopilot"

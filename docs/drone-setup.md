@@ -187,6 +187,10 @@ For each of the cameras, perform the following tasks:
 !!! important  
 	Ensure you have fully run the host computer setup in the [IT Infrastructure Setup Guide](infra-setup.md)
 
+#### XRCE-DDS Topic Configuration
+
+The firmware build uses a fleet-managed `dds_topics.yaml` that exposes PX4 topics to ROS 2 over uXRCE-DDS, including `rate_limit` fields where needed (e.g. `sensor_combined` at 300 Hz for VIO/calibration). The source of truth is `ansible/templates/dds_topics.yaml.j2` — `host_computer.yml` copies it over the upstream PX4 YAML automatically before running `make`. **If you need to expose a new PX4 topic to ROS 2, or change a rate, edit that file** (not the upstream PX4 tree, which gets clobbered on every clone). Then re-run `host_computer.yml` and reflash both the bootloader and main firmware as below.
+
 #### Bootloader
 
 1. Ensure the flight controller is powered off, unplug any power from the drone. 
