@@ -168,7 +168,7 @@
             repo: https://github.com/lis-epfl/swarm-nxt
             dest: "{{ host_base_path }}/repos/swarm-nxt"
             force: yes
-            version: dds
+            version: main
 
         - name: Get px4 package
           ansible.builtin.git:

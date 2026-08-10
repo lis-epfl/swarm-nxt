@@ -87,7 +87,7 @@
         ansible.builtin.git: 
             repo: https://github.com/lis-epfl/swarm-nxt
             dest: "{{ drone_base_path }}/repos/swarm-nxt"
-            version: mpc
+            version: main
             force: yes
         
       - name: List ros_packages directories
