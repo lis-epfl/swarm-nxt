@@ -28,6 +28,15 @@
     # A bad verdict on one drone must never abort the other ten. Set true only if you
     # want the play to exit non-zero when any drone fails to come back HEALTHY.
     selfcalib_strict: false
+    # Seconds of the recording to use. Empty = all of it. The contract needs only a
+    # static start plus ~10-15 s of motion, and cost scales with length: on an Orin NX
+    # a 60 s recording takes ~13 min (3 estimator passes at ~4x real time).
+    selfcalib_window: ""
+    # Certify the ATE on a dedicated extra pass running the published chain under the
+    # flight config + priors. Costs ~a third of the runtime. Off by default: under the
+    # flight-config loop the last warm-start pass tracks it to a median 1.17x with
+    # identical verdicts across 12 fleet recordings.
+    selfcalib_frozen_check: false
     selfcalib_timeout: 7200
 
   tasks:
@@ -101,7 +110,9 @@
           --template fleet_reference/{{ sc_ref }}/theta_star.yaml \
           --imu-chain fleet_reference/{{ sc_ref }}/kalibr_imu_chain.yaml \
           --out {{ drone_base_path }}/selfcalib_out/{{ sc_stamp }} \
-          --fleet-exclude {{ ansible_hostname }}
+          --fleet-exclude {{ ansible_hostname }} \
+          {{ ('--window ' ~ selfcalib_window) if selfcalib_window | string | length > 0 else '' }} \
+          {{ '--frozen-check' if (selfcalib_frozen_check | bool) else '' }}
       args:
         executable: /bin/bash
       environment:
