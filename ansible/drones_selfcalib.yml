@@ -214,7 +214,7 @@
         python3 scripts/summarize_selfcalib.py
         --collect-dir {{ host_base_path }}/calibrations/{{ hostvars[groups['drones'][0]]['sc_stamp'] }}
         --json-out {{ host_base_path }}/calibrations/{{ hostvars[groups['drones'][0]]['sc_stamp'] }}/summary.json
-        --expect {{ groups['drones'] | map('regex_replace', '\\.local$', '') | join(',') }}
+        --expect {{ groups['drones'] | map('extract', hostvars, 'ansible_hostname') | select('defined') | join(',') }}
       args:
         chdir: "{{ playbook_dir }}"
       register: sc_summary

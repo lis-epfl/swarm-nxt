@@ -63,8 +63,15 @@
     - name: Install self-calibration python dependencies
       # NOT opencv-python: this image builds OpenCV into /usr/local for cv_bridge and
       # the pip wheel would shadow it.
+      #
+      # numpy==1.24.4 REPAIRS an already-provisioned drone. MAVProxy and
+      # onnxruntime-gpu declare only numpy>=1.21.6, so provisioning pulled 2.2.6 --
+      # past the numpy 2.0 C-ABI break -- and that silently broke `import cv2` AND
+      # `import onnxruntime` for every python program on the drone, depth estimation
+      # included. Nothing needs 2.x. See tasks/setup-common.yml.
       ansible.builtin.pip:
         name:
+          - numpy==1.24.4
           - scipy
 
     # - name: Reboot

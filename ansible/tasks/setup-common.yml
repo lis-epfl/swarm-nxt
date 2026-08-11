@@ -106,9 +106,23 @@
 # already present. Deliberately NOT installing opencv-python: this image builds
 # OpenCV into /usr/local for cv_bridge (see the vision_opencv task below), and the
 # pip wheel would shadow it with a different build.
+# numpy is PINNED, and the pin is the point of this task.
+#
+# Nothing here asks for numpy directly: it arrives transitively via MAVProxy and
+# onnxruntime-gpu, which declare only `numpy>=1.21.6`. pip therefore resolves to
+# whatever is newest, and on drones provisioned from Jan 2026 that was 2.2.6 -- past
+# the numpy 2.0 C-ABI break. The consequences are silent and system-wide:
+#   import cv2          -> "numpy.core.multiarray failed to import"  (apt python3-opencv
+#                          4.5.4 is built against the 1.x ABI)
+#   import onnxruntime  -> "import numpy failed"                     (breaks depth estimation)
+# Neither package needs 2.x; both are satisfied by 1.24.4, which is also what
+# tasks/install-acados.yml pins inside the mpc_env venv, so the two agree.
+# Verified on an Orin NX (JetPack 6.2.1): with 1.24.4, cv2 4.5.4, scipy 1.8.0 and
+# onnxruntime 1.23.0 all import cleanly.
 - name: Self-calibration python dependencies
   ansible.builtin.pip:
     name:
+      - numpy==1.24.4
       - scipy
 
 - name: Install ONNX Runtime (C++ Dev Files)
