@@ -19,6 +19,10 @@ if [ -z "${BUILD_JOBS:-}" ]; then
     [ "$_mem_jobs" -lt 1 ] && _mem_jobs=1
     BUILD_JOBS=$(( _cores < _mem_jobs ? _cores : _mem_jobs ))
 fi
+# NOTE: colcon's --parallel-workers and MAKEFLAGS MULTIPLY -- N packages in flight,
+# each running make -jN, is N*N concurrent compilers. Pinning workers to 1 makes the
+# ceiling exactly BUILD_JOBS: packages build one at a time, and the parallelism goes
+# where the memory actually goes (many translation units inside one package).
 echo "drone_build.sh: building with $BUILD_JOBS parallel compile jobs"
 export MAKEFLAGS="-j${BUILD_JOBS}"
 
@@ -26,7 +30,7 @@ export MAKEFLAGS="-j${BUILD_JOBS}"
 # does find_package(px4_msgs QUIET): if it is not built yet, ov_msckf silently compiles
 # its raw-CDR fallback for SensorCombined instead of the typed path. Both work, but
 # which one you get should not depend on build ordering.
-colcon build --symlink-install --parallel-workers "$BUILD_JOBS" --packages-select \
+colcon build --symlink-install --parallel-workers 1 --packages-select \
     px4_msgs multi_agent_planner_msgs jps3d decomp_util convex_decomp_util \
     path_finding_util voxel_grid_util decomp_ros_msgs decomp_ros_utils
 
@@ -34,4 +38,4 @@ colcon build --symlink-install --parallel-workers "$BUILD_JOBS" --packages-selec
 source install/setup.sh
 
 # Build main packages
-colcon build --symlink-install --parallel-workers "$BUILD_JOBS"
+colcon build --symlink-install --parallel-workers 1
