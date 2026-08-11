@@ -104,6 +104,13 @@
           --fleet-exclude {{ ansible_hostname }}
       args:
         executable: /bin/bash
+      environment:
+        # run_serial.sh resolves the estimator workspace itself and defaults to
+        # $HOME/ov_ws_vio, which does not exist here: install-perception.yml links the
+        # VIO packages into ros2_swarmnxt_ws so they build alongside everything else
+        # (and so ov_msckf finds px4_msgs). Without this the run fails with
+        # "no OpenVINS workspace at /home/lis/ov_ws_vio".
+        OV_WS: "{{ drone_ros_path }}"
       async: "{{ selfcalib_timeout }}"
       poll: 0
       register: sc_job
@@ -176,6 +183,8 @@
               {{ '--force' if (selfcalib_force | bool) else '' }}
           args:
             executable: /bin/bash
+          environment:
+            OV_WS: "{{ drone_ros_path }}"
           register: sc_deploy
 
         - name: Point vio_calib/current at it
@@ -205,15 +214,25 @@
         python3 scripts/summarize_selfcalib.py
         --collect-dir {{ host_base_path }}/calibrations/{{ hostvars[groups['drones'][0]]['sc_stamp'] }}
         --json-out {{ host_base_path }}/calibrations/{{ hostvars[groups['drones'][0]]['sc_stamp'] }}/summary.json
+        --expect {{ groups['drones'] | map('regex_replace', '\\.local$', '') | join(',') }}
       args:
         chdir: "{{ playbook_dir }}"
       register: sc_summary
       changed_when: false
+      # rc 1 means NO drone produced a report -- that is a real failure of the whole
+      # run, not one vehicle's bad verdict, and must not be reported as success.
       failed_when: false
 
     - name: Show it
       ansible.builtin.debug:
         msg: "{{ sc_summary.stdout_lines }}"
+
+    - name: Fail if the run produced nothing at all
+      when: sc_summary.rc | default(0) | int != 0
+      ansible.builtin.fail:
+        msg: >-
+          no drone produced a report — the run failed everywhere. This is distinct from
+          a bad verdict, which is reported in the table above and is never fatal.
 
     # Opt-in only. By default a drone that fails is reported, not fatal — the fleet
     # result is the deliverable, and one bad vehicle must not mask the other ten.

@@ -87,11 +87,26 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--collect-dir', required=True)
     ap.add_argument('--json-out', default=None)
+    ap.add_argument('--expect', default=None,
+                    help='comma-separated drones the play targeted, so one that '
+                         'produced no report is still listed as NO RESULT')
     a = ap.parse_args()
     rows = load(a.collect_dir)
+    # Every drone in the play must appear, even if it produced nothing. The per-drone
+    # tasks are deliberately failure-tolerant (one bad vehicle must not abort the other
+    # ten), so a drone that failed outright shows up here only as a MISSING directory --
+    # and an empty table is indistinguishable from success. Seed the rows from the
+    # expected list so a total failure prints as rows, not as silence.
+    if a.expect:
+        seen = {r['drone'] for r in rows}
+        for d in [x for x in a.expect.split(',') if x.strip()]:
+            if d.strip() not in seen:
+                rows.append({'drone': d.strip(), 'missing': True})
+        rows.sort(key=lambda r: r['drone'])
     if not rows:
-        print('no drones in %s' % a.collect_dir)
-        return 0
+        print('NO RESULTS AT ALL in %s — every drone failed before writing a report.'
+              % a.collect_dir)
+        return 1
 
     print('')
     print('SELF-CALIBRATION — %s' % a.collect_dir)
@@ -156,10 +171,15 @@ def main():
             print('   -> inspect that camera. If the change is intentional, re-run with')
             print('      selfcalib_force=true to accept it as the new fixed point.')
 
+    usable = [r for r in rows if not r.get('missing')]
+    if not usable:
+        print('')
+        print('NO DRONE PRODUCED A REPORT — the run failed everywhere. Check the tool log')
+        print('on a drone: <base>/selfcalib_out/<stamp>/  (and its run.log).')
     if a.json_out:
         with open(a.json_out, 'w') as fh:
             json.dump([{k: v for k, v in r.items() if k != 'raw'} for r in rows], fh, indent=1, default=str)
-    return 0
+    return 0 if usable else 1
 
 
 if __name__ == '__main__':
