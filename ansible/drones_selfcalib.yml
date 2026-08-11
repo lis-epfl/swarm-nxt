@@ -1,0 +1,226 @@
+---
+# Self-calibrate every drone in parallel from an ordinary flight recording, report the
+# results per drone, and deploy the ones that come back HEALTHY.
+#
+#   ansible-playbook drones_selfcalib.yml
+#   ansible-playbook drones_selfcalib.yml -e selfcalib_log_dir=/home/lis/logs/2026/06/23/174842
+#   ansible-playbook drones_selfcalib.yml -e selfcalib_deploy=false      # measure only
+#   ansible-playbook drones_selfcalib.yml -e selfcalib_force=true        # deploy non-HEALTHY too
+#
+# Runs ON the drones. A recording is ~2 GB of camera mcap, so calibrating on the
+# controller would mean pulling that per drone over WiFi; only report.json and the
+# published chain (a few KB) come back.
+#
+# PRECONDITION worth knowing before you fly: the camera recorder starts ~5 s after
+# ros_packages, and the static-start gate needs >=1.5 s of stillness WITH images. Hold
+# the vehicle still for ~10 s after the stack starts, or the run fails at the gate with
+# what looks like an unrelated complaint.
+
+- name: Self-calibrate the fleet
+  hosts: drones
+  remote_user: lis
+  gather_facts: true
+  vars:
+    perception_path: "{{ drone_base_path }}/repos/perception_pkgs"
+    selfcalib_log_dir: "{{ drone_base_path }}/logs/latest"
+    selfcalib_deploy: true
+    selfcalib_force: false
+    # A bad verdict on one drone must never abort the other ten. Set true only if you
+    # want the play to exit non-zero when any drone fails to come back HEALTHY.
+    selfcalib_strict: false
+    selfcalib_timeout: 7200
+
+  tasks:
+    # ---- 1. flush the recording -------------------------------------------------
+    # ros2 bag and the camera recorder only close their files on shutdown, so a bag
+    # read while the stack is live is truncated mid-write.
+    - name: Stop ROS packages to flush the recording
+      become: false            # user-scope systemd needs the lis session bus, not root's
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: stopped
+        scope: user
+      ignore_errors: true      # not running is fine; we only need it stopped
+
+    - name: Wait for shutdown flush
+      ansible.builtin.pause:
+        seconds: 3
+
+    # ---- 2. resolve the recording ----------------------------------------------
+    - name: Resolve the recording directory
+      ansible.builtin.stat:
+        path: "{{ selfcalib_log_dir }}"
+      register: log_dir_stat
+
+    - name: Fail early if the recording is missing
+      ansible.builtin.fail:
+        msg: >-
+          no recording at {{ selfcalib_log_dir }}. Fly first, or pass
+          -e selfcalib_log_dir=/home/lis/logs/YYYY/MM/DD/HHMMSS
+      when: not log_dir_stat.stat.exists
+
+    # The tool reads bag/ and cams/ natively; both must be present or it is not a
+    # flight recording.
+    - name: Check the recording has both streams
+      ansible.builtin.stat:
+        path: "{{ selfcalib_log_dir }}/{{ item }}"
+      register: stream_stat
+      loop: [bag, cams]
+
+    - name: Fail if a stream is missing
+      ansible.builtin.fail:
+        msg: "{{ selfcalib_log_dir }} has no {{ item.item }}/ — not a flight recording"
+      when: not item.stat.exists
+      loop: "{{ stream_stat.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    # Prefer this drone's own published reference; fall back to nxt3's purely as a YAML
+    # skeleton. The seed comes from the fleet means either way, so the fallback does not
+    # leak nxt3's calibration into another vehicle.
+    - name: Look for this drone's fleet reference
+      ansible.builtin.stat:
+        path: "{{ perception_path }}/selfcalib/fleet_reference/{{ ansible_hostname }}/theta_star.yaml"
+      register: own_ref
+
+    - name: Choose the template chain
+      ansible.builtin.set_fact:
+        sc_ref: "{{ ansible_hostname if own_ref.stat.exists else 'nxt3' }}"
+        sc_stamp: "{{ hostvars['localhost']['sc_stamp'] | default(ansible_date_time.iso8601_basic_short) }}"
+
+    # ---- 3. calibrate (async: this is a multi-minute estimator loop) -------------
+    - name: Run self-calibration
+      ansible.builtin.shell: |
+        set -eo pipefail
+        source /opt/ros/humble/setup.bash
+        source {{ drone_ros_path }}/install/setup.bash
+        cd {{ perception_path }}/selfcalib
+        python3 tool/run_tool.py \
+          --drone {{ ansible_hostname }} \
+          --bag {{ selfcalib_log_dir }} \
+          --template fleet_reference/{{ sc_ref }}/theta_star.yaml \
+          --imu-chain fleet_reference/{{ sc_ref }}/kalibr_imu_chain.yaml \
+          --out {{ drone_base_path }}/selfcalib_out/{{ sc_stamp }} \
+          --fleet-exclude {{ ansible_hostname }}
+      args:
+        executable: /bin/bash
+      async: "{{ selfcalib_timeout }}"
+      poll: 0
+      register: sc_job
+
+    - name: Wait for self-calibration
+      ansible.builtin.async_status:
+        jid: "{{ sc_job.ansible_job_id }}"
+      register: sc_result
+      until: sc_result.finished
+      retries: "{{ (selfcalib_timeout | int / 15) | int }}"
+      delay: 15
+      # The tool exits non-zero on gate failure and writes report.json regardless; the
+      # verdict is read from that file, never from the exit status.
+      failed_when: false
+
+    - name: Cleanup async job
+      ansible.builtin.async_status:
+        jid: "{{ sc_job.ansible_job_id }}"
+        mode: cleanup
+      changed_when: false
+      failed_when: false
+
+    # ---- 4. collect ------------------------------------------------------------
+    - name: Pull results to the controller
+      ansible.posix.synchronize:
+        mode: pull
+        src: "{{ drone_base_path }}/selfcalib_out/{{ sc_stamp }}/"
+        dest: "{{ host_base_path }}/calibrations/{{ sc_stamp }}/{{ ansible_hostname }}/"
+        recursive: yes
+        archive: yes
+        rsync_opts:
+          - "--mkpath"
+          # Trajectories and per-pass harvests are large and only useful on the drone
+          # for debugging; the chain, the report and the mount are what matter here.
+          - "--exclude=calib/"
+          - "--exclude=deploy_check/"
+          - "--exclude=*.tum"
+      delegate_to: localhost
+      failed_when: false
+
+    - name: Read the verdict
+      ansible.builtin.slurp:
+        src: "{{ drone_base_path }}/selfcalib_out/{{ sc_stamp }}/report.json"
+      register: sc_report
+      failed_when: false
+
+    - name: Record the verdict
+      ansible.builtin.set_fact:
+        sc_verdict: >-
+          {{ (sc_report.content | b64decode | from_json).diagnosis.verdict
+             if sc_report.content is defined else 'NO REPORT' }}
+
+    # ---- 5. deploy the healthy ones --------------------------------------------
+    # Timestamped, with a `current` symlink, mirroring the logs/latest idiom. Never
+    # overwritten: a bad calibration must not be able to replace a good one silently,
+    # and rolling back is then just repointing the symlink.
+    - name: Deploy the calibration
+      when:
+        - selfcalib_deploy | bool
+        - sc_verdict is search('HEALTHY') or (selfcalib_force | bool)
+      block:
+        - name: Write the flight configuration folder
+          ansible.builtin.shell: |
+            set -eo pipefail
+            source /opt/ros/humble/setup.bash
+            cd {{ perception_path }}/selfcalib
+            python3 tool/deploy_vio.py \
+              --calib-out {{ drone_base_path }}/selfcalib_out/{{ sc_stamp }} \
+              --out {{ drone_base_path }}/vio_calib/{{ sc_stamp }} \
+              {{ '--force' if (selfcalib_force | bool) else '' }}
+          args:
+            executable: /bin/bash
+          register: sc_deploy
+
+        - name: Point vio_calib/current at it
+          ansible.builtin.file:
+            src: "{{ drone_base_path }}/vio_calib/{{ sc_stamp }}"
+            dest: "{{ drone_base_path }}/vio_calib/current"
+            state: link
+            force: true
+
+    # ---- 6. put the drone back the way we found it ------------------------------
+    - name: Restart ROS packages
+      become: false
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: started
+        scope: user
+      failed_when: false
+
+
+- name: Report the fleet result
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Summarise every drone's report
+      ansible.builtin.command: >
+        python3 scripts/summarize_selfcalib.py
+        --collect-dir {{ host_base_path }}/calibrations/{{ hostvars[groups['drones'][0]]['sc_stamp'] }}
+        --json-out {{ host_base_path }}/calibrations/{{ hostvars[groups['drones'][0]]['sc_stamp'] }}/summary.json
+      args:
+        chdir: "{{ playbook_dir }}"
+      register: sc_summary
+      changed_when: false
+      failed_when: false
+
+    - name: Show it
+      ansible.builtin.debug:
+        msg: "{{ sc_summary.stdout_lines }}"
+
+    # Opt-in only. By default a drone that fails is reported, not fatal — the fleet
+    # result is the deliverable, and one bad vehicle must not mask the other ten.
+    - name: Fail if any drone is not HEALTHY
+      when: selfcalib_strict | default(false) | bool
+      ansible.builtin.fail:
+        msg: "one or more drones did not return HEALTHY — see the table above"
+      vars:
+        unhealthy: "{{ groups['drones'] | map('extract', hostvars, 'sc_verdict') | select('search', 'HEALTHY') | list }}"
+      failed_when: unhealthy | length < groups['drones'] | length
