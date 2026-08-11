@@ -106,6 +106,12 @@
           force: true
         loop: "{{ ros_packages_reg.files }}"
       
+  - name: Perception packages (VIO estimator + self-calibration tool)
+    ansible.builtin.include_tasks: "tasks/install-perception.yml"
+    vars:
+      base_path: "{{ drone_base_path }}"
+      ros_path: "{{ drone_ros_path }}"
+
   - name: MPC controller Task
     block:
 

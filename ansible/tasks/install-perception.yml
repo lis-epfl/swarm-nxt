@@ -1,0 +1,38 @@
+# Install the perception packages (VIO estimator + self-calibration tool).
+#
+# Included from BOTH drones_update.yml and host_computer.yml, so it takes the generic
+# base_path / ros_path pair rather than the drone_* or host_* variables directly —
+# the same convention drones_preflight.yml uses for ros_packages_start.sh. Callers set:
+#
+#   drones_update.yml   base_path: "{{ drone_base_path }}"  ros_path: "{{ drone_ros_path }}"
+#   host_computer.yml   base_path: "{{ host_base_path }}"   ros_path: "{{ host_ros_path }}"
+#
+# The host needs these too: offline calibration and log analysis run the same estimator
+# binary, and calibration and flight VIO must never diverge.
+#
+# Only vio/ holds ament packages. selfcalib/ is a plain python tool invoked by path, so
+# it must NOT be linked into src/ — colcon would try to build it and fail.
+
+- name: Get perception packages
+  ansible.builtin.git:
+    repo: https://github.com/lis-epfl/perception_pkgs
+    dest: "{{ base_path }}/repos/perception_pkgs"
+    version: main
+    force: yes
+
+- name: Link VIO packages into the workspace
+  # Linked rather than built into their own workspace: the workspace's existing
+  # `colcon build` then compiles them alongside everything else, and — the reason that
+  # matters — ov_msckf's find_package(px4_msgs QUIET) resolves against px4_msgs in this
+  # same workspace, so it compiles the typed SensorCombined path instead of silently
+  # falling back to raw CDR parsing.
+  ansible.builtin.file:
+    src: "{{ base_path }}/repos/perception_pkgs/vio/{{ item }}"
+    dest: "{{ ros_path }}/src/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - ov_core
+    - ov_init
+    - ov_msckf
+    - vio_deploy

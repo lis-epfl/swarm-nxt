@@ -80,6 +80,13 @@
       - docker-ce-cli=5:27.5*
       - libusb-1.0-0-dev
       - libboost-python-dev
+      # OpenVINS build dependencies (ov_core / ov_init / ov_msckf, used by VIO and
+      # by the self-calibration tool). ov_init's CMakeLists does find_package(Ceres
+      # REQUIRED), so without libceres-dev the workspace build fails outright rather
+      # than skipping the packages.
+      - libceres-dev
+      - libeigen3-dev
+      - libboost-all-dev
 
     state: present
     allow_downgrade: true
@@ -94,6 +101,15 @@
   ansible.builtin.pip:
     name:
       - jetson-stats
+
+# scipy is the only python dependency the self-calibration tool needs that is not
+# already present. Deliberately NOT installing opencv-python: this image builds
+# OpenCV into /usr/local for cv_bridge (see the vision_opencv task below), and the
+# pip wheel would shadow it with a different build.
+- name: Self-calibration python dependencies
+  ansible.builtin.pip:
+    name:
+      - scipy
 
 - name: Install ONNX Runtime (C++ Dev Files)
   become: true

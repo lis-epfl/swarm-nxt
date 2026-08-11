@@ -195,6 +195,15 @@
             force: true
           loop: "{{ ros_packages_reg.files }}"
     
+    - name: Perception packages (VIO estimator + self-calibration tool)
+      # The host needs these as well as the drones: offline calibration and log
+      # analysis run the same estimator binary the drones fly, and the two must not
+      # diverge. Same task file, host paths.
+      ansible.builtin.include_tasks: "tasks/install-perception.yml"
+      vars:
+        base_path: "{{ host_base_path }}"
+        ros_path: "{{ host_ros_path }}"
+
     - name: Run rosdep
       become: yes
       ansible.builtin.shell: |
