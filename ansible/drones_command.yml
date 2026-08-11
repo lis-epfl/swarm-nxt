@@ -23,21 +23,49 @@
     #   ansible.builtin.file:
     #     path: /home/lis/ros2_swarmnxt_ws/install/multi_agent_planner
     #     state: absent
-    - name: Stop ROS packages to flush logs
-      become: false  # user-scope systemd needs the lis session bus, not root's
-      ansible.builtin.systemd:
-        name: ros_packages
-        state: stopped
-        scope: user
+    # - name: Stop ROS packages to flush logs
+    #   become: false  # user-scope systemd needs the lis session bus, not root's
+    #   ansible.builtin.systemd:
+    #     name: ros_packages
+    #     state: stopped
+    #     scope: user
+    #
+    # - name: Wait for shutdown flush
+    #   ansible.builtin.pause:
+    #     seconds: 3
+    #
+    # - name: Remove logs directory
+    #   ansible.builtin.file:
+    #     path: /home/lis/logs
+    #     state: absent
 
-    - name: Wait for shutdown flush
-      ansible.builtin.pause:
-        seconds: 3
+    # ---- backfill the perception dependencies on already-provisioned drones ----
+    # These live in tasks/setup-common.yml, which is only included from
+    # drone_setup.yml — the one-time provisioning playbook. A drone that was set up
+    # before the perception packages existed therefore never gets them, and
+    # drones_update.yml will happily clone and symlink ov_core/ov_init/ov_msckf and
+    # then fail the whole workspace build, because ov_init does
+    # find_package(Ceres REQUIRED).
+    #
+    # Re-running drone_setup.yml would also work but does far more (kernel patch,
+    # docker, jetpack, ROS install). This is the same package list, nothing else.
+    # Safe to run repeatedly; it is a no-op once the packages are present.
+    # Delete this block once every drone has been re-provisioned.
+    - name: Install perception build dependencies
+      ansible.builtin.apt:
+        name:
+          - libceres-dev
+          - libeigen3-dev
+          - libboost-all-dev
+        state: present
+        update_cache: true
 
-    - name: Remove logs directory
-      ansible.builtin.file:
-        path: /home/lis/logs
-        state: absent
+    - name: Install self-calibration python dependencies
+      # NOT opencv-python: this image builds OpenCV into /usr/local for cv_bridge and
+      # the pip wheel would shadow it.
+      ansible.builtin.pip:
+        name:
+          - scipy
 
     # - name: Reboot
     #   ansible.builtin.reboot:
