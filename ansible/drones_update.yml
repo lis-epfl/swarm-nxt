@@ -184,7 +184,13 @@
       jid: "{{ ros_build_async.ansible_job_id }}"
     register: build_ros_result
     until: build_ros_result.finished
-    retries: 100
+    # 240 x 10 s = 40 min, matching `async: 2400` on the task above. It was 100 (~16.7
+    # min) while async allowed 40, so a build between those two figures made ansible
+    # stop waiting and report failure while colcon carried on to completion on the
+    # drone -- a reporting failure indistinguishable from a real one.
+    # Measured on an Orin NX (JetPack 6.2.1, 8 cores): 44 packages in 16 min 9 s, and
+    # that run skipped multi_agent_planner. A complete build exceeds the old ceiling.
+    retries: 240
     delay: 10
 
   - name: Cleanup async
