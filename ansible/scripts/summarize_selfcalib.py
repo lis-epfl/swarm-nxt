@@ -23,7 +23,7 @@ import sys
 # the numbers printed here are only labels -- pass/fail always comes from report.json.
 THR = {
     'sc': ('self-consistency', 0.10),
-    'settle': ('within-pass settling', 0.032),
+    'settle': ('within-pass settling', 0.02),
     'focal': ('focal %', 2.0),
     'k1': ('k1', 0.06),
     'cxcy': ('c vs circle px', 120.0),
@@ -117,7 +117,7 @@ def main():
     hdr = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s  %s'
            % ('DRONE', 'VERDICT', 'PASS', 'SETTLE', 'SC', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'FAILS'))
     sub = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s'
-           % ('', '', '', '/0.032', '/0.10', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20'))
+           % ('', '', '', '/0.02', '/0.10', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20'))
     print(hdr)
     print(sub)
     print('-' * len(hdr))
