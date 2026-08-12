@@ -114,10 +114,10 @@ def main():
 
     print('')
     print('SELF-CALIBRATION — %s' % a.collect_dir)
-    hdr = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s %-17s  %s'
-           % ('DRONE', 'VERDICT', 'PASS', 'SETTLE', 'SC', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'ATE SOURCE', 'FAILS'))
-    sub = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s %-17s'
-           % ('', '', '', '/0.02', '/0.10', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20', ''))
+    hdr = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s  %s'
+           % ('DRONE', 'VERDICT', 'PASS', 'SETTLE', 'SC', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'FAILS'))
+    sub = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s'
+           % ('', '', '', '/0.02', '/0.10', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20'))
     print(hdr)
     print(sub)
     print('-' * len(hdr))
@@ -131,7 +131,7 @@ def main():
             continue
         f = r['fails']
         short = r['verdict'].split(':')[0]
-        print('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s %-17s  %s' % (
+        print('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s  %s' % (
             r['drone'], short, r['passes'] if r['passes'] else '-',
             fmt(r['settle'], '%.4f', mark(r['settle'], THR['settle'][1],
                                           r['settle'] is not None and r['settle'] >= THR['settle'][1])),
@@ -142,7 +142,7 @@ def main():
             fmt(r['toff'], '%.2f', mark(r['toff'], THR['toff'][1], 'toff' in f)),
             ('skipped' if r['ate_skipped'] else
              fmt(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
-            (r['ate_source'] or '-')[:17], ','.join(f) if f else '-'))
+            ','.join(f) if f else '-'))
 
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
