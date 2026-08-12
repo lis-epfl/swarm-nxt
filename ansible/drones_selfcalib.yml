@@ -31,7 +31,11 @@
     # Seconds of the recording to use. Empty = all of it. The contract needs only a
     # static start plus ~10-15 s of motion, and cost scales with length: on an Orin NX
     # a 60 s recording takes ~13 min (3 estimator passes at ~4x real time).
-    selfcalib_window: ""
+    # Seconds of the bag to use; "" means the whole recording. 20 s is the sweet
+    # spot: it settles inside pass 1 with a 12x margin, so no second pass is run.
+    # A SHORTER window is not faster -- 15 s does not settle, needs 2 passes, and
+    # ends up slower overall (76 s) than 20 s in one pass (60 s).
+    selfcalib_window: "20"
     # Certify the ATE on a dedicated extra pass running the published chain under the
     # flight config + priors. Costs ~a third of the runtime. Off by default: under the
     # flight-config loop the last warm-start pass tracks it to a median 1.17x with
