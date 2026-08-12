@@ -23,6 +23,7 @@ import sys
 # the numbers printed here are only labels -- pass/fail always comes from report.json.
 THR = {
     'sc': ('self-consistency', 0.10),
+    'settle': ('within-pass settling', 0.02),
     'focal': ('focal %', 2.0),
     'k1': ('k1', 0.06),
     'cxcy': ('c vs circle px', 120.0),
@@ -64,6 +65,9 @@ def load(collect_dir):
             'verdict': (d.get('verdict') or r.get('verdict') or '?'),
             'passes': r.get('passes_run') or r.get('converged_at_pass'),
             'sc': d.get('self_consistency', {}).get('worst_resid'),
+            # The number the verdict now turns on: did the calibration stop moving
+            # inside the pass the certificates were read from.
+            'settle': (d.get('settled') or {}).get('worst_resid'),
             'focal': dist.get('focal_vs_fleet_pct'),
             'k1': dist.get('k1_vs_fleet'),
             'cxcy': dist.get('cxcy_vs_circlefit_px'),
@@ -110,10 +114,10 @@ def main():
 
     print('')
     print('SELF-CALIBRATION — %s' % a.collect_dir)
-    hdr = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %8s  %s'
-           % ('DRONE', 'VERDICT', 'PASS', 'SC', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'SOURCE', 'FAILS'))
-    sub = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %8s'
-           % ('', '', '', '/0.10', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20', ''))
+    hdr = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s %-17s  %s'
+           % ('DRONE', 'VERDICT', 'PASS', 'SETTLE', 'SC', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'ATE SOURCE', 'FAILS'))
+    sub = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s %-17s'
+           % ('', '', '', '/0.02', '/0.10', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20', ''))
     print(hdr)
     print(sub)
     print('-' * len(hdr))
@@ -127,8 +131,10 @@ def main():
             continue
         f = r['fails']
         short = r['verdict'].split(':')[0]
-        print('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %8s  %s' % (
+        print('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s %-17s  %s' % (
             r['drone'], short, r['passes'] if r['passes'] else '-',
+            fmt(r['settle'], '%.4f', mark(r['settle'], THR['settle'][1],
+                                          r['settle'] is not None and r['settle'] >= THR['settle'][1])),
             fmt(r['sc'], '%.4f', mark(r['sc'], THR['sc'][1], r['sc'] is not None and r['sc'] >= THR['sc'][1])),
             fmt(r['focal'], '%.2f', mark(r['focal'], THR['focal'][1], 'focal' in f)),
             fmt(r['rot'], '%.2f', mark(r['rot'], THR['rot'][1], 'extrinsics' in f)),
@@ -136,7 +142,7 @@ def main():
             fmt(r['toff'], '%.2f', mark(r['toff'], THR['toff'][1], 'toff' in f)),
             ('skipped' if r['ate_skipped'] else
              fmt(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
-            (r['ate_source'] or '-')[:8], ','.join(f) if f else '-'))
+            (r['ate_source'] or '-')[:17], ','.join(f) if f else '-'))
 
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
