@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Flying - SwarmNxt</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/custom.css" rel="stylesheet" />
+        <link href="../css/terminal-player.css" rel="stylesheet" />
+        <link href="../css/asciinema-player.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Flying";
+        var mkdocs_page_input_path = "flying.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> SwarmNxt
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../infra-setup/">Infrastructure Setup</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../drone-setup/">Drone Build Instructions</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../remote-control-setup/">Remote Control Setup</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Flying</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#pre-flight-checklist">Pre-Flight Checklist</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#optional-run-an-update">Optional: Run an Update</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#post-flight-checklist">Post-Flight Checklist</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../software-common-tasks/">Common Software Tasks</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">SwarmNxt</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Flying</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/lis-epfl/swarm-nxt/edit/main/docs/flying.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="flying">Flying</h1>
+<p>When connecting your Host PC via LAN to the router, make sure to turn off the WiFi of the Host PC to avoid interference with ROS2.</p>
+<h2 id="pre-flight-checklist">Pre-Flight Checklist</h2>
+<p>The takeoff altitude and other takeoff parameters are set in <code>ros_packages/drone_state_manager_ros2/config/drone_state_manager_params.yml</code>. You need to change it on all the drones before you run the preflight check. For this you can change it locally on your host, and then modify the <code>drones_command.yml</code> playbook to send the files to all drones (examples of sending files exist already in the playbook), and then run the playbook. Then you can proceed to the next steps.</p>
+<ol>
+<li>Check that the rotors are not obstructed by any cables, and all cables are well-connected</li>
+<li>Ensure that the <code>inventory.ini</code> file has all of the hostnames of the drones under <code>[drones]</code>. This selects the drones that the operators are done on.</li>
+<li>Run the pre-flight ansible: <code>cd /path/to/swarmnxtrepo/ansible &amp;&amp; ansible-playbook -i inventory.ini drones_preflight.yml</code>. This will start or check:<ol>
+<li>The <code>micro_xrce</code> agent to get ROS2 access to PX4 outputs/inputs.</li>
+<li>The autonomy stack (MPC, Planner, ...).</li>
+<li>Checks if chronyc is tracking.</li>
+<li>Checks camera clocks are synced and in focus (if <code>enable_cameras</code> or <code>enable_depth</code> is set).</li>
+</ol>
+</li>
+<li>On the host PC open a web browser and go to <code>localhost:8080</code>, where you will see a dashboard (picture below) for controlling the drones along with other important information (latency, battery level, ...). Check that the latency is stable between each drone and the ground station, and that the batteries are at least 80%. </li>
+<li>Check that the EKF output is working well for each drone (only needed the first time you fly the drone): <code>ROS_DOMAIN_ID=1 ros2 launch foxglove_bridge foxglove_bridge_launch.xml</code> (domain id = 1 to check for nxt1). Then launch Foxglove and subscribe to the ekf output and to the MoCap output and make sure they match as you move the drone around manually.</li>
+<li>Use the dashboard to arm, take off, and land each drone individually before sending global commands.</li>
+</ol>
+<p><img alt="" src="../images/dashboard.png" /></p>
+<h2 id="optional-run-an-update">Optional: Run an Update</h2>
+<p>You can run an update before runing the preflight check by going to the <code>ansible/</code> directory and running the following command: </p>
+<pre><code class="language-bash">ansible-playbook -i inventory.ini drones_update.yml
+</code></pre>
+<p>This will update apt repositories, pull the latest version of ros packages (only those that changed), and build them. </p>
+<!-- ```asciinema-player -->
+<!-- { -->
+<!--     "file": "/swarm-nxt/demos/drones_update.cast" -->
+<!-- } -->
+<!-- ``` -->
+
+<h2 id="post-flight-checklist">Post-Flight Checklist</h2>
+<p>After the flight is done and you have disarmed the drones, you can run the post-flight script to copy the rosbags and logging files from the drones to the host PC <code>ansible-playbook -i inventory.ini drones_postflight.yml</code>. They will be in <code>{host_base_path}/consolidated_logs</code>. The topics recorded by the rosbags are defined in <code>group_vas/all</code> under <code>drone_rosbag_topics</code>.</p>
+<p>To shutdown the drones before changing the batteries, you can run <code>ansible-playbook -i inventory.ini drones_shutdown.yml</code>.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../remote-control-setup/" class="btn btn-neutral float-left" title="Remote Control Setup"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../software-common-tasks/" class="btn btn-neutral float-right" title="Common Software Tasks">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/lis-epfl/swarm-nxt" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../remote-control-setup/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../software-common-tasks/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../js/mathjax.js"></script>
+      <script src="../js/copy-button.js"></script>
+      <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      <script src="../js/asciinema-player.min.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
