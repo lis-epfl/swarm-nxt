@@ -144,6 +144,26 @@ def main():
              fmt(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
             ','.join(f) if f else '-'))
 
+    print('')
+    print('LEGEND  (a value is followed by ! when it is the metric that failed, ~ when past 75% of its budget;')
+    print('         the /x line under each header is that budget, mirrored from selfcalib/tool/diagnose.py)')
+    print('  DRONE     inventory hostname (the drone that calibrated itself)')
+    print('  VERDICT   HEALTHY = certified, deployed to vio_calib/current | FLY-AGAIN = calibration not converged /')
+    print('            not self-consistent (fly a longer, static-start recording) | HARDWARE-CHANGED = converged but')
+    print('            outside the fleet distribution (inspect the FAILS camera; -e selfcalib_force=true accepts it)')
+    print('            | PLATFORM-DEFECT = calibration fine, trajectory bad (timing/IMU; repair, not recalibrate)')
+    print('            | GATE-FAIL = recording rejected before estimation | NO RESULT = the run wrote no report')
+    print('  PASS      warm-start estimator passes run (1 = settled on the first pass)')
+    print('  SETTLE    within-pass settling: how much the online calibration still moved over the last 5')
+    print('            snapshots of the final pass (weighted residual; 0 = frozen). THE convergence certificate')
+    print('  SC        self-consistency: the same residual between the last two passes (weaker, endpoint-only)')
+    print('  FOCAL%    focal length vs the fleet lens-batch mean, in %')
+    print('  ROT°      camera-IMU extrinsic rotation vs the fleet mean for that mount position, degrees')
+    print('  TRANS cm  camera-IMU extrinsic translation vs the fleet mean, cm')
+    print('  t_d ms    camera-IMU time offset vs the fleet mean, ms')
+    print('  ATE m     post-takeoff trajectory RMSE vs ground truth after SE(3) alignment, metres --')
+    print('            "skipped" when the recording carries no mocap (then PLATFORM-DEFECT cannot be detected)')
+    print('  FAILS     which in-distribution checks failed: focal, k1, cxcy, extrinsics, toff')
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
     print('%d HEALTHY (deployed) · %d other · %d no result'
