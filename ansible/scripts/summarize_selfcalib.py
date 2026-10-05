@@ -18,12 +18,12 @@ import json
 import os
 import sys
 
-# Thresholds mirror selfcalib/tool/diagnose.py. Duplicated deliberately: this script
-# runs on the controller, which need not have the tool importable. If they ever drift,
-# the numbers printed here are only labels -- pass/fail always comes from report.json.
+# Thresholds mirror selfcalib/tool (STEP_STOP in run_tool.py, the rest in diagnose.py).
+# Duplicated deliberately: this script runs on the controller, which need not have the
+# tool importable. If they ever drift, the numbers printed here are only labels --
+# pass/fail always comes from report.json.
 THR = {
-    'sc': ('self-consistency', 0.10),
-    'settle': ('within-pass settling', 0.02),
+    'step': ('between-pass step, envelopes', 2.0),
     'focal': ('focal %', 2.0),
     'k1': ('k1', 0.06),
     'cxcy': ('c vs circle px', 120.0),
@@ -46,6 +46,8 @@ def mark(value, limit, failed):
 def load(collect_dir):
     rows = []
     for drone in sorted(os.listdir(collect_dir)):
+        if not os.path.isdir(os.path.join(collect_dir, drone)):
+            continue        # summary.json from an earlier run over this directory is not a drone
         rp = os.path.join(collect_dir, drone, 'report.json')
         if not os.path.isfile(rp):
             # A drone that produced no report at all is a result too -- it must appear
@@ -57,17 +59,22 @@ def load(collect_dir):
         except Exception as e:
             rows.append({'drone': drone, 'missing': True, 'err': str(e)[:40]})
             continue
-        d = r.get('diagnosis', {})
-        dist = d.get('in_distribution', {})
-        ate = d.get('ate', {})
+        d = r.get('diagnosis') or {}
+        dist = d.get('in_distribution') or {}
+        ate = d.get('ate') or {}
+        sc = d.get('self_consistency') or {}
         rows.append({
             'drone': r.get('drone', drone),
-            'verdict': (d.get('verdict') or r.get('verdict') or '?'),
+            # The top-level verdict is the tool's own and the one deploy_vio.py gates on.
+            # It is in every report; a run that stopped before the diagnosis (GATE-FAIL,
+            # ERROR) has no diagnosis block to read one from.
+            'verdict': (r.get('verdict') or d.get('verdict') or '?'),
             'passes': r.get('passes_run') or r.get('converged_at_pass'),
-            'sc': d.get('self_consistency', {}).get('worst_resid'),
-            # The number the verdict now turns on: did the calibration stop moving
-            # inside the pass the certificates were read from.
-            'settle': (d.get('settled') or {}).get('worst_resid'),
+            # The tool's stopping rule, and so its convergence certificate: the largest
+            # movement of any parameter type between the last two passes, in envelopes.
+            'step': sc.get('max_last_step'),
+            'step_types': sc.get('last_step_envelopes') or {},
+            'never_converged': bool(r.get('never_converged')),
             'focal': dist.get('focal_vs_fleet_pct'),
             'k1': dist.get('k1_vs_fleet'),
             'cxcy': dist.get('cxcy_vs_circlefit_px'),
@@ -76,6 +83,7 @@ def load(collect_dir):
             'toff': dist.get('toff_vs_fleet_ms'),
             'ate': ate.get('postg_m') if ate.get('postg_m') is not None else ate.get('global_m'),
             'ate_skipped': ate.get('skipped', False),
+            'ate_failed': ate.get('pass') is False,
             'fails': dist.get('fails', []),
             'ate_source': r.get('ate_source'),
             'deploy_err': r.get('deploy_check_error'),
@@ -114,10 +122,10 @@ def main():
 
     print('')
     print('SELF-CALIBRATION — %s' % a.collect_dir)
-    hdr = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s  %s'
-           % ('DRONE', 'VERDICT', 'PASS', 'SETTLE', 'SC', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'FAILS'))
-    sub = ('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s'
-           % ('', '', '', '/0.02', '/0.10', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20'))
+    hdr = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s  %s'
+           % ('DRONE', 'VERDICT', 'PASS', 'STEP', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'FAILS'))
+    sub = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s'
+           % ('', '', '', '/2.0', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20'))
     print(hdr)
     print(sub)
     print('-' * len(hdr))
@@ -131,11 +139,10 @@ def main():
             continue
         f = r['fails']
         short = r['verdict'].split(':')[0]
-        print('%-8s %-17s %4s %8s %7s %7s %7s %8s %7s %7s  %s' % (
+        print('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s  %s' % (
             r['drone'], short, r['passes'] if r['passes'] else '-',
-            fmt(r['settle'], '%.4f', mark(r['settle'], THR['settle'][1],
-                                          r['settle'] is not None and r['settle'] >= THR['settle'][1])),
-            fmt(r['sc'], '%.4f', mark(r['sc'], THR['sc'][1], r['sc'] is not None and r['sc'] >= THR['sc'][1])),
+            fmt(r['step'], '%.2f', mark(r['step'], THR['step'][1],
+                                        r['step'] is not None and r['step'] > THR['step'][1])),
             fmt(r['focal'], '%.2f', mark(r['focal'], THR['focal'][1], 'focal' in f)),
             fmt(r['rot'], '%.2f', mark(r['rot'], THR['rot'][1], 'extrinsics' in f)),
             fmt(r['trans'], '%.2f', mark(r['trans'], THR['trans'][1], 'extrinsics' in f)),
@@ -146,24 +153,27 @@ def main():
 
     print('')
     print('LEGEND  (a value is followed by ! when it is the metric that failed, ~ when past 75% of its budget;')
-    print('         the /x line under each header is that budget, mirrored from selfcalib/tool/diagnose.py)')
+    print('         the /x line under each header is that budget, mirrored from the selfcalib tool)')
     print('  DRONE     inventory hostname (the drone that calibrated itself)')
-    print('  VERDICT   HEALTHY = certified, deployed to vio_calib/current | FLY-AGAIN = calibration not converged /')
-    print('            not self-consistent (fly a longer, static-start recording) | HARDWARE-CHANGED = converged but')
-    print('            outside the fleet distribution (inspect the FAILS camera; -e selfcalib_force=true accepts it)')
-    print('            | PLATFORM-DEFECT = calibration fine, trajectory bad (timing/IMU; repair, not recalibrate)')
-    print('            | GATE-FAIL = recording rejected before estimation | NO RESULT = the run wrote no report')
-    print('  PASS      warm-start estimator passes run (1 = settled on the first pass)')
-    print('  SETTLE    within-pass settling: how much the online calibration still moved over the last 5')
-    print('            snapshots of the final pass (weighted residual; 0 = frozen). THE convergence certificate')
-    print('  SC        self-consistency: the same residual between the last two passes (weaker, endpoint-only)')
+    print('  VERDICT   HEALTHY = certified, deployed to vio_calib/current | FLY-AGAIN = the calibration was still')
+    print('            moving between passes when the pass limit was reached (fly again) | HARDWARE-CHANGED =')
+    print('            converged but outside the fleet distribution (inspect what FAILS names;')
+    print('            -e selfcalib_force=true accepts it) | PLATFORM-DEFECT = calibration fine, trajectory bad')
+    print('            (timing/IMU; repair, not recalibrate) | GATE-FAIL = recording rejected before estimation')
+    print('            (no still start; record again) | ERROR = the estimator produced nothing (reason below)')
+    print('            | NO RESULT = the run wrote no report')
+    print('  PASS      estimator passes run; each one restarts from the calibration the previous one ended on')
+    print('  STEP      how far the calibration moved between the last two passes: the largest of principal point,')
+    print('            focal length, distortion, rotation, translation and t_d, each counted in its own envelope')
+    print('            (2.5 px, 0.5 %, 0.001, 0.35°, 2.5 cm, 6 ms). The run stops, converged, at the first pass')
+    print('            where this is <= 2; that last pass is the published calibration')
     print('  FOCAL%    focal length vs the fleet lens-batch mean, in %')
     print('  ROT°      camera-IMU extrinsic rotation vs the fleet mean for that mount position, degrees')
     print('  TRANS cm  camera-IMU extrinsic translation vs the fleet mean, cm')
     print('  t_d ms    camera-IMU time offset vs the fleet mean, ms')
     print('  ATE m     post-takeoff trajectory RMSE vs ground truth after SE(3) alignment, metres --')
     print('            "skipped" when the recording carries no mocap (then PLATFORM-DEFECT cannot be detected)')
-    print('  FAILS     which in-distribution checks failed: focal, k1, cxcy, extrinsics, toff')
+    print('  FAILS     which in-distribution checks failed: focal, distortion, principal_point, extrinsics, toff')
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
     print('%d HEALTHY (deployed) · %d other · %d no result'
@@ -179,14 +189,25 @@ def main():
         print('%s  %s' % (r['drone'], r['verdict']))
         bad = [k for k, v in r['gates'].items() if v is False]
         if bad:
+            # a GATE-FAIL verdict already carries the gate's reason; do not print it twice
             print('   gates failed: %s%s' % (','.join(bad),
-                                             ('  — ' + r['gate_reason']) if r['gate_reason'] else ''))
+                                             ('  — ' + r['gate_reason'])
+                                             if r['gate_reason'] and r['gate_reason'] not in r['verdict'] else ''))
+        if r['verdict'].startswith('ERROR'):
+            print('   the estimator log is on the drone: <base>/selfcalib_out/<stamp>/calib/out/run.log')
+        if r['step_types']:
+            print('   last step, in envelopes (converged at <= %.0f): %s'
+                  % (THR['step'][1], '  '.join('%s %.2f%s' % (k, v, '!' if v > THR['step'][1] else '')
+                                              for k, v in r['step_types'].items())))
         if r['ate_skipped']:
             print('   ATE: skipped (no ground truth in the recording) — the verdict cannot')
             print('        distinguish a calibration problem from a platform one')
         elif r['ate'] is not None and r['ate'] >= THR['ate'][1]:
             print('   ATE %.3f m exceeds %.2f m — the trajectory, not necessarily the calibration'
                   % (r['ate'], THR['ate'][1]))
+        elif r['ate'] is None and r['ate_failed']:
+            print('   ATE could not be computed — too few estimated poses overlap the ground truth (almost')
+            print('        no flight in the data used), so this verdict says nothing about the platform')
         if r['deploy_err']:
             print('   deployment check failed (%s) — ATE above is the CALIBRATION pass,' % r['deploy_err'][:60])
             print('        which reads WORSE than deployment')

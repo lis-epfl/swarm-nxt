@@ -11,10 +11,15 @@
 # controller would mean pulling that per drone over WiFi; only report.json and the
 # published chain (a few KB) come back.
 #
-# PRECONDITION worth knowing before you fly: the camera recorder starts ~5 s after
-# ros_packages, and the static-start gate needs >=1.5 s of stillness WITH images. Hold
-# the vehicle still for ~10 s after the stack starts, or the run fails at the gate with
-# what looks like an unrelated complaint.
+# DATA USED: from the instant every stream is live (the camera recorder comes up a few
+# seconds after the IMU bag) up to selfcalib_window seconds after liftoff, i.e. after the
+# takeoff the PX4 land detector reports in the recording. The rest of the flight is not read.
+#
+# PRECONDITION worth knowing before you fly: the estimator initialises from a STILL
+# vehicle, and the static-start gate rejects a recording unless it finds a 3 s still
+# window ending within 5 s of that first instant. Leave the vehicle untouched on the
+# ground for ~15 s after the stack starts before arming; one that is moved or takes off
+# sooner comes back GATE-FAIL and has to be flown again.
 
 - name: Self-calibrate the fleet
   hosts: drones
@@ -28,13 +33,12 @@
     # A bad verdict on one drone must never abort the other ten. Set true only if you
     # want the play to exit non-zero when any drone fails to come back HEALTHY.
     selfcalib_strict: false
-    # Seconds of the recording to use. Empty = all of it. The contract needs only a
-    # static start plus ~10-15 s of motion, and cost scales with length: on an Orin NX
-    # a 60 s recording takes ~13 min (3 estimator passes at ~4x real time).
-    # Seconds of the bag to use; "" means the whole recording. 20 s is the sweet
-    # spot: it settles inside pass 1 with a 12x margin, so no second pass is run.
-    # A SHORTER window is not faster -- 15 s does not settle, needs 2 passes, and
-    # ends up slower overall (76 s) than 20 s in one pass (60 s).
+    # Seconds of FLIGHT to use, counted from liftoff (the takeoff the PX4 land detector
+    # reports in the recording). The tool reads from the instant every stream is live up
+    # to this long after liftoff, so time spent on the ground before takeoff does not eat
+    # into it. 20 is the tool's own default and the point it was validated at; "" leaves
+    # the choice to the tool. Cost scales with the span read: every estimator pass replays
+    # all of it, and a run is at least two passes.
     selfcalib_window: "20"
     # Certify the ATE on a dedicated extra pass running the published chain under the
     # flight config + priors. Costs ~a third of the runtime. Off by default: under the
@@ -115,7 +119,7 @@
           --imu-chain fleet_reference/{{ sc_ref }}/kalibr_imu_chain.yaml \
           --out {{ drone_base_path }}/selfcalib_out/{{ sc_stamp }} \
           --fleet-exclude {{ ansible_hostname }} \
-          {{ ('--window ' ~ selfcalib_window) if selfcalib_window | string | length > 0 else '' }} \
+          {{ ('--after-takeoff ' ~ selfcalib_window) if selfcalib_window | string | length > 0 else '' }} \
           {{ '--frozen-check' if (selfcalib_frozen_check | bool) else '' }}
       args:
         executable: /bin/bash
@@ -172,10 +176,14 @@
       register: sc_report
       failed_when: false
 
+    # The TOP-LEVEL verdict: it is in every report the tool writes and is the one
+    # deploy_vio.py gates on. diagnosis.verdict exists only when the run got as far as the
+    # diagnosis -- a GATE-FAIL or ERROR report has no diagnosis block at all, so reading
+    # it there fails this task on exactly those drones and skips their ROS restart below.
     - name: Record the verdict
       ansible.builtin.set_fact:
         sc_verdict: >-
-          {{ (sc_report.content | b64decode | from_json).diagnosis.verdict
+          {{ ((sc_report.content | b64decode | from_json).verdict | default('NO VERDICT', true))
              if sc_report.content is defined else 'NO REPORT' }}
 
     # ---- 5. deploy the healthy ones --------------------------------------------
