@@ -70,7 +70,10 @@
       repo: https://github.com/ctoumieh/multi_agent_pkgs/
       dest: "{{ drone_ros_path }}/src/multi_agent_pkgs"
       force: yes
-      version: d36726058b950e283dc85a1f73d61a4155aa8daf
+      # Tip of the branch `swarm-nxt`: d367260, the commit pinned here until now, plus
+      # the fix for the planner dying on start planning. A commit rather than the branch
+      # name, so what a drone runs changes only when this line does.
+      version: 353ad00240ad95f7c29700eeb52731dc6f08c608
 
   - name: SwarmNXT Nodes
     block: 

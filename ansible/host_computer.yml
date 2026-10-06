@@ -127,7 +127,8 @@
             repo: https://github.com/ctoumieh/multi_agent_pkgs
             dest: "{{ host_ros_path }}/src/multi_agent_pkgs"
             force: yes
-            version: d36726058b950e283dc85a1f73d61a4155aa8daf
+            # the same commit drones_update.yml gives the drones (branch `swarm-nxt`)
+            version: 353ad00240ad95f7c29700eeb52731dc6f08c608
 
         - name: Remove unwanted directories from planner packages
           file:
