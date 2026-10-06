@@ -89,6 +89,9 @@ def load(collect_dir):
             'ate_source': r.get('ate_source'),
             'deploy_err': r.get('deploy_check_error'),
             'mount': r.get('mount', {}),
+            # Initial pose fixed to the ground truth (no fitted alignment), mount rotation applied.
+            # Absent without ground truth, and when the tool skipped the mount solve.
+            'noumcal': (r.get('mount') or {}).get('A_mounted_m'),
             'gates': {k: r.get('gate_' + k, {}).get('pass') for k in ('static', 'timing', 'image')},
             'gate_reason': r.get('gate_static', {}).get('reason', ''),
             # the real directory on the drone (the playbook resolves logs/latest before it moves)
@@ -127,8 +130,9 @@ def main():
 
     print('')
     print('SELF-CALIBRATION — %s' % a.collect_dir)
-    hdr = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s  %s'
-           % ('DRONE', 'VERDICT', 'PASS', 'STEP', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'FAILS'))
+    hdr = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %9s  %s'
+           % ('DRONE', 'VERDICT', 'PASS', 'STEP', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'NOUMCAL m',
+              'FAILS'))
     sub = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s'
            % ('', '', '', '/2.0', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20'))
     print(hdr)
@@ -144,7 +148,7 @@ def main():
             continue
         f = r['fails']
         short = r['verdict'].split(':')[0]
-        print('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s  %s' % (
+        print('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %9s  %s' % (
             r['drone'], short, r['passes'] if r['passes'] else '-',
             fmt(r['step'], '%.2f', mark(r['step'], THR['step'][1],
                                         r['step'] is not None and r['step'] > THR['step'][1])),
@@ -154,6 +158,7 @@ def main():
             fmt(r['toff'], '%.2f', mark(r['toff'], THR['toff'][1], 'toff' in f)),
             ('skipped' if r['ate_skipped'] else
              fmt(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
+            fmt(r['noumcal'], '%.4f', ' '),
             ','.join(f) if f else '-'))
 
     print('')
@@ -179,6 +184,9 @@ def main():
     print('  t_d ms    camera-IMU time offset vs the fleet mean, ms')
     print('  ATE m     post-takeoff trajectory RMSE vs ground truth after SE(3) alignment, metres --')
     print('            "skipped" when the recording carries no mocap (then PLATFORM-DEFECT cannot be detected)')
+    print('  NOUMCAL m the same trajectory with its initial pose fixed to the ground truth instead of fitted, and')
+    print('            the mount rotation solved on this flight applied; metres, no budget. It hangs on that first')
+    print('            pose, so it reads higher than ATE. "-" without ground truth or when the mount solve was skipped')
     print('  FAILS     which in-distribution checks failed: focal, distortion, principal_point, extrinsics, toff')
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
