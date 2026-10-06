@@ -6,6 +6,8 @@
 #   ansible-playbook drones_selfcalib.yml -e selfcalib_log_dir=/home/lis/logs/2026/06/23/174842
 #   ansible-playbook drones_selfcalib.yml -e selfcalib_deploy=false      # measure only
 #   ansible-playbook drones_selfcalib.yml -e selfcalib_force=true        # deploy non-HEALTHY too
+#   ansible-playbook drones_selfcalib.yml --limit nxt3.local -e selfcalib_min_still=4.5 \
+#       -e selfcalib_log_dir=/home/lis/logs/2026/06/23/174842          # re-run one flight, shorter standstill
 #
 # Runs ON the drones. A recording is ~2 GB of camera mcap, so calibrating on the
 # controller would mean pulling that per drone over WiFi; only report.json and the
@@ -16,10 +18,12 @@
 # takeoff the PX4 land detector reports in the recording. The rest of the flight is not read.
 #
 # PRECONDITION worth knowing before you fly: the estimator initialises from a STILL
-# vehicle, and the static-start gate rejects a recording unless it finds a 3 s still
-# window ending within 5 s of that first instant. Leave the vehicle untouched on the
-# ground for ~15 s after the stack starts before arming; one that is moved or takes off
-# sooner comes back GATE-FAIL and has to be flown again.
+# vehicle and must have settled before it moves. The static-start gate rejects a
+# recording unless the vehicle stands still for 6 s from that first instant: 3 s for the
+# estimator to start (that window has to end within the first 5 s) and 3 s more to settle.
+# Idling motors do not count as motion; being carried, pushed or lifting off does. Leave
+# the vehicle untouched on the ground for ~15 s after the stack starts before taking off;
+# one that is moved or takes off sooner comes back GATE-FAIL and has to be flown again.
 
 - name: Self-calibrate the fleet
   hosts: drones
@@ -40,6 +44,14 @@
     # the choice to the tool. Cost scales with the span read: every estimator pass replays
     # all of it, and a run is at least two passes.
     selfcalib_window: "20"
+    # Seconds of standstill the recording must begin with, checked by the tool's
+    # static-start gate before any estimator work. "" leaves it to the tool (6). The tool's
+    # measurements put the floor at 4.5: results matched a full standstill from there on,
+    # so 4.5 is the value for re-running a recording rejected for taking off a little too
+    # early. Below that the estimator starts as the vehicle lifts off. A re-run has to
+    # name that recording with selfcalib_log_dir (the controller table prints the
+    # directory): by then logs/latest points at the recording the restart began.
+    selfcalib_min_still: ""
     # Certify the ATE on a dedicated extra pass running the published chain under the
     # flight config + priors. Costs ~a third of the runtime. Off by default: under the
     # flight-config loop the last warm-start pass tracks it to a median 1.17x with
@@ -76,17 +88,25 @@
           -e selfcalib_log_dir=/home/lis/logs/YYYY/MM/DD/HHMMSS
       when: not log_dir_stat.stat.exists
 
+    # logs/latest is a symlink, and every start of ros_packages points it at a NEW
+    # directory -- the restart at the end of this play included. Hand the tool the real
+    # directory instead: report.json then names the recording it was computed from, and
+    # a later run can be pointed at that same recording with -e selfcalib_log_dir=...
+    - name: Pin the recording to its real directory
+      ansible.builtin.set_fact:
+        sc_recording: "{{ log_dir_stat.stat.lnk_source | default(selfcalib_log_dir) }}"
+
     # The tool reads bag/ and cams/ natively; both must be present or it is not a
     # flight recording.
     - name: Check the recording has both streams
       ansible.builtin.stat:
-        path: "{{ selfcalib_log_dir }}/{{ item }}"
+        path: "{{ sc_recording }}/{{ item }}"
       register: stream_stat
       loop: [bag, cams]
 
     - name: Fail if a stream is missing
       ansible.builtin.fail:
-        msg: "{{ selfcalib_log_dir }} has no {{ item.item }}/ — not a flight recording"
+        msg: "{{ sc_recording }} has no {{ item.item }}/ — not a flight recording"
       when: not item.stat.exists
       loop: "{{ stream_stat.results }}"
       loop_control:
@@ -114,12 +134,13 @@
         cd {{ perception_path }}/selfcalib
         python3 tool/run_tool.py \
           --drone {{ ansible_hostname }} \
-          --bag {{ selfcalib_log_dir }} \
+          --bag {{ sc_recording }} \
           --template fleet_reference/{{ sc_ref }}/theta_star.yaml \
           --imu-chain fleet_reference/{{ sc_ref }}/kalibr_imu_chain.yaml \
           --out {{ drone_base_path }}/selfcalib_out/{{ sc_stamp }} \
           --fleet-exclude {{ ansible_hostname }} \
           {{ ('--after-takeoff ' ~ selfcalib_window) if selfcalib_window | string | length > 0 else '' }} \
+          {{ ('--min-still ' ~ selfcalib_min_still) if selfcalib_min_still | string | length > 0 else '' }} \
           {{ '--frozen-check' if (selfcalib_frozen_check | bool) else '' }}
       args:
         executable: /bin/bash

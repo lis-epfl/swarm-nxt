@@ -22,6 +22,7 @@ import sys
 # Duplicated deliberately: this script runs on the controller, which need not have the
 # tool importable. If they ever drift, the numbers printed here are only labels --
 # pass/fail always comes from report.json.
+STILL_FLOOR = 4.5    # s of standstill from which the tool's results matched a full standstill (run_tool --min-still)
 THR = {
     'step': ('between-pass step, envelopes', 2.0),
     'focal': ('focal %', 2.0),
@@ -90,6 +91,10 @@ def load(collect_dir):
             'mount': r.get('mount', {}),
             'gates': {k: r.get('gate_' + k, {}).get('pass') for k in ('static', 'timing', 'image')},
             'gate_reason': r.get('gate_static', {}).get('reason', ''),
+            # the real directory on the drone (the playbook resolves logs/latest before it moves)
+            'recording': r.get('bag'),
+            'standstill': (r.get('gate_static') or {}).get('standstill_s'),
+            'min_still': (r.get('gate_static') or {}).get('min_still_s'),
             'raw': r,
         })
     return rows
@@ -159,8 +164,9 @@ def main():
     print('            moving between passes when the pass limit was reached (fly again) | HARDWARE-CHANGED =')
     print('            converged but outside the fleet distribution (inspect what FAILS names;')
     print('            -e selfcalib_force=true accepts it) | PLATFORM-DEFECT = calibration fine, trajectory bad')
-    print('            (timing/IMU; repair, not recalibrate) | GATE-FAIL = recording rejected before estimation')
-    print('            (no still start; record again) | ERROR = the estimator produced nothing (reason below)')
+    print('            (timing/IMU; repair, not recalibrate) | GATE-FAIL = recording rejected before estimation,')
+    print('            normally because the drone did not stand still for long enough at the start (the measured')
+    print('            time is below; fly again) | ERROR = the estimator produced nothing (reason below)')
     print('            | NO RESULT = the run wrote no report')
     print('  PASS      estimator passes run; each one restarts from the calibration the previous one ended on')
     print('  STEP      how far the calibration moved between the last two passes: the largest of principal point,')
@@ -187,12 +193,22 @@ def main():
             continue
         print('')
         print('%s  %s' % (r['drone'], r['verdict']))
+        if r['recording']:
+            print('   recording on the drone: %s' % r['recording'])
         bad = [k for k, v in r['gates'].items() if v is False]
         if bad:
             # a GATE-FAIL verdict already carries the gate's reason; do not print it twice
             print('   gates failed: %s%s' % (','.join(bad),
                                              ('  — ' + r['gate_reason'])
                                              if r['gate_reason'] and r['gate_reason'] not in r['verdict'] else ''))
+        if (r['verdict'].startswith('GATE-FAIL') and r['standstill'] is not None and r['min_still'] is not None
+                and STILL_FLOOR <= r['standstill'] < r['min_still']):
+            print('   %.2f s of standstill is enough to calibrate from: the tool validated %.1f s, %g s is its margin.'
+                  % (r['standstill'], STILL_FLOOR, r['min_still']))
+            print('   Re-run this recording instead of flying again:')
+            print('     ansible-playbook drones_selfcalib.yml --limit %s.local -e selfcalib_min_still=%.1f \\'
+                  % (r['drone'], STILL_FLOOR))
+            print('         -e selfcalib_log_dir=%s' % (r['recording'] or '<its directory under ~/logs>'))
         if r['verdict'].startswith('ERROR'):
             print('   the estimator log is on the drone: <base>/selfcalib_out/<stamp>/calib/out/run.log')
         if r['step_types']:
