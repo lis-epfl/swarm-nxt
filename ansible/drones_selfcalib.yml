@@ -18,11 +18,12 @@
 #
 # PRECONDITION worth knowing before you fly: the estimator initialises from a STILL
 # vehicle and must have settled before it moves. The static-start gate rejects a
-# recording unless the vehicle stands still for 6 s from that first instant: 3 s for the
-# estimator to start (that window has to end within the first 5 s) and 3 s more to settle.
-# Idling motors do not count as motion; being carried, pushed or lifting off does. Leave
-# the vehicle untouched on the ground for ~15 s after the stack starts before taking off;
-# one that is moved or takes off sooner comes back GATE-FAIL and has to be flown again.
+# recording unless the vehicle stands still for selfcalib_min_still seconds (10) from that
+# first instant: 3 s for the estimator to start (that window has to end within the first
+# 5 s) and the rest to settle. Idling motors do not count as motion; being carried, pushed
+# or lifting off does. Leave the vehicle untouched on the ground for ~20 s after the stack
+# starts before taking off; one that is moved or takes off sooner comes back GATE-FAIL and
+# has to be flown again.
 #
 # STACK STATE: this play stops ros_packages to flush the recording and leaves it STOPPED,
 # and so does drones_postflight.yml. Every start of the stack creates a new log directory
@@ -52,14 +53,20 @@
     # all of it, and a run is at least two passes.
     selfcalib_window: "20"
     # Seconds of standstill the recording must begin with, checked by the tool's
-    # static-start gate before any estimator work. "" leaves it to the tool (6). The tool's
-    # measurements put the floor at 4.5: results matched a full standstill from there on,
-    # so 4.5 is the value for re-running a recording rejected for taking off a little too
-    # early. Below that the estimator starts as the vehicle lifts off. A re-run reads the
-    # same flight for as long as the stack has not been started again (drones_preflight.yml,
-    # drones_relaunch.yml); after that, name the recording with selfcalib_log_dir (the
-    # controller table prints its directory).
-    selfcalib_min_still: ""
+    # static-start gate before any estimator work: 3 s for the estimator to start, the
+    # rest for it to settle before the vehicle moves.
+    #   10   what a trustworthy mount needs. With the trajectory fixed at its start (the
+    #        NOUMCAL column) the error was 1.5-3.3 cm on flights with 7-14 s of standstill,
+    #        10 cm and more on flights with under 6 s, 4.7 cm on one flight cut down to 6 s.
+    #   6    the tool's own default ("" leaves it to the tool): enough for the camera
+    #        calibration and the aligned ATE, not for the mount.
+    #   4.5  the least the tool validated for the calibration itself; below it the
+    #        estimator starts as the vehicle lifts off.
+    # A lower value is how to still use a recording that took off too early, when the mount
+    # does not matter. A re-run reads the same flight for as long as the stack has not been
+    # started again (drones_preflight.yml, drones_relaunch.yml); after that, name the
+    # recording with selfcalib_log_dir (the controller table prints its directory).
+    selfcalib_min_still: "10"
     # Certify the ATE on a dedicated extra pass running the published chain under the
     # flight config + priors. Costs ~a third of the runtime. Off by default: under the
     # flight-config loop the last warm-start pass tracks it to a median 1.17x with

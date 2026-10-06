@@ -92,6 +92,9 @@ def load(collect_dir):
             # Initial pose fixed to the ground truth (no fitted alignment), mount rotation applied.
             # Absent without ground truth, and when the tool skipped the mount solve.
             'noumcal': (r.get('mount') or {}).get('A_mounted_m'),
+            # Seconds on the ground before takeoff: all streams live -> the PX4 takeoff. NOUMCAL
+            # depends on it, so the two are printed side by side.
+            'still': r.get('takeoff_s'),
             'gates': {k: r.get('gate_' + k, {}).get('pass') for k in ('static', 'timing', 'image')},
             'gate_reason': r.get('gate_static', {}).get('reason', ''),
             # the real directory on the drone (the playbook resolves logs/latest before it moves)
@@ -130,9 +133,9 @@ def main():
 
     print('')
     print('SELF-CALIBRATION — %s' % a.collect_dir)
-    hdr = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %9s  %s'
+    hdr = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %9s %7s  %s'
            % ('DRONE', 'VERDICT', 'PASS', 'STEP', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'NOUMCAL m',
-              'FAILS'))
+              'STILL s', 'FAILS'))
     sub = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s'
            % ('', '', '', '/2.0', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20'))
     print(hdr)
@@ -148,7 +151,7 @@ def main():
             continue
         f = r['fails']
         short = r['verdict'].split(':')[0]
-        print('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %9s  %s' % (
+        print('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %9s %7s  %s' % (
             r['drone'], short, r['passes'] if r['passes'] else '-',
             fmt(r['step'], '%.2f', mark(r['step'], THR['step'][1],
                                         r['step'] is not None and r['step'] > THR['step'][1])),
@@ -159,6 +162,7 @@ def main():
             ('skipped' if r['ate_skipped'] else
              fmt(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
             fmt(r['noumcal'], '%.4f', ' '),
+            fmt(r['still'], '%.1f', '!' if r['gates'].get('static') is False else ' '),
             ','.join(f) if f else '-'))
 
     print('')
@@ -188,6 +192,9 @@ def main():
     print('            the mount rotation solved on this flight applied; metres, no budget. Unlike ATE it keeps any')
     print('            offset the estimate picks up right after liftoff, which grows when the drone stood still only')
     print('            briefly before taking off. "-" without ground truth or when the mount solve was skipped')
+    print('  STILL s   seconds the drone stood on the ground in the recording before taking off (from all streams')
+    print('            being live to the PX4 takeoff). The still-start check asks for selfcalib_min_still of them')
+    print('            and measures about half a second more than this; ! = that check rejected the recording')
     print('  FAILS     which in-distribution checks failed: focal, distortion, principal_point, extrinsics, toff')
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
@@ -212,9 +219,11 @@ def main():
                                              if r['gate_reason'] and r['gate_reason'] not in r['verdict'] else ''))
         if (r['verdict'].startswith('GATE-FAIL') and r['standstill'] is not None and r['min_still'] is not None
                 and STILL_FLOOR <= r['standstill'] < r['min_still']):
-            print('   %.2f s of standstill is enough to calibrate from: the tool validated %.1f s, %g s is its margin.'
-                  % (r['standstill'], STILL_FLOOR, r['min_still']))
-            print('   Re-run this recording instead of flying again:')
+            print('   %.2f s of standstill is enough to calibrate the cameras from (the tool validated %.1f s). The'
+                  % (r['standstill'], STILL_FLOOR))
+            print('   %g s asked for is for the mount: NOUMCAL read 10 cm and more with under 6 s of standstill,'
+                  % r['min_still'])
+            print('   1.5 to 3.3 cm with 7 s and more. To use this recording anyway:')
             print('     ansible-playbook drones_selfcalib.yml --limit %s.local -e selfcalib_min_still=%.1f \\'
                   % (r['drone'], STILL_FLOOR))
             print('         -e selfcalib_log_dir=%s' % (r['recording'] or '<its directory under ~/logs>'))
