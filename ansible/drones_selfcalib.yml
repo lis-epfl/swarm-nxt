@@ -6,8 +6,7 @@
 #   ansible-playbook drones_selfcalib.yml -e selfcalib_log_dir=/home/lis/logs/2026/06/23/174842
 #   ansible-playbook drones_selfcalib.yml -e selfcalib_deploy=false      # measure only
 #   ansible-playbook drones_selfcalib.yml -e selfcalib_force=true        # deploy non-HEALTHY too
-#   ansible-playbook drones_selfcalib.yml --limit nxt3.local -e selfcalib_min_still=4.5 \
-#       -e selfcalib_log_dir=/home/lis/logs/2026/06/23/174842          # re-run one flight, shorter standstill
+#   ansible-playbook drones_selfcalib.yml --limit nxt3.local -e selfcalib_min_still=4.5   # re-run one drone, shorter standstill
 #
 # Runs ON the drones. A recording is ~2 GB of camera mcap, so calibrating on the
 # controller would mean pulling that per drone over WiFi; only report.json and the
@@ -24,6 +23,13 @@
 # Idling motors do not count as motion; being carried, pushed or lifting off does. Leave
 # the vehicle untouched on the ground for ~15 s after the stack starts before taking off;
 # one that is moved or takes off sooner comes back GATE-FAIL and has to be flown again.
+#
+# STACK STATE: this play stops ros_packages to flush the recording and leaves it STOPPED,
+# and so does drones_postflight.yml. Every start of the stack creates a new log directory
+# and points logs/latest at it, so a restart by either playbook would hand the other one,
+# or a second run of the same one, a ground-only recording instead of the flight. Left
+# stopped, logs/latest stays on the flight: the two can run in either order, any number
+# of times. drones_preflight.yml starts the stack again before the next flight.
 
 - name: Self-calibrate the fleet
   hosts: drones
@@ -48,9 +54,10 @@
     # static-start gate before any estimator work. "" leaves it to the tool (6). The tool's
     # measurements put the floor at 4.5: results matched a full standstill from there on,
     # so 4.5 is the value for re-running a recording rejected for taking off a little too
-    # early. Below that the estimator starts as the vehicle lifts off. A re-run has to
-    # name that recording with selfcalib_log_dir (the controller table prints the
-    # directory): by then logs/latest points at the recording the restart began.
+    # early. Below that the estimator starts as the vehicle lifts off. A re-run reads the
+    # same flight for as long as drones_preflight.yml has not started the stack again;
+    # after that, name the recording with selfcalib_log_dir (the controller table prints
+    # its directory).
     selfcalib_min_still: ""
     # Certify the ATE on a dedicated extra pass running the published chain under the
     # flight config + priors. Costs ~a third of the runtime. Off by default: under the
@@ -88,10 +95,10 @@
           -e selfcalib_log_dir=/home/lis/logs/YYYY/MM/DD/HHMMSS
       when: not log_dir_stat.stat.exists
 
-    # logs/latest is a symlink, and every start of ros_packages points it at a NEW
-    # directory -- the restart at the end of this play included. Hand the tool the real
-    # directory instead: report.json then names the recording it was computed from, and
-    # a later run can be pointed at that same recording with -e selfcalib_log_dir=...
+    # logs/latest is a symlink that the next start of ros_packages (drones_preflight.yml)
+    # points at a NEW directory. Hand the tool the real directory instead: report.json
+    # then keeps naming the recording it was computed from, and a later run can still be
+    # pointed at it with -e selfcalib_log_dir=...
     - name: Pin the recording to its real directory
       ansible.builtin.set_fact:
         sc_recording: "{{ log_dir_stat.stat.lnk_source | default(selfcalib_log_dir) }}"
@@ -200,7 +207,7 @@
     # The TOP-LEVEL verdict: it is in every report the tool writes and is the one
     # deploy_vio.py gates on. diagnosis.verdict exists only when the run got as far as the
     # diagnosis -- a GATE-FAIL or ERROR report has no diagnosis block at all, so reading
-    # it there fails this task on exactly those drones and skips their ROS restart below.
+    # it there fails this task on exactly those drones.
     - name: Record the verdict
       ansible.builtin.set_fact:
         sc_verdict: >-
@@ -238,14 +245,9 @@
             state: link
             force: true
 
-    # ---- 6. put the drone back the way we found it ------------------------------
-    - name: Restart ROS packages
-      become: false
-      ansible.builtin.systemd:
-        name: ros_packages
-        state: started
-        scope: user
-      failed_when: false
+    # ---- 6. the stack stays stopped ---------------------------------------------
+    # Deliberately no restart: see STACK STATE at the top. Starting ros_packages here
+    # would move logs/latest off the flight this play has just calibrated.
 
 
 - name: Report the fleet result
@@ -269,7 +271,10 @@
 
     - name: Show it
       ansible.builtin.debug:
-        msg: "{{ sc_summary.stdout_lines }}"
+        msg: >-
+          {{ sc_summary.stdout_lines + ['',
+             'The ROS stack is left STOPPED on every drone, so logs/latest stays on this flight.',
+             'Run drones_preflight.yml before the next flight.'] }}
 
     - name: Fail if the run produced nothing at all
       when: sc_summary.rc | default(0) | int != 0
