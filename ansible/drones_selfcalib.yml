@@ -29,7 +29,8 @@
 # and points logs/latest at it, so a restart by either playbook would hand the other one,
 # or a second run of the same one, a ground-only recording instead of the flight. Left
 # stopped, logs/latest stays on the flight: the two can run in either order, any number
-# of times. drones_preflight.yml starts the stack again before the next flight.
+# of times. Before the next flight, drones_preflight.yml starts the stack again; so does
+# drones_relaunch.yml, without the checks.
 
 - name: Self-calibrate the fleet
   hosts: drones
@@ -55,9 +56,9 @@
     # measurements put the floor at 4.5: results matched a full standstill from there on,
     # so 4.5 is the value for re-running a recording rejected for taking off a little too
     # early. Below that the estimator starts as the vehicle lifts off. A re-run reads the
-    # same flight for as long as drones_preflight.yml has not started the stack again;
-    # after that, name the recording with selfcalib_log_dir (the controller table prints
-    # its directory).
+    # same flight for as long as the stack has not been started again (drones_preflight.yml,
+    # drones_relaunch.yml); after that, name the recording with selfcalib_log_dir (the
+    # controller table prints its directory).
     selfcalib_min_still: ""
     # Certify the ATE on a dedicated extra pass running the published chain under the
     # flight config + priors. Costs ~a third of the runtime. Off by default: under the
@@ -95,10 +96,10 @@
           -e selfcalib_log_dir=/home/lis/logs/YYYY/MM/DD/HHMMSS
       when: not log_dir_stat.stat.exists
 
-    # logs/latest is a symlink that the next start of ros_packages (drones_preflight.yml)
-    # points at a NEW directory. Hand the tool the real directory instead: report.json
-    # then keeps naming the recording it was computed from, and a later run can still be
-    # pointed at it with -e selfcalib_log_dir=...
+    # logs/latest is a symlink that the next start of ros_packages (drones_preflight.yml,
+    # drones_relaunch.yml) points at a NEW directory. Hand the tool the real directory
+    # instead: report.json then keeps naming the recording it was computed from, and a
+    # later run can still be pointed at it with -e selfcalib_log_dir=...
     - name: Pin the recording to its real directory
       ansible.builtin.set_fact:
         sc_recording: "{{ log_dir_stat.stat.lnk_source | default(selfcalib_log_dir) }}"
@@ -274,7 +275,7 @@
         msg: >-
           {{ sc_summary.stdout_lines + ['',
              'The ROS stack is left STOPPED on every drone, so logs/latest stays on this flight.',
-             'Run drones_preflight.yml before the next flight.'] }}
+             'Before the next flight: drones_preflight.yml, or drones_relaunch.yml to skip its checks.'] }}
 
     - name: Fail if the run produced nothing at all
       when: sc_summary.rc | default(0) | int != 0

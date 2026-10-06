@@ -1,0 +1,75 @@
+---
+# Start the flight stack on the drones again, with none of drones_preflight.yml's checks.
+#
+#   ansible-playbook -i inventory.ini drones_relaunch.yml
+#   ansible-playbook -i inventory.ini drones_relaunch.yml --limit nxt3.local
+#
+# For flying again after drones_postflight.yml or drones_selfcalib.yml, which both leave
+# the stack stopped. It restarts ros_packages, and makes sure the micro_xrce agent is up,
+# with the launch file and configuration the last drones_preflight.yml left on the drone.
+# Nothing else happens: no camera sync or focus test, no clock-sync check, nothing is
+# rebuilt or sent, and the host's own stack is not touched. Run drones_preflight.yml
+# instead after drones_update.yml, after changing the inventory or group_vars, and
+# whenever the cameras or the clock sync may have changed -- after a reboot, for one.
+#
+# EVERY START OF THE STACK BEGINS A NEW RECORDING and points logs/latest at it. Collect
+# the previous flight first (drones_postflight.yml, drones_selfcalib.yml): run after this
+# playbook they read the new recording, not that flight. A drone whose stack was still
+# running is called out, because that is how a recording gets left behind.
+
+- name: Relaunch the flight stack
+  hosts: drones
+  remote_user: lis
+  gather_facts: false
+  tasks:
+    # Read before the restart moves it: it is the recording a still-running stack leaves behind.
+    - name: Note the current recording
+      ansible.builtin.stat:
+        path: "{{ drone_base_path }}/logs/latest"
+      register: relaunch_prev
+
+    - name: Make sure the MicroXRCE agent is running
+      become: false            # user-scope systemd needs the lis session bus, not root's
+      ansible.builtin.systemd:
+        name: micro_xrce
+        state: started
+        scope: user
+
+    - name: Restart ros_packages
+      become: false
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: restarted
+        scope: user
+      register: relaunch_stack
+
+    - name: Say which recordings were cut short
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }} was still running. The recording it was making,
+          {{ relaunch_prev.stat.lnk_source | default('logs/latest') }}, is closed and is no longer
+          logs/latest: drones_postflight.yml now collects the new one, and drones_selfcalib.yml
+          reaches the old one only with -e selfcalib_log_dir=<that directory>.
+      when: (relaunch_stack.status.ActiveState | default('')) in ['active', 'activating']
+
+    # `restarted` returns as soon as systemd has forked the start script, so a launch that
+    # dies straight away (no workspace, no launch file) would pass as up. This catches
+    # that; it says nothing about the nodes, which the start script launches only after
+    # its per-drone stagger delay.
+    - name: Give the start script a moment
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Check the stack stayed up
+      become: false
+      ansible.builtin.shell: XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)} systemctl --user is-active ros_packages
+      register: relaunch_active
+      changed_when: false
+      failed_when: false
+
+    - name: Fail the drones whose stack did not stay up
+      ansible.builtin.fail:
+        msg: >-
+          ros_packages is {{ relaunch_active.stdout | default('', true) | trim | default('not running', true) }}
+          five seconds after the restart. On the drone: journalctl --user -u ros_packages -n 40
+      when: relaunch_active.rc != 0
