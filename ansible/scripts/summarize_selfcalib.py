@@ -185,8 +185,9 @@ def main():
     print('  ATE m     post-takeoff trajectory RMSE vs ground truth after SE(3) alignment, metres --')
     print('            "skipped" when the recording carries no mocap (then PLATFORM-DEFECT cannot be detected)')
     print('  NOUMCAL m the same trajectory with its initial pose fixed to the ground truth instead of fitted, and')
-    print('            the mount rotation solved on this flight applied; metres, no budget. It hangs on that first')
-    print('            pose, so it reads higher than ATE. "-" without ground truth or when the mount solve was skipped')
+    print('            the mount rotation solved on this flight applied; metres, no budget. Unlike ATE it keeps any')
+    print('            offset the estimate picks up right after liftoff, which grows when the drone stood still only')
+    print('            briefly before taking off. "-" without ground truth or when the mount solve was skipped')
     print('  FAILS     which in-distribution checks failed: focal, distortion, principal_point, extrinsics, toff')
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
