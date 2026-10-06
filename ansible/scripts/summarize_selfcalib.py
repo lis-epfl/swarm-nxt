@@ -133,17 +133,26 @@ def main():
 
     print('')
     print('SELF-CALIBRATION — %s' % a.collect_dir)
-    hdr = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %9s %7s  %s'
-           % ('DRONE', 'VERDICT', 'PASS', 'STEP', 'FOCAL%', 'ROT°', 'TRANS cm', 't_d ms', 'ATE m', 'NOUMCAL m',
-              'STILL s', 'FAILS'))
-    sub = ('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s'
-           % ('', '', '', '/2.0', '/2.0', '/8.0', '/15.0', '/20.0', '/0.20'))
-    print(hdr)
-    print(sub)
-    print('-' * len(hdr))
+    # One layout for the header, the budget line and every row, so they cannot drift apart.
+    # A numeric column is its text right-aligned in `width` followed by ONE character that
+    # holds the ! / ~ mark -- a space in the header -- so a title ends exactly above the last
+    # digit of its values.
+    COLS = [('STEP', '/2.0', 6), ('FOCAL%', '/2.0', 6), ('ROT°', '/8.0', 6), ('TRANS cm', '/15.0', 8),
+            ('t_d ms', '/20.0', 6), ('ATE m', '/0.20', 7), ('NOUMCAL m', '', 9), ('STILL s', '', 7)]
 
-    def fmt(v, spec, m):
-        return ('%s%s' % (spec % v, m)) if v is not None else '-'
+    def line(drone, verdict, passes, cells, fails):
+        return ('%-8s %-17s %4s' % (drone, verdict, passes)
+                + ''.join(' %*s%s' % (w, text, m) for (_, _, w), (text, m) in zip(COLS, cells))
+                + '  ' + fails).rstrip()
+
+    def cell(v, spec, m=' '):
+        """(text, mark) of one numeric cell; a missing value is a dash under the last digit."""
+        return (spec % v, m) if v is not None else ('-', ' ')
+
+    hdr = line('DRONE', 'VERDICT', 'PASS', [(t, ' ') for t, _, _ in COLS], 'FAILS')
+    print(hdr)
+    print(line('', '', '', [(budget, ' ') for _, budget, _ in COLS], ''))
+    print('-' * len(hdr))
 
     for r in rows:
         if r.get('missing'):
@@ -151,19 +160,19 @@ def main():
             continue
         f = r['fails']
         short = r['verdict'].split(':')[0]
-        print('%-8s %-17s %4s %7s %7s %7s %8s %7s %7s %9s %7s  %s' % (
-            r['drone'], short, r['passes'] if r['passes'] else '-',
-            fmt(r['step'], '%.2f', mark(r['step'], THR['step'][1],
-                                        r['step'] is not None and r['step'] > THR['step'][1])),
-            fmt(r['focal'], '%.2f', mark(r['focal'], THR['focal'][1], 'focal' in f)),
-            fmt(r['rot'], '%.2f', mark(r['rot'], THR['rot'][1], 'extrinsics' in f)),
-            fmt(r['trans'], '%.2f', mark(r['trans'], THR['trans'][1], 'extrinsics' in f)),
-            fmt(r['toff'], '%.2f', mark(r['toff'], THR['toff'][1], 'toff' in f)),
-            ('skipped' if r['ate_skipped'] else
-             fmt(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
-            fmt(r['noumcal'], '%.4f', ' '),
-            fmt(r['still'], '%.1f', '!' if r['gates'].get('static') is False else ' '),
-            ','.join(f) if f else '-'))
+        cells = [
+            cell(r['step'], '%.2f', mark(r['step'], THR['step'][1],
+                                         r['step'] is not None and r['step'] > THR['step'][1])),
+            cell(r['focal'], '%.2f', mark(r['focal'], THR['focal'][1], 'focal' in f)),
+            cell(r['rot'], '%.2f', mark(r['rot'], THR['rot'][1], 'extrinsics' in f)),
+            cell(r['trans'], '%.2f', mark(r['trans'], THR['trans'][1], 'extrinsics' in f)),
+            cell(r['toff'], '%.2f', mark(r['toff'], THR['toff'][1], 'toff' in f)),
+            (('skipped', ' ') if r['ate_skipped'] else
+             cell(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
+            cell(r['noumcal'], '%.4f'),
+            cell(r['still'], '%.1f', '!' if r['gates'].get('static') is False else ' '),
+        ]
+        print(line(r['drone'], short, r['passes'] if r['passes'] else '-', cells, ','.join(f) if f else '-'))
 
     print('')
     print('LEGEND  (a value is followed by ! when it is the metric that failed, ~ when past 75% of its budget;')
