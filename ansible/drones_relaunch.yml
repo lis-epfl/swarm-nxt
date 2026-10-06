@@ -9,9 +9,8 @@
 # the stack stopped. It restarts ros_packages, and makes sure the micro_xrce agent is up,
 # with the launch file and configuration the last drones_preflight.yml left on the drone.
 #
-# Two things are checked first, because a stack started over either is not safe to fly:
-#   - no self-calibration is still running on the drone;
-#   - the drone's clock is tracking the host's, by the same test preflight uses.
+# One thing is checked first, because a stack started without it is not safe to fly: the
+# drone's clock has to be tracking the host's, by the same test preflight uses.
 # Everything else preflight does is skipped: no camera sync or focus test, chrony is not
 # restarted, nothing is rebuilt or sent, and the host's own stack is not touched. Run
 # drones_preflight.yml instead after drones_update.yml, after changing the inventory or
@@ -27,29 +26,7 @@
   remote_user: lis
   gather_facts: false
   tasks:
-    # ---- 1. nothing is started over these two ------------------------------------
-    # drones_selfcalib.yml runs the calibration as a detached job: interrupting the playbook
-    # on the controller does not stop it on the drone, where it holds the CPU and the GPU
-    # for minutes. The [x] in each pattern keeps pgrep from matching the shell that runs
-    # it; run_online_msckf, the flight estimator, is deliberately not in the list. The stop
-    # command in the message kills the estimator with -9 because nothing less works: it
-    # takes SIGTERM as a ROS shutdown request, which its replay loop never looks at, and
-    # killing only the tool leaves the pass in progress running to its end.
-    - name: Look for a self-calibration still running
-      ansible.builtin.shell: pgrep -af '[p]ython3 tool/(run_tool|deploy_vio)\.py|[r]un_serial_msckf' || true
-      register: relaunch_selfcalib
-      changed_when: false
-
-    - name: Refuse to start under a running self-calibration
-      ansible.builtin.fail:
-        msg: >-
-          a self-calibration is still running on {{ inventory_hostname }}
-          ({{ relaunch_selfcalib.stdout_lines | length }} process(es), first:
-          {{ relaunch_selfcalib.stdout_lines | first | truncate(100, true) }}).
-          Let it finish, or stop it on the drone:
-          pkill -f '[t]ool/run_tool.py'; pkill -9 -x run_serial_msck
-      when: relaunch_selfcalib.stdout | trim | length > 0
-
+    # ---- 1. no start on an unsynchronised clock ----------------------------------
     # Mocap poses reach PX4 with the HOST's timestamp, so a drone whose clock is not on the
     # host's flies on position samples of the wrong age. Same test as drones_preflight.yml
     # (scripts/chronyc_check.py: a reference, and an RMS offset within 5 ms). Preflight
