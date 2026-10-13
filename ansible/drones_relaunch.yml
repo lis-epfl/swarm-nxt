@@ -6,15 +6,28 @@
 #   ansible-playbook -i inventory.ini drones_relaunch.yml --limit nxt3.local
 #
 # For flying again after drones_postflight.yml or drones_selfcalib.yml, which both leave
-# the stack stopped. It restarts ros_packages, and makes sure the micro_xrce agent is up,
-# with the launch file and configuration the last drones_preflight.yml left on the drone.
+# the stack stopped. It sends the launch file again, rendered from the inventory and
+# group_vars as they are now, restarts ros_packages, and makes sure the micro_xrce agent is
+# up. Everything else on the drone is what the last drones_preflight.yml left.
+#
+# So a flag of the launch file that was changed since the last preflight takes effect here:
+# the onboard VIO flags (enable_vio, vio_nav and the others), enable_cameras, enable_depth,
+# the OAK speed, the recorded topics.
 #
 # One thing is checked first, because a stack started without it is not safe to fly: the
 # drone's clock has to be tracking the host's, by the same test preflight uses.
-# Everything else preflight does is skipped: no camera sync or focus test, chrony is not
-# restarted, nothing is rebuilt or sent, and the host's own stack is not touched. Run
-# drones_preflight.yml instead after drones_update.yml, after changing the inventory or
-# group_vars, and whenever the cameras may have changed -- a reboot or a hard landing.
+# Everything else preflight does before the start is skipped: no camera sync or focus test,
+# none of its checks of the onboard VIO (calibration folder, estimator, fallback distance),
+# chrony is not restarted, nothing is rebuilt, nothing but the launch file and the clock
+# check is sent, and the host's own stack is not touched. Run drones_preflight.yml instead
+# after drones_update.yml, after any other change of the inventory or group_vars, the first
+# time a VIO flag or the cameras are switched on for a drone, and whenever the cameras may
+# have changed -- a reboot or a hard landing.
+#
+# With vio_nav it waits, after the start, until vision_pose_node has handed PX4 to the VIO, as
+# preflight does: leave the drone standing untouched until this playbook has finished (about
+# 10 s after the estimator's first image). A drone that does not get there is stopped again
+# and reported with the reason.
 #
 # EVERY START OF THE STACK BEGINS A NEW RECORDING and points logs/latest at it. Collect
 # the previous flight first (drones_postflight.yml, drones_selfcalib.yml): run after this
@@ -53,7 +66,26 @@
           restarts chrony and waits for it.
       when: relaunch_clock.rc != 0
 
-    # ---- 2. start ---------------------------------------------------------------
+    # ---- 2. the launch file ------------------------------------------------------
+    # Rendered and sent on every relaunch, with or without a VIO flag, so that the stack starts
+    # on the flags as they are now, a flag that was switched off included. The same template
+    # and destination as in drones_preflight.yml. The template names the drone by its host
+    # name, which is a fact; nothing else is gathered.
+    - name: Read the drone's host name
+      ansible.builtin.setup:
+        gather_subset: min
+        filter: ansible_hostname
+
+    - name: Send the launch file
+      ansible.builtin.template:
+        src: templates/drone_launch.py.j2
+        dest: "{{ drone_base_path }}/launch.py"
+        mode: "644"
+      vars:
+        ros_path: "{{ drone_ros_path }}"
+        base_path: "{{ drone_base_path }}"
+
+    # ---- 3. start ---------------------------------------------------------------
     # Read before the restart moves it: it is the recording a still-running stack leaves behind.
     - name: Note the current recording
       ansible.builtin.stat:
@@ -84,7 +116,7 @@
           reaches the old one only with -e selfcalib_log_dir=<that directory>.
       when: (relaunch_stack.status.ActiveState | default('')) in ['active', 'activating']
 
-    # ---- 3. did it stay up ------------------------------------------------------
+    # ---- 4. did it stay up ------------------------------------------------------
     # `restarted` returns as soon as systemd has forked the start script, so a launch that
     # dies straight away (no workspace, no launch file) would pass as up. This catches
     # that; it says nothing about the nodes, which the start script launches only after
@@ -106,3 +138,11 @@
           ros_packages is {{ relaunch_active.stdout | default('', true) | trim | default('not running', true) }}
           five seconds after the restart. On the drone: journalctl --user -u ros_packages -n 40
       when: relaunch_active.rc != 0
+
+    # ---- 5. with vio_nav, PX4 on the VIO -----------------------------------------
+    # The same wait as in drones_preflight.yml: the estimator is fed, and the last
+    # "pose source:" line of the launch log is the handover to the VIO. A drone that fails it is
+    # stopped again and reported with the reason.
+    - name: Wait for the handover to the VIO
+      when: vio_nav | default(false) | bool
+      ansible.builtin.include_tasks: "tasks/vio-after-start.yml"

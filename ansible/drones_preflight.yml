@@ -13,7 +13,7 @@
       ignore_errors: yes  # In case it's not running
 
     - name: Launch Camera Tests (Async)
-      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool)
+      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool) or (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)
       ansible.builtin.shell: |
         source /opt/ros/humble/setup.bash
         source {{ drone_ros_path }}/install/setup.bash
@@ -39,7 +39,7 @@
       register: vision_launch_job
 
     - name: Save Job ID for Later
-      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool)
+      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool) or (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)
       set_fact:
         vision_job_id: "{{ vision_launch_job.ansible_job_id }}"
 
@@ -132,6 +132,19 @@
         - {dest: "{{ drone_base_path }}/logs/scripts"}
         - {dest: "~/.local/share/systemd/user"}
 
+    # The launch file takes vio_fallback_dist_m as it is. Typed in centimetres it would switch
+    # the fallback to the mocap off without a word, so it is checked before the file is sent.
+    - name: Check the fallback distance of the onboard VIO
+      when: (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)
+      ansible.builtin.assert:
+        that:
+          - (vio_fallback_dist_m | default(0.15) | float(-1)) > 0
+          - (vio_fallback_dist_m | default(0.15) | float(-1)) <= 1.0
+        fail_msg: >-
+          vio_fallback_dist_m is "{{ vio_fallback_dist_m | default(0.15) }}" for {{ inventory_hostname }}.
+          It is a distance in metres (0.15 = 15 cm): above 0 and at most 1.
+        quiet: true
+
     - name: Send files
       ansible.builtin.template:
         src: "{{ item.src }}"
@@ -174,7 +187,7 @@
 
     # --- WAIT FOR CAMERA RESULTS ---
     - name: Verify Camera Checks
-      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool)
+      when: (enable_depth | default(false) | bool) or (enable_cameras | default(false) | bool) or (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)
       block:
         - name: Wait for Camera Job
           ansible.builtin.async_status:
@@ -189,6 +202,80 @@
              msg: "{{ (vision_result.stderr | regex_search('(SYNC_FAILED|FOCUS_FAILED|FAILED:.*|OUT_OF_FOCUS:.*)', multiline=True)) | default('Camera Checks Failed') }}"
           when: vision_result.rc != 0
     # -------------------------------
+
+    # --- ONBOARD VIO: a drone is not started when its calibration folder or the estimator is missing,
+    # or when the estimator is too old to give poses on the ground ---
+    - name: Verify the onboard VIO can start
+      when: (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)
+      vars:
+        vio_needs: >-
+          {{ ['estimator_flight.yaml', 'kalibr_imucam_chain.yaml', 'kalibr_imu_chain.yaml',
+              'flight_stiffness.env', 'campaign.env']
+             + (['mount.json'] if (vio_nav | default(false) | bool) else []) }}
+      block:
+        - name: Look for the calibration folder and the estimator
+          ansible.builtin.stat:
+            path: "{{ item }}"
+            follow: true
+          loop: >-
+            {{ vio_needs | map('regex_replace', '^', drone_base_path ~ '/vio_calib/current/') | list
+               + [drone_ros_path ~ '/install/ov_msckf/lib/ov_msckf/run_online_msckf'] }}
+          register: vio_files
+
+        - name: Refuse to start without them
+          ansible.builtin.fail:
+            msg: >-
+              Onboard VIO is enabled for {{ inventory_hostname }}, but these are missing:
+              {{ vio_files.results | rejectattr('stat.exists') | map(attribute='item') | join(', ') }}.
+              A program under install/: run drones_update.yml. flight_stiffness.env or
+              campaign.env: the folder is older than the deploy tool, deploy the calibration
+              again. Anything else in vio_calib: fly once with enable_cameras=true and run
+              drones_selfcalib.yml (mount.json needs the motion capture in that flight).
+          when: vio_files.results | rejectattr('stat.exists') | list | length > 0
+
+        # The estimator gives poses while the drone stands still only from perception_pkgs
+        # dc8d058 (12 Oct 2026) on; an older one gives its first pose after the takeoff. The VIO
+        # is then never placed on the ground: nothing of the flight is in /<ns>/vio/odometry
+        # and, with vio_nav, the drone flies on the mocap. This looks at the checkout the
+        # estimator is built from (tasks/install-perception.yml: a full clone of main, linked
+        # into the workspace). It reads the commit only: not files changed by hand in that
+        # checkout, and not whether the estimator was built again after the checkout moved.
+        # An estimator that is too old in spite of this check shows after the start: it is fed
+        # and gives no pose (the note in the rescue below).
+        - name: Look for commit dc8d058 in the checkout of perception_pkgs
+          ansible.builtin.shell: |
+            repo={{ drone_base_path }}/repos/perception_pkgs
+            [ -e "$repo" ] || { echo "it has no checkout $repo to tell how old its estimator is"; exit 2; }
+            [ -e "$repo/.git" ] || { echo "its folder $repo is not a git checkout"; exit 3; }
+            at=$(git -C "$repo" log -1 --date=short --format='%h of %cd' HEAD 2>&1) \
+              || { echo "git cannot read its checkout $repo ($(echo "$at" | tail -n 1 | cut -c1-100))"; exit 3; }
+            git -C "$repo" merge-base --is-ancestor dc8d058b876f8a3b0c50f08f778269e336de85e4 HEAD 2>/dev/null \
+              && { echo "$at"; exit 0; }
+            [ "$(git -C "$repo" rev-parse --is-shallow-repository 2>/dev/null)" = true ] \
+              && { echo "its checkout $repo (at $at) is a shallow clone, in which commit dc8d058 cannot be looked for"; exit 3; }
+            echo "its checkout $repo is at $at, which does not contain commit dc8d058"; exit 1
+          args:
+            executable: /bin/bash
+          register: vio_estimator_src
+          changed_when: false
+          failed_when: false
+
+        # rc 1: an older checkout. rc 2: none. rc 3: a folder drones_update.yml cannot bring up
+        # to date (its git task fails on a folder git cannot read and leaves a shallow clone
+        # shallow), so that one has to go first.
+        - name: Refuse an estimator that gives no pose on the ground
+          ansible.builtin.fail:
+            msg: >-
+              Onboard VIO is enabled for {{ inventory_hostname }}, but
+              {{ vio_estimator_src.stdout | default('', true) | trim | default('the look at its perception_pkgs checkout gave nothing', true) }}.
+              The estimator of perception_pkgs gives poses while the drone stands still only
+              from commit dc8d058 (12 Oct 2026) on. An older one gives its first pose after the
+              takeoff: the VIO is then never placed on the ground and, with vio_nav, the drone
+              flies on the mocap.
+              {{ 'Remove that folder on the drone, then run' if vio_estimator_src.rc == 3 else 'Run' }}
+              drones_update.yml (it fetches perception_pkgs main and builds the estimator
+              again), then this playbook again. Its stack is left stopped.
+          when: vio_estimator_src.rc != 0
 
     - name: Start & Enable MicroXRCE service
       ansible.builtin.systemd:
@@ -205,3 +292,12 @@
         enabled: false
         daemon_reload: true
         scope: user
+
+    # --- ONBOARD VIO, AFTER THE START ---
+    # The estimator has to be fed and, with vio_nav, vision_pose_node has to hand PX4 to the VIO,
+    # which it does on the ground only: leave the drones untouched until this playbook has
+    # finished. A drone that does not get there is stopped again and reported with the reason.
+    # The tasks are in tasks/vio-after-start.yml, which drones_relaunch.yml uses too.
+    - name: Check the onboard VIO after the start
+      when: (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)
+      ansible.builtin.include_tasks: "tasks/vio-after-start.yml"

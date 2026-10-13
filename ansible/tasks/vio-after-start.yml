@@ -1,0 +1,86 @@
+# The onboard VIO after the stack has been started. Included by drones_preflight.yml (with
+# enable_vio or vio_nav) and by drones_relaunch.yml (with vio_nav).
+#
+# Two things only a running stack shows. The estimator logs every 5 s what it received and
+# fed. And with vio_nav, vision_pose_node logs "pose source: MOCAP -> VIO (...)" when it
+# hands PX4's pose input to the VIO; it does that on the ground only, once the VIO has given
+# poses for some seconds with the drone standing still, so leave the drones untouched until
+# the playbook has finished. The last such line has to be that one: a later
+# "VIO -> MOCAP" is the fallback, which holds until the stack is started again.
+# A drone that fails either wait is stopped again, so that a drone reported as failed is
+# never one that is up and would fly on something else than its flags say.
+- name: Check the onboard VIO after the start
+  block:
+    - name: Wait for the estimator to report image sets fed
+      ansible.builtin.shell: >-
+        pgrep -x run_online_msck > /dev/null &&
+        grep -h -F '[online-live]' {{ drone_base_path }}/logs/latest/*/launch.log
+        | tail -n 1 | grep -E 'fed=[1-9]'
+      register: vio_alive
+      changed_when: false
+      retries: 18
+      delay: 5
+      until: vio_alive.rc == 0
+
+    - name: Wait for vision_pose_node to hand PX4 to the VIO
+      when: vio_nav | default(false) | bool
+      ansible.builtin.shell: >-
+        grep -h -F 'pose source: ' {{ drone_base_path }}/logs/latest/*/launch.log
+        | tail -n 1 | grep -F 'pose source: MOCAP -> VIO'
+      register: vio_handed
+      changed_when: false
+      retries: 18
+      delay: 5
+      until: vio_handed.rc == 0
+  rescue:
+    # The launch log has what was started, every change of the pose source and, while PX4
+    # is not fed the VIO, why ("VIO not used: <reason>", one line whenever the reason
+    # changes). The node's status topic adds what the reason rests on (whether it has poses,
+    # the mocap and a disarmed PX4); it is read once here while the stack still runs. The
+    # name of the reason comes from the installed message file, so the numbers are not
+    # repeated here.
+    - name: Read the reason from the launch log and from vision_pose_node
+      ansible.builtin.shell: |
+        log="{{ drone_base_path }}/logs/latest/*/launch.log"
+        grep -h -F '[vio] ' $log | tail -n 2
+        grep -h -F -e 'pose source: ' -e 'VIO ready' -e 'VIO not ready any more' -e 'VIO not used: ' -e 'VIO stream restarted' $log | tail -n 5
+        live=$(grep -h -F '[online-live]' $log | tail -n 1)
+        [ -n "$live" ] && echo "$live"
+        grep -h -F 'process has died' $log | grep -E 'vision_pose_node|run_online_msckf' | tail -n 2 | cut -c1-200
+        if echo "$live" | grep -q -E 'fed=[1-9][0-9]* poses=0$'; then
+          echo "NOTE: the estimator is fed and has given no pose (poses=0). On a drone that stands still that is an estimator older than perception_pkgs dc8d058: its first pose comes after the takeoff. drones_preflight.yml looks for that commit in the checkout before the start, drones_relaunch.yml does not. If the checkout has it, the estimator was not built again since the checkout moved, or files of the checkout were changed by hand. Either way: run drones_update.yml."
+        fi
+        ws={{ drone_ros_path }}/install
+        if [ -f $ws/setup.bash ]; then
+          source /opt/ros/humble/setup.bash
+          source $ws/setup.bash
+          export ROS_DOMAIN_ID={{ drone_num }}
+          st=$(timeout -k 2 10 ros2 topic echo --no-daemon --once /{{ ns }}/vio/status swarmnxt_msgs/msg/VisionPoseStatus 2>/dev/null \
+               | grep -E '^(source|use_vio|vio_alive|vio_ready|mocap_valid|armed|fallback_latched|reason|vio_poses):' | tr '\n' ' ')
+          r=$(echo "$st" | sed -n 's/.*reason: \([0-9][0-9]*\).*/\1/p')
+          why=""
+          [ -n "$r" ] && why=$(grep -h -E "^uint8 +REASON_[A-Z_]+ *= *$r([^0-9]|\$)" $ws/swarmnxt_msgs/share/swarmnxt_msgs/msg/VisionPoseStatus.msg 2>/dev/null | head -n 1 | sed 's/^uint8 *//' | tr -s ' ')
+          echo "vision_pose_node status: ${st:-none received within 10 s }${why:+($why)}"
+        fi
+        true
+      args:
+        executable: /bin/bash
+      register: vio_why
+      changed_when: false
+      failed_when: false
+
+    - name: Stop the stack of this drone
+      ansible.builtin.systemd:
+        name: ros_packages
+        state: stopped
+        scope: user
+
+    - name: Report the drone as not started
+      ansible.builtin.fail:
+        msg: >-
+          {{ inventory_hostname }}: "{{ ansible_failed_task.name | default('the check of the onboard VIO') }}"
+          did not succeed within its time, so the stack of this drone was stopped again.
+          {{ 'Its estimator runs and is fed: with enable_vio=true and vio_nav=false this drone starts, with PX4 on the mocap.'
+             if (vio_alive.rc | default(1)) == 0 else '' }}
+          What the launch log and vision_pose_node say:
+          {{ vio_why.stdout | default('', true) | trim | default('(nothing: no estimator, no "[vio]" line and no "pose source" line)', true) }}

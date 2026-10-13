@@ -37,6 +37,91 @@ optitrack_server_address: "192.168.194.3"
 enable_cameras: false
 enable_depth: false
 
+# Onboard VIO -- set per drone the same way (e.g. nxt10.local enable_vio=true). The flags take
+# effect at the next drones_preflight.yml or drones_relaunch.yml: both render the launch file.
+#   enable_vio    the estimator of perception_pkgs runs on the drone. vision_pose_node places
+#                 its poses in the room and they are recorded (/vio/poseimu as the estimator
+#                 gives them, /<ns>/vio/odometry placed in the room). PX4 flies on the mocap,
+#                 as without the flag. The VIO is placed while the drone stands disarmed,
+#                 never in flight.
+#   vio_nav       PX4 flies on the VIO, from the ground on. vision_pose_node hands PX4's pose
+#                 input to the VIO while the drone stands disarmed, once the estimator has
+#                 given poses for some seconds with the drone standing still (about 10 s
+#                 after it starts). drones_preflight.yml and drones_relaunch.yml wait for that,
+#                 so leave the drones alone until the playbook has finished.
+#                 A drone armed earlier flies that flight on the mocap; while PX4 is not on
+#                 the VIO the launch log says why ("VIO not used: ...").
+#                 The node gives PX4 back to the mocap, and keeps it there until the stack
+#                 is started again, when one of these happens:
+#                   - PX4's position is more than vio_fallback_dist_m from the mocap for
+#                     0.1 s;
+#                   - no pose has come from the estimator for 0.33 s;
+#                   - the time stamps of the estimator's poses jump ahead by more than 1 s:
+#                     it has started again, and its poses are in another world;
+#                   - PX4's position has not been compared with the mocap for 1 s although
+#                     the mocap is arriving (PX4's own odometry stopped, or its stamps no
+#                     longer meet the mocap's), so the first rule cannot run;
+#                   - vision_pose_node itself was started again in flight.
+#                 For the first four the launch log has the line "pose source: VIO -> MOCAP
+#                 (...)" with the rule and its numbers. Only vio_fallback_dist_m is set here;
+#                 the other figures are the node's own (README of
+#                 ros_packages/vision_pose_ros2). A mocap that drops out does not
+#                 end the VIO: PX4 stays on it, and the rules that need the mocap wait for
+#                 its return. If the VIO stops while the mocap is away, PX4 gets no pose
+#                 until the mocap is back.
+#                 The mocap is still needed: at every start it gives the VIO its place and
+#                 heading in the room, and the VIO is checked against it.
+#                 The drone can stand anywhere and face any way: the tilt between the mocap's
+#                 rigid body and the IMU is measured again at every start, and of the
+#                 calibration flight only the heading offset in mount.json is used.
+#   vio_matching  false = fly without the matching between cameras that the flight settings
+#                 of perception_pkgs switch on (its vio/README.md gives the trade-off). Only
+#                 false, 0, no and off switch it off.
+#   vio_fallback_dist_m  the distance of the first of those rules, in metres.
+#   vio_heading_trim     true = in flight, the heading the VIO was given at the start is turned
+#                 slowly toward the one that fits the mocap's positions (0.2 deg/s for 20 s,
+#                 from the moment the drone is 2 m from where it started; 2 deg at most).
+# enable_vio or vio_nav turn on the cameras and the camera recorder. The one camera recording
+# on the host PC (nxt3, 4 June 2026) is 5.0 GB for 3 min 3 s: 1.65 GB per minute.
+# Both flags need:
+#   - the estimator of perception_pkgs dc8d058 (12 Oct 2026) or later, built on the drone by
+#     drones_update.yml. From that commit on it gives poses while the drone stands still. An
+#     older one gives its first pose after the takeoff: the VIO is then never placed, nothing
+#     of the flight is in /<ns>/vio/odometry, and with vio_nav the drone flies on the mocap;
+#   - a calibration deployed in ~/vio_calib/current by the deploy tool of perception_pkgs
+#     cdcc9dc or later (drones_selfcalib.yml does it).
+# vio_nav also needs that calibration's mount.json, which takes a calibration flight in the
+# mocap. The mount is solved against the estimator's first pose. Until perception_pkgs dc8d058
+# that was the first pose after the takeoff; now it is one on the ground, about 3 s after the
+# recording starts, which is also where vision_pose_node uses the mount. dc8d058 says to solve
+# the mounts again. On the one flight where both were solved (nxt3, 4 June 2026) they differ by
+# 0.02 to 0.22 deg of heading, which is 0.2 to 1.7 cm at 4.5 m from the start: a mount.json
+# from before can be flown on. Nothing in mount.json says which estimator solved it.
+# Solving it again takes no new flight while a recording of a flight in the mocap is still on
+# the drone: drones_update.yml, then drones_selfcalib.yml with
+# -e selfcalib_log_dir=<that recording>. That calibrates the cameras again as well and
+# replaces ~/vio_calib/current.
+# Do not run drones_selfcalib.yml on a recording without a takeoff (logs/latest once the
+# stack has been started again without a flight). Since dc8d058 the tool calls such a
+# recording HEALTHY, and what is deployed then is the fleet's mean calibration with a mount
+# that means nothing (seen: 115.8 deg of heading, 86.8 deg of tilt). In the table that
+# drones_selfcalib.yml prints, such a run has "-" in the column STILL.
+# The launch file does not take such a mount: a mount.json whose mount_tilt_deg is not
+# between 0 and 15 deg is treated like a missing one (the mounts seen have 1.4 to 3.4 deg).
+# The estimator runs and the VIO is recorded, PX4 stays on the mocap, the launch log says
+# "[vio] vio_nav OFF, PX4 stays on the mocap: ..." with the tilt, and drones_preflight.yml
+# with vio_nav fails with that line. Calibrate again on a recording with a flight.
+# drones_preflight.yml refuses a drone whose folder or estimator is missing or whose
+# perception_pkgs checkout is older than dc8d058 and, with vio_nav, a drone whose VIO has not
+# taken over on the ground.
+# drones_relaunch.yml makes none of these checks before the start. With vio_nav it also
+# refuses a drone whose VIO has not taken over on the ground.
+enable_vio: false
+vio_nav: false
+vio_matching: true
+vio_fallback_dist_m: 0.15
+vio_heading_trim: false
+
 # OAK USB speed cap.  Default super_plus (10 Gbps).  In short tests nxt10's
 # link was marginal at SUPER_PLUS (X_LINK_ERROR / USB-disconnect stalls)
 # while nxt6 auto-negotiated to SUPER (5 Gbps) anyway and was clean.  In a
@@ -54,6 +139,13 @@ drone_rosbag_topics:
   - "/agent_[0-9]+/*"
   - "/fmu/*"
   - "/depth/*"
+  # The estimator's pose of the onboard VIO. It is published only with enable_vio or vio_nav,
+  # and a topic that is not published is not recorded. Anchored on purpose: these patterns
+  # are searched inside topic names, and nothing else of /vio/ may match, because the
+  # estimator computes its other outputs (feature clouds, track images) as soon as something
+  # subscribes. The poses vision_pose_node places in the room and its status are /<ns>/vio/*,
+  # which the first line already takes.
+  - "^/vio/poseimu$"
   # /oak_ffc_4p_driver_node/* is recorded separately by oak_compressed_recorder
   # (libmcap direct, zero-loss). See drone_launch.py.j2.
   - "/tf"

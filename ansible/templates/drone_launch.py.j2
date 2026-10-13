@@ -1,3 +1,9 @@
+{# Onboard VIO flags of group_vars/all: either one starts the cameras, the camera recorder and
+   the estimator of perception_pkgs. What PX4 is fed is decided in the "Onboard VIO" block below.
+   The Jinja tags of the VIO parts start at column 0 on purpose: Ansible renders with trim_blocks
+   on and lstrip_blocks off, so the spaces in front of an indented tag are kept and glued to the
+   line that follows it. #}
+{% set vio_flags = (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool) %}
 # swarm_stack.launch.py
 from launch import LaunchDescription
 from launch.actions import (
@@ -46,17 +52,244 @@ def generate_launch_description():
         ]
     )
 
-    mocap_to_vision_pose = Node(
-        package="mocap_to_vision_pose_ros2",
-        executable="mocap_to_vision_pose_node",
+{% if vio_flags %}
+    # ---- Onboard VIO (enable_vio / vio_nav in group_vars/all) --------------------------------
+    # The estimator of perception_pkgs runs on the calibration folder the deploy tool left in
+    # ~/vio_calib/current, and vision_pose_node (below) places its poses in the room. This block
+    # decides what is started and what that node is told.
+    # Nothing in it may stop the launch: drones_relaunch.yml starts the stack without any of the
+    # preflight checks, so whatever is not ready has to cost the VIO and not the flight stack.
+    # The drone then flies on the mocap, and a line starting with "[vio]" in the launch log says why.
+    # (Imported here and not at the top: a drone without the flags gets a file without this block.)
+    import json
+    from ament_index_python.packages import get_package_prefix, PackageNotFoundError
+    from launch.actions import LogInfo
+
+    vio_dir = "{{ drone_base_path }}/vio_calib/current"
+    vio_log = os.path.join(os.environ.get("ROS_LOG_DIR"), "vio")
+    # What this start was asked to do; what it did is added further down (vio/run.json, in the
+    # folder of this start's recording).
+    vio_run = {
+        "enable_vio": {{ 'True' if (enable_vio | default(false) | bool) else 'False' }},
+        "vio_nav": {{ 'True' if (vio_nav | default(false) | bool) else 'False' }},
+        "vio_matching": {{ 'False' if (vio_matching | default(true) | string | lower) in ['false', '0', 'no', 'off'] else 'True' }},
+        "vio_heading_trim": {{ 'True' if (vio_heading_trim | default(false) | bool) else 'False' }},
+        "vio_fallback_dist_m": {{ vio_fallback_dist_m | default(0.15) | float }},
+        "folder": os.path.realpath(vio_dir),
+    }
+
+    def _env_file(path):
+        # KEY=VALUE lines as deploy_vio.py writes them, read as a sourcing shell would: the
+        # folder's flight_stiffness.env ends with a quoted OV_NONRADIAL='...'.
+        env = {}
+        with open(path, errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                value = value.strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+                    value = value[1:-1]
+                elif value[:1] not in ("'", '"'):
+                    value = value.split(" #", 1)[0].rstrip()
+                env[key.strip()] = value
+        return env
+
+    def _is_number(text):
+        try:
+            return math.isfinite(float(text))
+        except (TypeError, ValueError):
+            return False
+
+    def _program(package, executable):
+        # A Node whose package is missing stops the whole launch, so look before adding one.
+        try:
+            return os.path.isfile(os.path.join(get_package_prefix(package), "lib", package, executable))
+        except PackageNotFoundError:
+            return False
+
+    # A mount.json whose tilt (mount_tilt_deg, between the mocap's rigid body and the IMU) is
+    # above this is not a mount. The mounts seen have a tilt of 1.4 to 3.4 deg. Since
+    # perception_pkgs dc8d058 the self-calibration tool calls a recording without a takeoff
+    # healthy, and the mount.json deployed from one has a heading of 115.83 deg and a tilt of
+    # 86.83 deg.
+    MOUNT_TILT_MAX_DEG = 15.0
+
+    def _mount(path):
+        # mount.json of the calibration and "", or None and why it is not used. Only its heading
+        # part is used in flight.
+        why = "no usable mount.json in " + vio_dir
+        try:
+            with open(path) as f:
+                mount = json.load(f)
+            yaw = mount.get("mount_yaw_deg")
+            usable = isinstance(yaw, (int, float)) and not isinstance(yaw, bool) and math.isfinite(yaw)
+            # A file without the tilt is taken as before. NaN fails both comparisons.
+            tilt = mount.get("mount_tilt_deg", 0.0) if usable else 0.0
+            if not (isinstance(tilt, (int, float)) and not isinstance(tilt, bool)
+                    and 0.0 <= tilt <= MOUNT_TILT_MAX_DEG):
+                usable = False
+                why = ("mount_tilt_deg " + repr(tilt)[:24] + " in the mount.json of " + vio_dir
+                       + " is not between 0 and %g deg, so this is not a mount: calibrate again"
+                         " on a recording with a flight" % MOUNT_TILT_MAX_DEG)
+            return (mount, "") if usable else (None, why)
+        except (OSError, ValueError, AttributeError, OverflowError, RecursionError):
+            return None, why
+
+    vio_env = {}
+    vio_problem = ""
+    try:
+        os.makedirs(vio_log, exist_ok=True)
+        missing = [f for f in ("estimator_flight.yaml", "kalibr_imucam_chain.yaml", "kalibr_imu_chain.yaml",
+                               "flight_stiffness.env", "campaign.env")
+                   if not os.path.isfile(os.path.join(vio_dir, f))]
+        if missing:
+            vio_problem = vio_dir + " lacks " + ", ".join(missing) + ": deploy the calibration again"
+        elif not _program("ov_msckf", "run_online_msckf"):
+            vio_problem = "ov_msckf is not built: run drones_update.yml"
+        else:
+            # The flight settings of this calibration (stiff calibration priors, lens terms,
+            # matching between cameras) and the vehicle's tracker switches, as the folder's
+            # MANIFEST.txt has them sourced. Only the estimator's process gets them: they must
+            # never reach a calibration run.
+            vio_env = _env_file(os.path.join(vio_dir, "flight_stiffness.env"))
+            vio_env.update(_env_file(os.path.join(vio_dir, "campaign.env")))
+            # The estimator takes a prior it cannot read as "not set" and says nothing, and
+            # exits on lens terms it cannot read.
+            bad = [k for k in ("OV_PRIOR_DT_SIG", "OV_PRIOR_EXTR_Q_SIG", "OV_PRIOR_EXTR_T_SIG",
+                               "OV_PRIOR_INTR_F_SIG", "OV_PRIOR_INTR_D_SIG") if not _is_number(vio_env.get(k))]
+            if "OV_PRIOR_NONRAD_SIG" in vio_env and not _is_number(vio_env["OV_PRIOR_NONRAD_SIG"]):
+                bad.append("OV_PRIOR_NONRAD_SIG")
+            if "OV_NONRADIAL" not in vio_env:
+                bad.append("OV_NONRADIAL")
+            if vio_env.get("OV_GPU_TRACK") != "1":
+                bad.append("OV_GPU_TRACK")
+            # A zero byte in a name or a value, or a line without a name: the launcher cannot
+            # start a process with such an environment, and it then ends the whole launch
+            # instead of going on without the estimator.
+            bad += sorted(repr(k)[:24] for k, v in vio_env.items() if not k or "\0" in k or "\0" in v)
+            if bad:
+                vio_problem = ("the env files of " + vio_dir + " are damaged or older than the estimator ("
+                               + ", ".join(bad) + "): deploy the calibration again")
+    except OSError as e:
+        vio_problem = "cannot read " + vio_dir + ": " + str(e)
+    vio_mount, vio_mount_problem = _mount(os.path.join(vio_dir, "mount.json"))
+
+    vio_actions = []      # joins the launch description at the end of this file
+    vision_pose_vio = {}  # parameters of vision_pose_node on top of its mocap ones
+    vio_px4 = False       # whether vision_pose_node may feed PX4 from the VIO (its use_vio)
+
+    if vio_problem:
+        # No estimator, so vision_pose_node is told nothing about a VIO: it runs exactly as on a
+        # drone without the flags.
+        vio_actions.append(LogInfo(msg="[vio] NOT STARTED, PX4 stays on the mocap: " + vio_problem))
+    else:
+        if not vio_run["vio_matching"]:
+            # vio_matching=false: fly without the matching between cameras
+            # (perception_pkgs vio/README.md, "Matching and lens terms in flight").
+            vio_env.pop("OV_XCAM", None)
+            vio_env.pop("OV_XCAM_PRESET", None)
+        # Written while it runs; the trajectory and the pose-latency file only at a clean exit.
+        vio_env["OV_ONLINE_LAT"] = os.path.join(vio_log, "latency.txt")
+        vio_env["OV_ONLINE_POSE_LAT"] = os.path.join(vio_log, "pose_latency.txt")
+        # vision_pose_node needs the estimator's poses while the drone still stands: it places the
+        # VIO in the room and hands PX4 over before arming, never in the air. The estimator gives
+        # them from its static initialisation on (about 3 s after it starts) since perception_pkgs
+        # dc8d058, and nothing has to be set here for it. An older estimator gives its first pose
+        # after the takeoff: the VIO is then never ready on the ground and the drone flies on the
+        # mocap. drones_preflight.yml refuses a drone whose perception_pkgs checkout is older.
+
+        # In its own namespace, outside what the bag records: a recorder subscribed to the
+        # estimator's feature clouds or track images would make it compute them.
+        # No chrt: the estimator pins and schedules its own threads (OV_AFFINITY in campaign.env).
+        vio_actions.append(Node(
+            package="ov_msckf",
+            executable="run_online_msckf",
+            namespace="vio",
+            arguments=[os.path.join(vio_dir, "estimator_flight.yaml"),
+                       os.path.join(vio_log, "estimate.tum")],
+            # ROS parameters override estimator_flight.yaml, which names no topics as deployed.
+            parameters=[{
+                # The file's "use_stereo: false" is followed by a comment that OpenCV's reader
+                # takes for a value, and the live node started from the file alone exits
+                # ("the node use_stereo has an invalid boolean type"; seen on the host PC, not
+                # tried on a drone). Given here, the file's line is not read. False is the
+                # flight value: the matching between cameras of flight_stiffness.env needs it.
+                "use_stereo": False,
+                "imu_topic": "/fmu/out/sensor_combined",
+                "imu_msg_type": "px4_msgs/msg/SensorCombined",
+                "cam_msg_type": "sensor_msgs/msg/CompressedImage",
+                "cam_topic0": "/oak_ffc_4p_driver_node/CAM_A/compressed",
+                "cam_topic1": "/oak_ffc_4p_driver_node/CAM_B/compressed",
+                "cam_topic2": "/oak_ffc_4p_driver_node/CAM_C/compressed",
+                "cam_topic3": "/oak_ffc_4p_driver_node/CAM_D/compressed",
+            }],
+            additional_env=vio_env,
+            output="log",
+        ))
+
+        # PX4 is fed the VIO only with the heading offset of the calibration (mount.json: the yaw
+        # between the mocap's rigid body and the IMU). Without it, or with one that _mount() does
+        # not take, the VIO is still placed in the room and recorded, and PX4 stays on the mocap.
+        vio_px4 = vio_run["vio_nav"] and vio_mount is not None
+        if vio_run["vio_nav"] and not vio_px4:
+            vio_actions.append(LogInfo(msg="[vio] vio_nav OFF, PX4 stays on the mocap: " + vio_mount_problem))
+        vision_pose_vio = {
+            "vio_topic": "/vio/poseimu",
+            # False = the VIO is placed in the room and recorded, and PX4 flies on the mocap.
+            # True = PX4 is handed to the VIO on the ground, once it has stood still long enough;
+            # a drone armed before that flies this flight on the mocap.
+            "use_vio": vio_px4,
+            "has_mount": vio_mount is not None,
+            "mount_yaw_deg": float(vio_mount["mount_yaw_deg"]) if vio_mount else 0.0,
+            # Back to the mocap, until the node is started again, when PX4's position is further
+            # than this from the mocap. The node's other reasons to go back keep its defaults
+            # (group_vars/all lists them).
+            "fallback_dist_m": vio_run["vio_fallback_dist_m"],
+            # vio_heading_trim: in flight, turn the VIO's heading in the room toward the one that
+            # fits the mocap's positions, at this rate in deg/s. 0 = leave it as placed.
+            "heading_trim_rate_dps": 0.2 if vio_run["vio_heading_trim"] else 0.0,
+            # After a fallback, feed PX4 the mocap attitude turned into the IMU's body frame (the
+            # node identifies the rotation between rigid body and IMU at every start), so that
+            # the attitude PX4 fuses does not step at the switch.
+            "correct_mocap_attitude": vio_run["vio_nav"],
+        }
+
+    vio_run.update({"started": not vio_problem, "problem": vio_problem, "mount": vio_mount,
+                    "mount_problem": vio_mount_problem, "vision_pose_node": vision_pose_vio})
+    try:
+        with open(os.path.join(vio_log, "run.json"), "w") as f:
+            json.dump(vio_run, f)
+    except OSError:
+        pass
+
+{% endif %}
+    # The node that gives PX4 its pose: the only writer of /fmu/in/vehicle_visual_odometry. It
+    # feeds the mocap. With the onboard VIO flags of group_vars/all it also places the
+    # estimator's poses in the room and, with vio_nav, feeds PX4 from them: what it is told then
+    # is decided in an "Onboard VIO" block that precedes it in the launch file of such a drone.
+    # It is not looked up before it is added: without it PX4 has no position at all, and a launch
+    # that stops here is the clearer failure. drones_update.yml builds it with the other
+    # ros_packages of swarm-nxt.
+    # respawn: should it die in flight, it comes back and feeds the mocap.
+    vision_pose = Node(
+        package="vision_pose_ros2",
+        executable="vision_pose_node",
         parameters=[
             {
                 "mocap_topic": "/optitrack_multiplexer_node/rigid_body/{{ ns }}",
-                "namespace": "{{ ns }}"
+                # In the drone's namespace, which is what the bag records.
+                "odometry_topic": "/{{ ns }}/vio/odometry",
+                "status_topic": "/{{ ns }}/vio/status",
+{% if vio_flags %}
+                **vision_pose_vio,
+{% endif %}
             }
         ],
         prefix=['chrt -f 50'],
         output="log",
+        respawn=True,
     )
 
     latency_checker = Node(
@@ -195,7 +428,9 @@ def generate_launch_description():
 
     extra_nodes = []
 
-    {% if (enable_cameras | default(false) | bool) or (enable_depth | default(false) | bool) %}
+{# The onboard VIO needs the camera driver too (the estimator reads its four compressed
+   streams) and gets the camera recorder with it. #}
+    {% if (enable_cameras | default(false) | bool) or (enable_depth | default(false) | bool) or vio_flags %}
     # Camera driver (needed by enable_cameras and enable_depth).
     # usb_speed is per-drone-overridable in inventory.ini via oak_usb_speed=super
     # for drones whose OAK link is marginal at 10 Gbps SuperSpeed Plus.
@@ -277,11 +512,17 @@ def generate_launch_description():
     )
     {% endif %}
 
+{% if vio_flags %}
+    # The estimator of the onboard VIO, or the line that says why it is not started
+    # (both decided in the "Onboard VIO" block, in front of vision_pose_node).
+    extra_nodes += vio_actions
+
+{% endif %}
     return LaunchDescription(
         [
             bridge_node,
             rosbag_start,
-            mocap_to_vision_pose,
+            vision_pose,
             latency_checker,
             safety_checker,
             drone_state_manager,
