@@ -24,10 +24,11 @@
 # time a VIO flag or the cameras are switched on for a drone, and whenever the cameras may
 # have changed -- a reboot or a hard landing.
 #
-# With vio_nav it waits, after the start, until vision_pose_node has handed PX4 to the VIO, as
-# preflight does: leave the drone standing untouched until this playbook has finished (about
-# 10 s after the estimator's first image). A drone that does not get there is stopped again
-# and reported with the reason.
+# With enable_vio or vio_nav it waits, after the start, as preflight does: until the estimator
+# is fed and vision_pose_node reports the VIO ready and, with vio_nav, has handed PX4 to it.
+# Leave the drone standing untouched until this playbook has finished (about 15 s after the
+# start): a drone that takes off before the estimator has started gets no pose for the whole
+# flight. A drone that does not get there is stopped again and reported with the reason.
 #
 # EVERY START OF THE STACK BEGINS A NEW RECORDING and points logs/latest at it. Collect
 # the previous flight first (drones_postflight.yml, drones_selfcalib.yml): run after this
@@ -139,10 +140,10 @@
           five seconds after the restart. On the drone: journalctl --user -u ros_packages -n 40
       when: relaunch_active.rc != 0
 
-    # ---- 5. with vio_nav, PX4 on the VIO -----------------------------------------
-    # The same wait as in drones_preflight.yml: the estimator is fed, and the last
-    # "pose source:" line of the launch log is the handover to the VIO. A drone that fails it is
-    # stopped again and reported with the reason.
-    - name: Wait for the handover to the VIO
-      when: vio_nav | default(false) | bool
+    # ---- 5. with a VIO flag, the VIO ready -----------------------------------------
+    # The same wait as in drones_preflight.yml: the estimator is fed, vision_pose_node reports
+    # the VIO ready and, with vio_nav, the last "pose source:" line of the launch log is the
+    # handover to the VIO. A drone that fails it is stopped again and reported with the reason.
+    - name: Wait for the onboard VIO
+      when: (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)
       ansible.builtin.include_tasks: "tasks/vio-after-start.yml"

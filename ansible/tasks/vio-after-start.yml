@@ -1,13 +1,16 @@
-# The onboard VIO after the stack has been started. Included by drones_preflight.yml (with
-# enable_vio or vio_nav) and by drones_relaunch.yml (with vio_nav).
+# The onboard VIO after the stack has been started. Included by drones_preflight.yml and by
+# drones_relaunch.yml, with enable_vio or vio_nav.
 #
-# Two things only a running stack shows. The estimator logs every 5 s what it received and
-# fed. And with vio_nav, vision_pose_node logs "pose source: MOCAP -> VIO (...)" when it
-# hands PX4's pose input to the VIO; it does that on the ground only, once the VIO has given
-# poses for some seconds with the drone standing still, so leave the drones untouched until
-# the playbook has finished. The last such line has to be that one: a later
-# "VIO -> MOCAP" is the fallback, which holds until the stack is started again.
-# A drone that fails either wait is stopped again, so that a drone reported as failed is
+# Three things only a running stack shows. The estimator logs every 5 s what it received and
+# fed. vision_pose_node logs "VIO ready: ..." once the estimator's poses have been settled
+# for some seconds with the drone standing still and are placed in the room. And with
+# vio_nav it then logs "pose source: MOCAP -> VIO (...)" when it hands PX4's pose input to the
+# VIO, on the ground only; the last such line has to be that one: a later "VIO -> MOCAP" is
+# the fallback, which holds until the stack is started again.
+# So leave the drones standing untouched until the playbook has finished, about 15 s after
+# the start. That holds without vio_nav too: the estimator can only start while the drone
+# stands, and a drone that takes off before it has started gets no pose for the whole flight.
+# A drone that fails a wait is stopped again, so that a drone reported as failed is
 # never one that is up and would fly on something else than its flags say.
 - name: Check the onboard VIO after the start
   block:
@@ -21,6 +24,19 @@
       retries: 18
       delay: 5
       until: vio_alive.rc == 0
+
+    # Without vio_nav PX4 stays on the mocap and nothing is handed over: the wait is for the
+    # VIO to be ready. "VIO not ready any more" after it means the drone was moved.
+    - name: Wait for vision_pose_node to report the VIO ready
+      when: not (vio_nav | default(false) | bool)
+      ansible.builtin.shell: >-
+        grep -h -F -e 'VIO ready: ' -e 'VIO not ready any more' {{ drone_base_path }}/logs/latest/*/launch.log
+        | tail -n 1 | grep -F 'VIO ready: '
+      register: vio_is_ready
+      changed_when: false
+      retries: 18
+      delay: 5
+      until: vio_is_ready.rc == 0
 
     - name: Wait for vision_pose_node to hand PX4 to the VIO
       when: vio_nav | default(false) | bool
@@ -80,7 +96,7 @@
         msg: >-
           {{ inventory_hostname }}: "{{ ansible_failed_task.name | default('the check of the onboard VIO') }}"
           did not succeed within its time, so the stack of this drone was stopped again.
-          {{ 'Its estimator runs and is fed: with enable_vio=true and vio_nav=false this drone starts, with PX4 on the mocap.'
+          {{ 'Its estimator runs and is fed. The drone has to stand untouched from the start of the stack until this playbook has finished.'
              if (vio_alive.rc | default(1)) == 0 else '' }}
           What the launch log and vision_pose_node say:
           {{ vio_why.stdout | default('', true) | trim | default('(nothing: no estimator, no "[vio]" line and no "pose source" line)', true) }}

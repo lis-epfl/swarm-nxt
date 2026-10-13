@@ -294,9 +294,10 @@
         scope: user
 
     # --- ONBOARD VIO, AFTER THE START ---
-    # The estimator has to be fed and, with vio_nav, vision_pose_node has to hand PX4 to the VIO,
-    # which it does on the ground only: leave the drones untouched until this playbook has
-    # finished. A drone that does not get there is stopped again and reported with the reason.
+    # The estimator has to be fed, vision_pose_node has to report the VIO ready and, with vio_nav,
+    # hand PX4 to it, all of which needs the drone standing: leave the drones untouched until
+    # this playbook has finished. A drone that does not get there is stopped again and reported
+    # with the reason.
     # The tasks are in tasks/vio-after-start.yml, which drones_relaunch.yml uses too.
     - name: Check the onboard VIO after the start
       when: (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)

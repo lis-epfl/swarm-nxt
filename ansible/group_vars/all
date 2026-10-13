@@ -43,7 +43,10 @@ enable_depth: false
 #                 its poses in the room and they are recorded (/vio/poseimu as the estimator
 #                 gives them, /<ns>/vio/odometry placed in the room). PX4 flies on the mocap,
 #                 as without the flag. The VIO is placed while the drone stands disarmed,
-#                 never in flight.
+#                 never in flight. The estimator can only start while the drone stands still:
+#                 drones_preflight.yml and drones_relaunch.yml wait until the VIO is ready
+#                 (about 15 s after the start), so leave the drones alone until the playbook
+#                 has finished. A drone that takes off earlier gets no pose for that flight.
 #   vio_nav       PX4 flies on the VIO, from the ground on. vision_pose_node hands PX4's pose
 #                 input to the VIO while the drone stands disarmed, once the estimator has
 #                 given poses for some seconds with the drone standing still (about 10 s
