@@ -207,6 +207,11 @@ def generate_launch_description():
             package="ov_msckf",
             executable="run_online_msckf",
             namespace="vio",
+            # Without the display of the desktop session that the service inherits (DISPLAY=:0
+            # on a drone): with it the estimator's image decoding gets the software graphics
+            # library instead of NVIDIA's ("NvBufSurfaceMapEglImage failed") and the estimator
+            # crashes at the first images. Started over ssh there is no DISPLAY, and it runs.
+            prefix="env -u DISPLAY -u XAUTHORITY",
             arguments=[os.path.join(vio_dir, "estimator_flight.yaml"),
                        os.path.join(vio_log, "estimate.tum")],
             # ROS parameters override estimator_flight.yaml, which names no topics as deployed.
