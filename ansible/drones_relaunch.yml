@@ -28,7 +28,8 @@
 # is fed and vision_pose_node reports the VIO ready and, with vio_nav, has handed PX4 to it.
 # Leave the drone standing untouched until this playbook has finished (about 15 s after the
 # start): a drone that takes off before the estimator has started gets no pose for the whole
-# flight. A drone that does not get there is stopped again and reported with the reason.
+# flight. A drone that does not get there is reported with the reason and, unless it is
+# armed, stopped again.
 #
 # EVERY START OF THE STACK BEGINS A NEW RECORDING and points logs/latest at it. Collect
 # the previous flight first (drones_postflight.yml, drones_selfcalib.yml): run after this
@@ -143,7 +144,8 @@
     # ---- 5. with a VIO flag, the VIO ready -----------------------------------------
     # The same wait as in drones_preflight.yml: the estimator is fed, vision_pose_node reports
     # the VIO ready and, with vio_nav, the last "pose source:" line of the launch log is the
-    # handover to the VIO. A drone that fails it is stopped again and reported with the reason.
+    # handover to the VIO. A drone that fails it is reported with the reason and, unless it is
+    # armed, stopped again.
     - name: Wait for the onboard VIO
       when: (enable_vio | default(false) | bool) or (vio_nav | default(false) | bool)
       ansible.builtin.include_tasks: "tasks/vio-after-start.yml"

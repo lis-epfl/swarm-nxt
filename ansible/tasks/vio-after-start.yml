@@ -11,7 +11,10 @@
 # the start. That holds without vio_nav too: the estimator can only start while the drone
 # stands, and a drone that takes off before it has started gets no pose for the whole flight.
 # A drone that fails a wait is stopped again, so that a drone reported as failed is
-# never one that is up and would fly on something else than its flags say.
+# not one that is up and would fly on something else than its flags say. With one exception:
+# only a drone known to be disarmed is stopped. One that is armed, or whose arming state
+# cannot be read, may be flying (the VIO cannot become ready after arming), and stopping the
+# stack would take its controller and PX4's pose away: it is left running and reported.
 - name: Check the onboard VIO after the start
   block:
     - name: Wait for the estimator to report image sets fed
@@ -26,11 +29,13 @@
       until: vio_alive.rc == 0
 
     # Without vio_nav PX4 stays on the mocap and nothing is handed over: the wait is for the
-    # VIO to be ready. "VIO not ready any more" after it means the drone was moved.
+    # VIO to be ready. "VIO not ready any more" after it means the drone was moved, "VIO stream
+    # restarted" that the estimator's poses jumped in time; both wait for the next "VIO ready".
     - name: Wait for vision_pose_node to report the VIO ready
       when: not (vio_nav | default(false) | bool)
       ansible.builtin.shell: >-
-        grep -h -F -e 'VIO ready: ' -e 'VIO not ready any more' {{ drone_base_path }}/logs/latest/*/launch.log
+        grep -h -F -e 'VIO ready: ' -e 'VIO not ready any more' -e 'VIO stream restarted'
+        {{ drone_base_path }}/logs/latest/*/launch.log
         | tail -n 1 | grep -F 'VIO ready: '
       register: vio_is_ready
       changed_when: false
@@ -85,7 +90,14 @@
       changed_when: false
       failed_when: false
 
+    # "armed: false" in the status vision_pose_node gave just above (from PX4's vehicle status).
+    # No status within its 10 s, or "armed: true", leaves the stack running.
+    - name: Note whether the drone is known to be disarmed
+      ansible.builtin.set_fact:
+        vio_drone_disarmed: '{{ (vio_why.stdout | default("")) is search("vision_pose_node status: .*armed: false") }}'
+
     - name: Stop the stack of this drone
+      when: vio_drone_disarmed | bool
       ansible.builtin.systemd:
         name: ros_packages
         state: stopped
@@ -95,7 +107,9 @@
       ansible.builtin.fail:
         msg: >-
           {{ inventory_hostname }}: "{{ ansible_failed_task.name | default('the check of the onboard VIO') }}"
-          did not succeed within its time, so the stack of this drone was stopped again.
+          did not succeed within its time.
+          {{ 'The stack of this drone was stopped again.' if (vio_drone_disarmed | bool) else
+             'THE STACK OF THIS DRONE WAS LEFT RUNNING: the drone is armed or its arming state could not be read, so it may be flying. Land it, then run the playbook again with the drone standing still.' }}
           {{ 'Its estimator runs and is fed. The drone has to stand untouched from the start of the stack until this playbook has finished.'
              if (vio_alive.rc | default(1)) == 0 else '' }}
           What the launch log and vision_pose_node say:

@@ -60,6 +60,8 @@ def generate_launch_description():
     # Nothing in it may stop the launch: drones_relaunch.yml starts the stack without any of the
     # preflight checks, so whatever is not ready has to cost the VIO and not the flight stack.
     # The drone then flies on the mocap, and a line starting with "[vio]" in the launch log says why.
+    # (After the start the playbooks wait for the VIO; a drone that does not get it ready is
+    # reported and, while it is disarmed, stopped again.)
     # (Imported here and not at the top: a drone without the flags gets a file without this block.)
     import json
     from ament_index_python.packages import get_package_prefix, PackageNotFoundError

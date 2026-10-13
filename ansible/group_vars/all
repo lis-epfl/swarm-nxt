@@ -115,10 +115,10 @@ enable_depth: false
 # "[vio] vio_nav OFF, PX4 stays on the mocap: ..." with the tilt, and drones_preflight.yml
 # with vio_nav fails with that line. Calibrate again on a recording with a flight.
 # drones_preflight.yml refuses a drone whose folder or estimator is missing or whose
-# perception_pkgs checkout is older than dc8d058 and, with vio_nav, a drone whose VIO has not
-# taken over on the ground.
-# drones_relaunch.yml makes none of these checks before the start. With vio_nav it also
-# refuses a drone whose VIO has not taken over on the ground.
+# perception_pkgs checkout is older than dc8d058. drones_relaunch.yml makes none of these
+# checks before the start. After the start both refuse, with either flag, a drone whose
+# estimator is not fed or whose VIO does not become ready and, with vio_nav, has not taken
+# over on the ground: its stack is stopped again, unless the drone is armed.
 enable_vio: false
 vio_nav: false
 vio_matching: true
