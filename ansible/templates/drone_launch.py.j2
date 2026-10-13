@@ -9,7 +9,10 @@ from launch import LaunchDescription
 from launch.actions import (
     IncludeLaunchDescription,
     ExecuteProcess,
+    GroupAction,
+    LogInfo,
     OpaqueFunction,
+    SetEnvironmentVariable,
     Shutdown,
     RegisterEventHandler,
 )
@@ -65,7 +68,6 @@ def generate_launch_description():
     # (Imported here and not at the top: a drone without the flags gets a file without this block.)
     import json
     from ament_index_python.packages import get_package_prefix, PackageNotFoundError
-    from launch.actions import LogInfo
 
     vio_dir = "{{ drone_base_path }}/vio_calib/current"
     vio_log = os.path.join(os.environ.get("ROS_LOG_DIR"), "vio")
@@ -441,20 +443,65 @@ def generate_launch_description():
     # Camera driver (needed by enable_cameras and enable_depth).
     # usb_speed is per-drone-overridable in inventory.ini via oak_usb_speed=super
     # for drones whose OAK link is marginal at 10 Gbps SuperSpeed Plus.
-    extra_nodes.append(
-        IncludeLaunchDescription(
-            AnyLaunchDescriptionSource(
-                PathJoinSubstitution([
-                    FindPackageShare('oak_ffc_4p_driver_ros2'),
-                    'launch',
-                    'oak_ffc_4p_driver_omninxt.launch.py'
-                ])
-            ),
-            launch_arguments={
-                'usb_speed': '{{ oak_usb_speed | default("super_plus") }}',
-            }.items(),
-        )
+    camera_driver = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('oak_ffc_4p_driver_ros2'),
+                'launch',
+                'oak_ffc_4p_driver_omninxt.launch.py'
+            ])
+        ),
+        launch_arguments={
+            'usb_speed': '{{ oak_usb_speed | default("super_plus") }}',
+        }.items(),
     )
+
+    # 16 MB of shared memory for the camera driver. The ROS middleware (Fast DDS 2.6) gives a
+    # process 512 kB for everything it sends to other processes of this computer, and one set
+    # of four images is about 1 MB. When that is full the driver does not wait: it throws away
+    # the oldest images a reader has not picked up yet, or the new one for every reader, and
+    # logs nothing. With the recorder and the estimator reading, 17 % of the image sets
+    # reached the estimator incomplete on nxt3 (October 2026), and none with 16 MB. Only the
+    # sender's size counts, so only the driver gets the profile, through its environment;
+    # the profile changes nothing else (same transports, shared memory then UDP).
+    # To see it on a drone: ls -l /dev/shm/fastrtps_*  shows one file of 16802336 bytes.
+    # A profile that cannot be written costs the buffer and not the cameras.
+    camera_profile = os.path.join(os.environ.get("ROS_LOG_DIR") or "/tmp", "fastdds_camera_driver.xml")
+    try:
+        os.makedirs(os.path.dirname(camera_profile), exist_ok=True)
+        with open(camera_profile, "w") as f:
+            f.write("""<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <transport_descriptors>
+    <transport_descriptor>
+      <transport_id>shm_big</transport_id>
+      <type>SHM</type>
+      <segment_size>16777216</segment_size>
+    </transport_descriptor>
+    <transport_descriptor>
+      <transport_id>udp4</transport_id>
+      <type>UDPv4</type>
+    </transport_descriptor>
+  </transport_descriptors>
+  <participant profile_name="default_participant" is_default_profile="true">
+    <rtps>
+      <userTransports>
+        <transport_id>shm_big</transport_id>
+        <transport_id>udp4</transport_id>
+      </userTransports>
+      <useBuiltinTransports>false</useBuiltinTransports>
+    </rtps>
+  </participant>
+</profiles>
+""")
+        # The environment is set for what the group starts and put back after it.
+        extra_nodes.append(GroupAction([
+            SetEnvironmentVariable("FASTRTPS_DEFAULT_PROFILES_FILE", camera_profile),
+            camera_driver,
+        ]))
+    except OSError as e:
+        extra_nodes.append(LogInfo(msg="[cams] camera driver started with the default 512 kB of shared memory: " + str(e)))
+        extra_nodes.append(camera_driver)
 
     # Zero-loss camera recorder (libmcap direct).  Writes to <ROS_LOG_DIR>/cams/
     # alongside the regular rosbag at <ROS_LOG_DIR>/bag/.  ros2 bag can't sustain
