@@ -350,5 +350,12 @@ def main():
         if len(drone_dirs) > 1:
              print("\n[WARNING] Could not calculate distances (Flight times did not overlap).")
 
+    # 6. ONBOARD VIO (drones flown with enable_vio or vio_nav; prints nothing for the others)
+    try:
+        import analyze_vio
+        analyze_vio.print_tables(root_dir)
+    except Exception as e:
+        print(f"\n[WARNING] VIO tables skipped ({type(e).__name__}: {e})")
+
 if __name__ == "__main__":
     main()
