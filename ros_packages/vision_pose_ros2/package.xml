@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>vision_pose_ros2</name>
+  <version>0.0.0</version>
+  <description>Gives PX4 its pose: the mocap, or the onboard VIO placed in the room, with a fallback to the mocap.</description>
+  <maintainer email="charbel.toumieh@epfl.ch">toumieh</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>px4_msgs</depend>
+  <depend>optitrack_multiplexer_ros2_msgs</depend>
+  <depend>swarmnxt_msgs</depend>
+  <depend>eigen</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

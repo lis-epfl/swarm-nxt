@@ -36,6 +36,13 @@ jobs:
                 git sparse-checkout set multi_agent_planner_msgs
                 mv multi_agent_planner_msgs ${GITHUB_WORKSPACE}/ros_packages/
 
+                # Clone the optitrack message packages (sparse checkout): vision_pose_ros2 reads the mocap's
+                # rigid body, and its message package needs the wrapper's
+                git clone --depth 1 --filter=blob:none --sparse https://github.com/lis-epfl/optitrack_packages_ros2.git /tmp/optitrack_pkgs
+                cd /tmp/optitrack_pkgs
+                git sparse-checkout set optitrack_multiplexer_ros2_msgs optitrack_wrapper_ros2_msgs
+                mv optitrack_multiplexer_ros2_msgs optitrack_wrapper_ros2_msgs ${GITHUB_WORKSPACE}/ros_packages/
+
                 # Clone px4_ros_com
                 git clone --depth 1 --branch main https://github.com/PX4/px4_ros_com.git ${GITHUB_WORKSPACE}/ros_packages/px4_ros_com
 
