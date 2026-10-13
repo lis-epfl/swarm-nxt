@@ -95,6 +95,13 @@ def load(collect_dir):
             # Seconds on the ground before takeoff: all streams live -> the PX4 takeoff. NOUMCAL
             # depends on it, so the two are printed side by side.
             'still': r.get('takeoff_s'),
+            # Seconds of the recording the tool read, from all streams live: the standstill plus
+            # the flight window. The tool writes null when that reaches past the end of the
+            # recording, or when it found no takeoff: it then read the recording to its end.
+            # A run the still-start check stopped wrote the span too, without having read it.
+            'used': (None if (r.get('gate_static') or {}).get('pass') is False else
+                     r['window_s'] if r.get('window_s') is not None else
+                     'all' if 'window_s' in r else None),
             'gates': {k: r.get('gate_' + k, {}).get('pass') for k in ('static', 'timing', 'image')},
             'gate_reason': r.get('gate_static', {}).get('reason', ''),
             # the real directory on the drone (the playbook resolves logs/latest before it moves)
@@ -138,7 +145,8 @@ def main():
     # holds the ! / ~ mark -- a space in the header -- so a title ends exactly above the last
     # digit of its values.
     COLS = [('STEP', '/2.0', 6), ('FOCAL%', '/2.0', 6), ('ROT°', '/8.0', 6), ('TRANS cm', '/15.0', 8),
-            ('t_d ms', '/20.0', 6), ('ATE m', '/0.20', 7), ('NOUMCAL m', '', 9), ('STILL s', '', 7)]
+            ('t_d ms', '/20.0', 6), ('ATE m', '/0.20', 7), ('NOUMCAL m', '', 9), ('STILL s', '', 7),
+            ('USED s', '', 6)]
 
     def line(drone, verdict, passes, cells, fails):
         return ('%-8s %-17s %4s' % (drone, verdict, passes)
@@ -171,6 +179,7 @@ def main():
              cell(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
             cell(r['noumcal'], '%.4f'),
             cell(r['still'], '%.1f', '!' if r['gates'].get('static') is False else ' '),
+            ('all', ' ') if r['used'] == 'all' else cell(r['used'], '%.1f'),
         ]
         print(line(r['drone'], short, r['passes'] if r['passes'] else '-', cells, ','.join(f) if f else '-'))
 
@@ -204,6 +213,10 @@ def main():
     print('  STILL s   seconds the drone stood on the ground in the recording before taking off (from all streams')
     print('            being live to the PX4 takeoff). The still-start check asks for selfcalib_min_still of them')
     print('            and measures about half a second more than this; ! = that check rejected the recording')
+    print('  USED s    seconds of the recording the calibration read, counted from all streams being live: STILL')
+    print('            plus the selfcalib_window seconds of flight after the takeoff. "all" = the recording ends')
+    print('            before that, or holds no takeoff, and was read to its end; "-" = the still-start check')
+    print('            rejected the recording, and nothing more of it was read')
     print('  FAILS     which in-distribution checks failed: focal, distortion, principal_point, extrinsics, toff')
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
