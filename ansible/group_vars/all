@@ -84,6 +84,17 @@ enable_depth: false
 #   vio_heading_trim     true = in flight, the heading the VIO was given at the start is turned
 #                 slowly toward the one that fits the mocap's positions (0.2 deg/s for 20 s,
 #                 from the moment the drone is 2 m from where it started; 2 deg at most).
+# The estimator flies the flight settings of the perception_pkgs it is built from
+# (vio/vio_deploy/config/flight_stiffness.env and campaign.env, installed by drones_update.yml),
+# not the copy of them that the deploy tool left in the calibration folder: of that copy the
+# launch file takes only the last line, the lens terms of the calibration (OV_NONRADIAL). A
+# change of the flight settings in perception_pkgs therefore reaches every drone with
+# drones_update.yml and the next preflight or relaunch, without a new calibration; vio/run.json
+# in the folder of a start's recording says which settings it flew ("env"). Among them are the
+# limits for slow flight (perception_pkgs vio/README.md, "Slow flight"): without them the
+# estimator runs 0.3 to 0.5 s behind for as long as the drone is slow, PX4 does not take a pose
+# that old (EKF2_DELAY_MAX is 200 ms), and vision_pose_node gives the VIO up after 0.33 s
+# without a pose.
 # enable_vio or vio_nav turn on the cameras and the camera recorder. The one camera recording
 # on the host PC (nxt3, 4 June 2026) is 5.0 GB for 3 min 3 s: 1.65 GB per minute.
 # Both flags need:

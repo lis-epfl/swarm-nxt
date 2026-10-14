@@ -210,16 +210,20 @@
       vars:
         vio_needs: >-
           {{ ['estimator_flight.yaml', 'kalibr_imucam_chain.yaml', 'kalibr_imu_chain.yaml',
-              'flight_stiffness.env', 'campaign.env']
+              'flight_stiffness.env']
              + (['mount.json'] if (vio_nav | default(false) | bool) else []) }}
       block:
-        - name: Look for the calibration folder and the estimator
+        # The flight settings are the installed vio_deploy package's; the folder gives the
+        # calibration and, in its flight_stiffness.env, the lens terms (templates/drone_launch.py.j2).
+        - name: Look for the calibration folder, the estimator and its flight settings
           ansible.builtin.stat:
             path: "{{ item }}"
             follow: true
           loop: >-
             {{ vio_needs | map('regex_replace', '^', drone_base_path ~ '/vio_calib/current/') | list
-               + [drone_ros_path ~ '/install/ov_msckf/lib/ov_msckf/run_online_msckf'] }}
+               + [drone_ros_path ~ '/install/ov_msckf/lib/ov_msckf/run_online_msckf',
+                  drone_ros_path ~ '/install/vio_deploy/share/vio_deploy/config/flight_stiffness.env',
+                  drone_ros_path ~ '/install/vio_deploy/share/vio_deploy/config/campaign.env'] }}
           register: vio_files
 
         - name: Refuse to start without them
@@ -227,10 +231,10 @@
             msg: >-
               Onboard VIO is enabled for {{ inventory_hostname }}, but these are missing:
               {{ vio_files.results | rejectattr('stat.exists') | map(attribute='item') | join(', ') }}.
-              A program under install/: run drones_update.yml. flight_stiffness.env or
-              campaign.env: the folder is older than the deploy tool, deploy the calibration
-              again. Anything else in vio_calib: fly once with enable_cameras=true and run
-              drones_selfcalib.yml (mount.json needs the motion capture in that flight).
+              Anything under install/: run drones_update.yml. flight_stiffness.env in vio_calib:
+              the folder is older than the deploy tool, deploy the calibration again. Anything
+              else in vio_calib: fly once with enable_cameras=true and run drones_selfcalib.yml
+              (mount.json needs the motion capture in that flight).
           when: vio_files.results | rejectattr('stat.exists') | list | length > 0
 
         # The estimator gives poses while the drone stands still only from perception_pkgs

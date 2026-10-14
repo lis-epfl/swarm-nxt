@@ -141,32 +141,50 @@ def generate_launch_description():
         except (OSError, ValueError, AttributeError, OverflowError, RecursionError):
             return None, why
 
+    # The flight settings come with the estimator that is installed (drones_update.yml builds the
+    # vio_deploy package of perception_pkgs with it), not from the calibration folder: the
+    # folder's flight_stiffness.env is a copy of the package's file made on the day of the
+    # calibration, and only its last line belongs to the calibration (below).
+    try:
+        vio_settings = os.path.join(get_package_prefix("vio_deploy"), "share", "vio_deploy", "config")
+    except PackageNotFoundError:
+        vio_settings = ""
+    vio_run["settings"] = vio_settings
+
     vio_env = {}
     vio_problem = ""
     try:
         os.makedirs(vio_log, exist_ok=True)
         missing = [f for f in ("estimator_flight.yaml", "kalibr_imucam_chain.yaml", "kalibr_imu_chain.yaml",
-                               "flight_stiffness.env", "campaign.env")
+                               "flight_stiffness.env")
                    if not os.path.isfile(os.path.join(vio_dir, f))]
         if missing:
             vio_problem = vio_dir + " lacks " + ", ".join(missing) + ": deploy the calibration again"
         elif not _program("ov_msckf", "run_online_msckf"):
             vio_problem = "ov_msckf is not built: run drones_update.yml"
+        elif not vio_settings or not all(os.path.isfile(os.path.join(vio_settings, f))
+                                         for f in ("flight_stiffness.env", "campaign.env")):
+            vio_problem = "vio_deploy is not built: run drones_update.yml"
         else:
-            # The flight settings of this calibration (stiff calibration priors, lens terms,
-            # matching between cameras) and the vehicle's tracker switches, as the folder's
-            # MANIFEST.txt has them sourced. Only the estimator's process gets them: they must
-            # never reach a calibration run.
-            vio_env = _env_file(os.path.join(vio_dir, "flight_stiffness.env"))
-            vio_env.update(_env_file(os.path.join(vio_dir, "campaign.env")))
+            # The flight settings of the estimator (stiff calibration priors, matching between
+            # cameras, the limits for slow flight) and the vehicle's tracker and scheduler
+            # switches, so a drone flies the settings of the estimator it runs, whenever it was
+            # calibrated. Of the calibration only its lens terms: the last line of the folder's
+            # flight_stiffness.env (OV_NONRADIAL), which deploy_vio.py writes for every
+            # calibration, empty when it has none. Only the estimator's process gets them: they
+            # must never reach a calibration run.
+            vio_env = _env_file(os.path.join(vio_settings, "flight_stiffness.env"))
+            vio_env.update(_env_file(os.path.join(vio_settings, "campaign.env")))
+            vio_env.pop("OV_NONRADIAL", None)
+            lens = _env_file(os.path.join(vio_dir, "flight_stiffness.env"))
+            if "OV_NONRADIAL" in lens:
+                vio_env["OV_NONRADIAL"] = lens["OV_NONRADIAL"]
             # The estimator takes a prior it cannot read as "not set" and says nothing, and
             # exits on lens terms it cannot read.
             bad = [k for k in ("OV_PRIOR_DT_SIG", "OV_PRIOR_EXTR_Q_SIG", "OV_PRIOR_EXTR_T_SIG",
                                "OV_PRIOR_INTR_F_SIG", "OV_PRIOR_INTR_D_SIG") if not _is_number(vio_env.get(k))]
             if "OV_PRIOR_NONRAD_SIG" in vio_env and not _is_number(vio_env["OV_PRIOR_NONRAD_SIG"]):
                 bad.append("OV_PRIOR_NONRAD_SIG")
-            if "OV_NONRADIAL" not in vio_env:
-                bad.append("OV_NONRADIAL")
             if vio_env.get("OV_GPU_TRACK") != "1":
                 bad.append("OV_GPU_TRACK")
             # A zero byte in a name or a value, or a line without a name: the launcher cannot
@@ -174,10 +192,13 @@ def generate_launch_description():
             # instead of going on without the estimator.
             bad += sorted(repr(k)[:24] for k, v in vio_env.items() if not k or "\0" in k or "\0" in v)
             if bad:
-                vio_problem = ("the env files of " + vio_dir + " are damaged or older than the estimator ("
-                               + ", ".join(bad) + "): deploy the calibration again")
+                vio_problem = ("the flight settings in " + vio_settings + " are damaged or older than this"
+                               " launch file (" + ", ".join(bad) + "): run drones_update.yml")
+            elif "OV_NONRADIAL" not in vio_env:
+                vio_problem = (vio_dir + "/flight_stiffness.env has no lens terms (OV_NONRADIAL):"
+                               " deploy the calibration again")
     except OSError as e:
-        vio_problem = "cannot read " + vio_dir + ": " + str(e)
+        vio_problem = "cannot read the calibration or the flight settings: " + str(e)
     vio_mount, vio_mount_problem = _mount(os.path.join(vio_dir, "mount.json"))
 
     vio_actions = []      # joins the launch description at the end of this file
@@ -265,8 +286,11 @@ def generate_launch_description():
             "correct_mocap_attitude": vio_run["vio_nav"],
         }
 
+    # "env": what the estimator was started with, the record of the flight settings it flew
+    # (the package they came from changes with the next drones_update.yml).
     vio_run.update({"started": not vio_problem, "problem": vio_problem, "mount": vio_mount,
-                    "mount_problem": vio_mount_problem, "vision_pose_node": vision_pose_vio})
+                    "mount_problem": vio_mount_problem, "vision_pose_node": vision_pose_vio,
+                    "env": vio_env if not vio_problem else {}})
     try:
         with open(os.path.join(vio_log, "run.json"), "w") as f:
             json.dump(vio_run, f)
