@@ -159,7 +159,7 @@ drone_rosbag_topics:
   # estimator computes its other outputs (feature clouds, track images) as soon as something
   # subscribes. The poses vision_pose_node places in the room and its status are /<ns>/vio/*,
   # which the first line already takes.
-  - "^/vio/poseimu$"
+  - "/vio/poseimu"
   # /oak_ffc_4p_driver_node/* is recorded separately by oak_compressed_recorder
   # (libmcap direct, zero-loss). See drone_launch.py.j2.
   - "/tf"
