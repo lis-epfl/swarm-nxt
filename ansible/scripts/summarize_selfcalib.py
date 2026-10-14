@@ -44,6 +44,16 @@ def mark(value, limit, failed):
     return '~' if value > 0.75 * limit else ' '
 
 
+def used_after_takeoff(r):
+    """Seconds the tool read after the takeoff, 'all', or None (see the 'used' entry in load)."""
+    if (r.get('gate_static') or {}).get('pass') is False or r.get('takeoff_s') is None:
+        return None
+    end = r['window_s'] if r.get('window_s') is not None else r.get('recording_s')
+    if end is None:
+        return 'all' if 'window_s' in r else None
+    return max(0.0, end - r['takeoff_s'])
+
+
 def load(collect_dir):
     rows = []
     for drone in sorted(os.listdir(collect_dir)):
@@ -95,13 +105,14 @@ def load(collect_dir):
             # Seconds on the ground before takeoff: all streams live -> the PX4 takeoff. NOUMCAL
             # depends on it, so the two are printed side by side.
             'still': r.get('takeoff_s'),
-            # Seconds of the recording the tool read, from all streams live: the standstill plus
-            # the flight window. The tool writes null when that reaches past the end of the
-            # recording, or when it found no takeoff: it then read the recording to its end.
-            # A run the still-start check stopped wrote the span too, without having read it.
-            'used': (None if (r.get('gate_static') or {}).get('pass') is False else
-                     r['window_s'] if r.get('window_s') is not None else
-                     'all' if 'window_s' in r else None),
+            # Seconds of the recording the tool read after the takeoff, without the standstill
+            # before it (STILL): to the end of the flight window (window_s, counted from all
+            # streams live like takeoff_s), or to the end of the recording when the window
+            # reaches past it (the tool then writes window_s null and, since it gives it,
+            # recording_s). 'all' for a report without recording_s. None when no takeoff was
+            # found, and when the still-start check stopped the run (it wrote the window
+            # without reading it).
+            'used': used_after_takeoff(r),
             'gates': {k: r.get('gate_' + k, {}).get('pass') for k in ('static', 'timing', 'image')},
             'gate_reason': r.get('gate_static', {}).get('reason', ''),
             # the real directory on the drone (the playbook resolves logs/latest before it moves)
@@ -213,10 +224,12 @@ def main():
     print('  STILL s   seconds the drone stood on the ground in the recording before taking off (from all streams')
     print('            being live to the PX4 takeoff). The still-start check asks for selfcalib_min_still of them')
     print('            and measures about half a second more than this; ! = that check rejected the recording')
-    print('  USED s    seconds of the recording the calibration read, counted from all streams being live: STILL')
-    print('            plus the selfcalib_window seconds of flight after the takeoff. "all" = the recording ends')
-    print('            before that, or holds no takeoff, and was read to its end; "-" = the still-start check')
-    print('            rejected the recording, and nothing more of it was read')
+    print('  USED s    seconds of the recording the calibration read after the takeoff, without the STILL before it:')
+    print('            selfcalib_window, or less when the recording ends sooner. A flight shorter than that is read')
+    print('            with its landing and the time on the ground after it, up to the end of the recording.')
+    print('            "all" = the recording ended first, and the report, from an older selfcalib, does not say')
+    print('            where; "-" = no takeoff in the recording, or the still-start check rejected it')
+    print('            and nothing more of it was read')
     print('  FAILS     which in-distribution checks failed: focal, distortion, principal_point, extrinsics, toff')
     healthy = [r for r in rows if not r.get('missing') and r['verdict'].startswith('HEALTHY')]
     print('')
