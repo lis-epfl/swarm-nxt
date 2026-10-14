@@ -51,7 +51,7 @@
     # into it. 20 is the tool's own default and the point it was validated at; "" leaves
     # the choice to the tool. Cost scales with the span read: every estimator pass replays
     # all of it, and a run is at least two passes.
-    selfcalib_window: "20"
+    selfcalib_window: "90"
     # Seconds of standstill the recording must begin with, checked by the tool's
     # static-start gate before any estimator work: 3 s for the estimator to start, the
     # rest for it to settle before the vehicle moves.
