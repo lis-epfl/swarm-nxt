@@ -131,8 +131,15 @@ def main():
     ap.add_argument('--expect', default=None,
                     help='comma-separated drones the play targeted, so one that '
                          'produced no report is still listed as NO RESULT')
+    ap.add_argument('--min-still', type=float, default=None,
+                    help='seconds on the ground before the takeoff (STILL) below which a drone is '
+                         'warned about (selfcalib_min_still). A warning only: it is calibrated anyway.')
     a = ap.parse_args()
     rows = load(a.collect_dir)
+    for r in rows:
+        # calibrated, but after a standstill shorter than asked for
+        r['still_short'] = bool(a.min_still and r.get('still') is not None and r['still'] < a.min_still
+                                and r['gates'].get('static') is not False)
     # Every drone in the play must appear, even if it produced nothing. The per-drone
     # tasks are deliberately failure-tolerant (one bad vehicle must not abort the other
     # ten), so a drone that failed outright shows up here only as a MISSING directory --
@@ -189,7 +196,7 @@ def main():
             (('skipped', ' ') if r['ate_skipped'] else
              cell(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
             cell(r['noumcal'], '%.4f'),
-            cell(r['still'], '%.1f', '!' if r['gates'].get('static') is False else ' '),
+            cell(r['still'], '%.1f', '!' if r['gates'].get('static') is False else '~' if r['still_short'] else ' '),
             ('all', ' ') if r['used'] == 'all' else cell(r['used'], '%.1f'),
         ]
         print(line(r['drone'], short, r['passes'] if r['passes'] else '-', cells, ','.join(f) if f else '-'))
@@ -222,8 +229,9 @@ def main():
     print('            offset the estimate picks up right after liftoff, which grows when the drone stood still only')
     print('            briefly before taking off. "-" without ground truth or when the mount solve was skipped')
     print('  STILL s   seconds the drone stood on the ground in the recording before taking off (from all streams')
-    print('            being live to the PX4 takeoff). The still-start check asks for selfcalib_min_still of them')
-    print('            and measures about half a second more than this; ! = that check rejected the recording')
+    print('            being live to the PX4 takeoff). ~ = fewer than selfcalib_min_still: calibrated and deployed')
+    print('            anyway, see WARNINGS below. ! = the still-start check rejected the recording: it does not')
+    print('            begin with the 3 s of standstill the estimator needs to start')
     print('  USED s    seconds of the recording the calibration read after the takeoff, without the STILL before it:')
     print('            selfcalib_window, or less when the recording ends sooner. A flight shorter than that is read')
     print('            with its landing and the time on the ground after it, up to the end of the recording.')
@@ -237,6 +245,22 @@ def main():
           % (len(healthy),
              len([r for r in rows if not r.get('missing') and not r['verdict'].startswith('HEALTHY')]),
              len([r for r in rows if r.get('missing')])))
+
+    # ---- warnings: calibrated, but after too short a standstill ----
+    short = [r for r in rows if not r.get('missing') and r['still_short']]
+    if short:
+        print('')
+        print('WARNINGS')
+        for r in short:
+            print('%s  stood still %.1f s before the takeoff, %g s asked for (selfcalib_min_still): %s anyway.'
+                  % (r['drone'], r['still'], a.min_still,
+                     'deployed' if r['verdict'].startswith('HEALTHY') else 'calibrated'))
+            print('   The mount (the heading of the VIO in the room) is less certain: NOUMCAL read 10 cm and more')
+            print('   with under 6 s of standstill, 1.5 to 3.3 cm with 7 s and more.%s'
+                  % ('' if r['still'] >= STILL_FLOOR else ' Below %.1f s the estimator starts as the'
+                     % STILL_FLOOR))
+            if r['still'] < STILL_FLOOR:
+                print('   vehicle lifts off, and the calibration itself was not validated there.')
 
     # ---- tier 2: detail only where something went wrong ----
     for r in rows:
@@ -252,16 +276,6 @@ def main():
             print('   gates failed: %s%s' % (','.join(bad),
                                              ('  — ' + r['gate_reason'])
                                              if r['gate_reason'] and r['gate_reason'] not in r['verdict'] else ''))
-        if (r['verdict'].startswith('GATE-FAIL') and r['standstill'] is not None and r['min_still'] is not None
-                and STILL_FLOOR <= r['standstill'] < r['min_still']):
-            print('   %.2f s of standstill is enough to calibrate the cameras from (the tool validated %.1f s). The'
-                  % (r['standstill'], STILL_FLOOR))
-            print('   %g s asked for is for the mount: NOUMCAL read 10 cm and more with under 6 s of standstill,'
-                  % r['min_still'])
-            print('   1.5 to 3.3 cm with 7 s and more. To use this recording anyway:')
-            print('     ansible-playbook drones_selfcalib.yml --limit %s.local -e selfcalib_min_still=%.1f \\'
-                  % (r['drone'], STILL_FLOOR))
-            print('         -e selfcalib_log_dir=%s' % (r['recording'] or '<its directory under ~/logs>'))
         if r['verdict'].startswith('ERROR'):
             print('   the estimator log is on the drone: <base>/selfcalib_out/<stamp>/calib/out/run.log')
         if r['step_types']:
