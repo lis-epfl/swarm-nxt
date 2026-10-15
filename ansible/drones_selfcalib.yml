@@ -237,6 +237,12 @@
         - selfcalib_deploy | bool
         - sc_verdict is search('HEALTHY') or (selfcalib_force | bool)
       block:
+        # --mount-from: the calibration in use (vio_calib/current still points at it here). A
+        # calibration without the motion capture, or flown too gently to show the lever arm,
+        # keeps that calibration's mount and lever arm: they describe how the flight controller
+        # sits in the drone's rigid body, which a camera calibration does not change. Solve
+        # them again in the motion capture after changing the hardware. (Passed only to a
+        # deploy_vio.py that knows it: perception_pkgs from 15 Oct 2026 on.)
         - name: Write the flight configuration folder
           ansible.builtin.shell: |
             set -eo pipefail
@@ -245,6 +251,7 @@
             python3 tool/deploy_vio.py \
               --calib-out {{ drone_base_path }}/selfcalib_out/{{ sc_stamp }} \
               --out {{ drone_base_path }}/vio_calib/{{ sc_stamp }} \
+              $(grep -q -e '--mount-from' tool/deploy_vio.py && echo --mount-from {{ drone_base_path }}/vio_calib/current) \
               {{ '--force' if (selfcalib_force | bool) else '' }}
           args:
             executable: /bin/bash
