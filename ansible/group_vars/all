@@ -104,6 +104,12 @@ enable_depth: false
 #     of the flight is in /<ns>/vio/odometry, and with vio_nav the drone flies on the mocap;
 #   - a calibration deployed in ~/vio_calib/current by the deploy tool of perception_pkgs
 #     cdcc9dc or later (drones_selfcalib.yml does it).
+# The estimator gives the position of the flight controller's IMU, the mocap that of its rigid
+# body's origin: on nxt3 about 6.5 cm apart, which shows as up to about 4 cm of error in hard
+# turns. A calibration flown in the mocap that tilts enough puts that lever arm in mount.json
+# (lever_arm_imu_m, perception_pkgs selfcalib), and vision_pose_node then moves the VIO onto
+# the rigid body's origin, the point PX4 gets from the mocap. Without it (older calibrations,
+# gentle flights) the VIO is taken as it comes.
 # vio_nav also needs that calibration's mount.json, which takes a calibration flight in the
 # mocap. The mount is solved against the estimator's first pose. Until perception_pkgs dc8d058
 # that was the first pose after the takeoff; now it is one on the ground, about 3 s after the

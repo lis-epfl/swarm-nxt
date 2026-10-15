@@ -66,6 +66,10 @@ struct Params {
   // VIO feed
   double vio_pos_var = 1e-6;
   double vio_att_var = 1e-6;
+  // position of the IMU from the origin of the rigid body, in the IMU frame
+  // (metres), from the calibration: the VIO is moved back by it onto the
+  // point the mocap reports. Zero: the VIO is taken as it comes.
+  Eigen::Vector3d vio_lever_arm = Eigen::Vector3d::Zero();
   // after a fallback, send the attitude of the IMU body instead of the rigid
   // body's
   bool correct_mocap_attitude = false;

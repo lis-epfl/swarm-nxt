@@ -179,6 +179,14 @@ def analyze_drone(drone_dir):
     r.setdefault("matching", "on" if run.get("vio_matching") else "off")
     bag = read_bag(drone_dir, ns)
     vio, mc = bag["vio"], bag["mocap"]
+    # The estimator gives the IMU's position, the mocap that of the rigid body's origin. With the
+    # calibration's lever arm (mount.json, lever_arm_imu_m: the IMU's position from that origin, IMU
+    # frame) the estimate is moved back onto the origin, as vision_pose_node does since it has one.
+    lever = (run.get("mount") or {}).get("lever_arm_imu_m")
+    if lever is not None and len(vio):
+        vio = vio.copy()
+        vio[:, 2:5] -= np.einsum("nij,j->ni", np.array([quat_to_R(q) for q in vio[:, 5:9]]),
+                                 np.asarray(lever, float))
     if len(vio) < 20:
         r["note"] = "the bag has %d estimator poses" % len(vio)
         return r
@@ -321,6 +329,7 @@ def print_tables(log_dir):
             _trio(g(r, "flown"), "%.1f"), _f(g(r, "dyaw"), "%+.2f")] for r in res],
           ["ATE = error after the best rigid fit; scale = what a fit with scale would change",
            "NOUMCAL = pinned at the pose at arming, with the deployed mount; refit = with the mount solved on this flight",
+           "ATE, NOUMCAL, refit: the estimate is moved onto the rigid body's origin by the lever arm of mount.json, when it has one",
            "flown = the stream vision_pose_node placed in the room (what PX4 flies on with vio_nav), nothing fitted",
            "dyaw = this flight's heading offset minus the deployed one"])
 

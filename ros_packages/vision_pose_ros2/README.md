@@ -132,6 +132,7 @@ with a FATAL line. All parameters are read once at start.
 | `vio_topic` | `""` | estimator pose (`PoseWithCovarianceStamped`); empty: no VIO handling |
 | `use_vio` | false | PX4 may be fed the VIO; false with a `vio_topic`: place and log only |
 | `has_mount`, `mount_yaw_deg` | false, 0.0 | mount yaw of the calibration (`mount.json`) |
+| `vio_lever_arm` | [0, 0, 0] | position of the IMU from the origin of the rigid body, in the IMU frame (m), from the calibration (`mount.json`, `lever_arm_imu_m`): the VIO is moved back by it onto the point the mocap reports, at any attitude |
 | `world_from_start_pose` | false | without any mocap sample, place the VIO at the start pose (outdoors) |
 | `start_position`, `start_yaw_deg` | [0, 0, 0], 0.0 | that start pose (m, deg; IMU body) |
 | `fallback_dist_m`, `fallback_hold_s` | 0.15, 0.10 | distance rule on PX4's position (rule 9a) |

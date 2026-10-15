@@ -200,6 +200,18 @@ def generate_launch_description():
     except OSError as e:
         vio_problem = "cannot read the calibration or the flight settings: " + str(e)
     vio_mount, vio_mount_problem = _mount(os.path.join(vio_dir, "mount.json"))
+    # The IMU's position from the origin of the mocap's rigid body, in the IMU frame (metres), when
+    # the calibration solved it (mount.json, lever_arm_imu_m; perception_pkgs selfcalib). The
+    # estimator gives the IMU's position, the mocap that of the rigid body's origin: without it
+    # the VIO differs from the mocap by the lever arm turned with the attitude (about 4 cm in
+    # the hard turns of nxt3, 15 Oct 2026). Zeros: the VIO is taken as it comes, as before.
+    vio_lever_arm = [0.0, 0.0, 0.0]
+    if vio_mount is not None:
+        _lever = vio_mount.get("lever_arm_imu_m")
+        if (isinstance(_lever, list) and len(_lever) == 3
+                and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+                        and abs(v) < 0.3 for v in _lever)):
+            vio_lever_arm = [float(v) for v in _lever]
 
     vio_actions = []      # joins the launch description at the end of this file
     vision_pose_vio = {}  # parameters of vision_pose_node on top of its mocap ones
@@ -273,6 +285,7 @@ def generate_launch_description():
             "use_vio": vio_px4,
             "has_mount": vio_mount is not None,
             "mount_yaw_deg": float(vio_mount["mount_yaw_deg"]) if vio_mount else 0.0,
+            "vio_lever_arm": vio_lever_arm,
             # Back to the mocap, until the node is started again, when PX4's position is further
             # than this from the mocap. The node's other reasons to go back keep its defaults
             # (group_vars/all lists them).

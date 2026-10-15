@@ -273,6 +273,12 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
     waiting_ring_.Clear();
   }
   const Eigen::Quaterniond q_v = pose.q.normalized();
+  // The estimator gives the position of the IMU, the mocap that of the rigid
+  // body's origin. Moved back by the lever arm of the calibration (the IMU's
+  // position from that origin, in the IMU frame), the VIO describes the same
+  // point as the mocap at any attitude: for the placement, the distance to the
+  // mocap and PX4.
+  const Eigen::Vector3d p_v = pose.p - q_v * params_.vio_lever_arm;
   const int64_t prev_stamp_ns = vio_stamp_ns_;
   if (prev_stamp_ns == 0 || pose.stamp_ns - prev_stamp_ns > kVioMaxGapNs) {
     vio_run_start_ns_ = pose.stamp_ns;
@@ -281,7 +287,7 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
   vio_rx_s_ = now_s;
   vio_age_s_ = age_s;
   ++vio_poses_;
-  vio_ring_.Push({pose.stamp_ns, pose.p, q_v});
+  vio_ring_.Push({pose.stamp_ns, p_v, q_v});
 
   // the mocap at the stamp of the pose; a pose the mocap has not reached
   // waits for it (PairWaiting)
@@ -291,7 +297,7 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
   const bool waits = !paired && (mocap_ring_.empty() ||
                                  pose.stamp_ns > mocap_ring_.Newest().stamp_ns);
   if (paired) {
-    pair_ring_.Push({pose.stamp_ns, pose.p, q_v, p_m, q_m});
+    pair_ring_.Push({pose.stamp_ns, p_v, q_v, p_m, q_m});
   }
 
   // place the VIO in the room, on the ground only: the placement is frozen
@@ -302,7 +308,7 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
     const bool settled = IsSettled();
     // where the placement in use so far puts this pose
     const double psi_old = psi0_ + trim_;
-    const Eigen::Vector3d p_old = Rz(psi_old) * (pose.p - p_v0_) + p_0_;
+    const Eigen::Vector3d p_old = Rz(psi_old) * (p_v - p_v0_) + p_0_;
     if (settled) {
       placed_now = Place();
     }
@@ -333,7 +339,7 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
       const double turn_deg =
           std::round(Deg(Wrap(psi0_ + trim_ - psi_old)) * 100.0) / 100.0;
       Log("VIO placed again: step %.3f m, heading %+.2f deg, reset_counter %u",
-          (Rz(psi0_ + trim_) * (pose.p - p_v0_) + p_0_ - p_old).norm(),
+          (Rz(psi0_ + trim_) * (p_v - p_v0_) + p_0_ - p_old).norm(),
           turn_deg + 0.0, static_cast<unsigned>(reset_counter_));
     }
   }
@@ -342,13 +348,13 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
   if (placed_) {
     if (armed_) {
       if (paired) {
-        UpdateHeadingFit(pose.stamp_ns, pose.p, p_m);
+        UpdateHeadingFit(pose.stamp_ns, p_v, p_m);
       }
       SlewTrim(pose.stamp_ns, prev_stamp_ns);
     }
     const Eigen::Quaterniond q_psi = Rz(psi0_ + trim_);
     placed->stamp_ns = pose.stamp_ns;
-    placed->p = q_psi * (pose.p - p_v0_) + p_0_;
+    placed->p = q_psi * (p_v - p_v0_) + p_0_;
     placed->q = q_psi * q_v;
     result.placed = true;
 
@@ -360,7 +366,7 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
     }
   }
   if (waits) {
-    waiting_ring_.Push({pose.stamp_ns, pose.p, q_v, result.placed, placed->p});
+    waiting_ring_.Push({pose.stamp_ns, p_v, q_v, result.placed, placed->p});
   }
 
   MaybeSwitchToVio(now_s);

@@ -109,6 +109,9 @@ struct Scenario {
   double psi = 0.6;                       // VIO world -> room heading
   Eigen::Vector3d shift{4.0, -7.0, 0.3};  // p_room = Rz(psi) p_vio + shift
   Eigen::Quaterniond c = Eigen::Quaterniond::Identity();  // rigid body -> IMU
+  // position of the IMU from the rigid body's origin, in the IMU frame: the
+  // estimator reports the IMU, the mocap the origin
+  Eigen::Vector3d lever = Eigen::Vector3d::Zero();
   double status_from = 0.0;  // first vehicle status (kInf: none)
   double status_gap_from = kInf, status_gap_until = kInf;  // none in between
   double arm = kInf;
@@ -292,7 +295,8 @@ Record Run(const Scenario &sc) {
       vision_pose::VioPose pose;
       pose.stamp_ns = Stamp(event.t - (event.kind == 5 ? 10.0 : 0.0) +
                             (restarted ? sc.vio_restart_stamp_s : 0.0));
-      pose.p = Rz(-sc.psi) * (truth.p + sc.vio_error(event.t) - sc.shift -
+      pose.p = Rz(-sc.psi) * (truth.p + (truth.q * sc.c.conjugate()) * sc.lever +
+                              sc.vio_error(event.t) - sc.shift -
                               (restarted ? Eigen::Vector3d(5.0, 0.0, 0.0)
                                          : Eigen::Vector3d(0.0, 0.0, 0.0)));
       pose.q = Rz(-sc.psi) * truth.q * sc.c.conjugate() *
@@ -550,6 +554,34 @@ void CheckPlacementExact() {
   Check(record.LogCount("VIO ready:") == 1 &&
             record.LogCount("armed: placement frozen") == 1,
         "one 'VIO ready' line, one freeze at arming");
+}
+
+void CheckLeverArm() {
+  std::printf("placement: the IMU 6.5 cm from the rigid body's origin\n");
+  Scenario sc;
+  sc.params.vio_enabled = true;
+  sc.params.has_mount = true;
+  sc.params.mount_yaw = 2.72 * kDeg;
+  sc.c = Rz(-2.72 * kDeg);
+  sc.psi = 2.1;
+  sc.arm = 9.5;
+  sc.takeoff = 10.5;
+  sc.duration = 26.0;
+  sc.lever = Eigen::Vector3d(0.043, -0.045, -0.019);  // nxt3, 15 Oct 2026
+  double position, angle;
+  // without it the placement takes the lever arm in on the ground, and the VIO
+  // is off by its turn once the attitude changes
+  Record record = Run(sc);
+  PlacedError(sc, record, 0.0, &position, &angle);
+  Check(position > 0.01,
+        "without vio_lever_arm: placed VIO off the rigid body's origin in flight",
+        Fmt("max %.1f mm", 1e3 * position));
+  sc.params.vio_lever_arm = sc.lever;
+  record = Run(sc);
+  PlacedError(sc, record, 0.0, &position, &angle);
+  Check(position < 1e-6 && angle < 1e-6,
+        "with vio_lever_arm: placed VIO on the rigid body's origin within 1e-6 m",
+        Fmt("max %.3g m, %.3g rad over standstill and flight", position, angle));
 }
 
 void CheckTilt() {
@@ -2250,6 +2282,7 @@ int main() {
   CheckMocapConversion();
   CheckPlacementExact();
   CheckTilt();
+  CheckLeverArm();
   CheckVioNav();
   CheckArmedBeforeReady();
   CheckDistanceFallback();

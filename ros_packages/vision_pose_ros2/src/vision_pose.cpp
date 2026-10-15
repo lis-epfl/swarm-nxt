@@ -226,6 +226,7 @@ void VisionPose::DeclareRosParameters() {
   DeclareDouble("vio_settle_s", 7.0);
   DeclareDouble("vio_still_m", 0.03);
   DeclareDouble("vio_timeout_s", 0.33);
+  DeclareDoubleArray("vio_lever_arm", {0.0, 0.0, 0.0});
   DeclareDouble("vio_pos_var", 0.000001);
   DeclareDouble("vio_att_var", 0.000001);
   declare_parameter<bool>("correct_mocap_attitude", false, fixed);
@@ -302,6 +303,15 @@ Params VisionPose::InitializeRosParameters() {
   RequirePositive("vio_still_m", params.vio_still_m);
   RequirePositive("vio_timeout_s", params.vio_timeout_s);
 
+  const std::vector<double> lever_arm =
+      get_parameter("vio_lever_arm").as_double_array();
+  if (lever_arm.size() != 3) {
+    throw std::invalid_argument("parameter vio_lever_arm must hold 3 values");
+  }
+  for (size_t i = 0; i < 3; ++i) {
+    RequireFinite("vio_lever_arm", lever_arm[i]);
+    params.vio_lever_arm(static_cast<Eigen::Index>(i)) = lever_arm[i];
+  }
   params.vio_pos_var = get_parameter("vio_pos_var").as_double();
   params.vio_att_var = get_parameter("vio_att_var").as_double();
   RequirePositive("vio_pos_var", params.vio_pos_var);
