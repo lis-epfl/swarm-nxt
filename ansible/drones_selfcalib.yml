@@ -137,6 +137,15 @@
         sc_ref: "{{ ansible_hostname if own_ref.stat.exists else 'nxt3' }}"
         sc_stamp: "{{ hostvars['localhost']['sc_stamp'] | default(ansible_date_time.iso8601_basic_short) }}"
 
+    # The report play at the end runs on localhost, where the vars of this play do not
+    # exist: the standstill warning threshold is handed over as a fact of localhost.
+    - name: Hand the standstill warning threshold to the report
+      ansible.builtin.set_fact:
+        sc_min_still: "{{ selfcalib_min_still }}"
+      delegate_to: localhost
+      delegate_facts: true
+      run_once: true
+
     # ---- 3. calibrate (async: this is a multi-minute estimator loop) -------------
     - name: Run self-calibration
       ansible.builtin.shell: |
@@ -266,7 +275,7 @@
         --collect-dir {{ host_base_path }}/calibrations/{{ hostvars[groups['drones'][0]]['sc_stamp'] }}
         --json-out {{ host_base_path }}/calibrations/{{ hostvars[groups['drones'][0]]['sc_stamp'] }}/summary.json
         --expect {{ groups['drones'] | map('extract', hostvars, 'ansible_hostname') | select('defined') | join(',') }}
-        {{ ('--min-still ' ~ selfcalib_min_still) if selfcalib_min_still | string | length > 0 else '' }}
+        {{ ('--min-still ' ~ sc_min_still) if sc_min_still | default('') | string | length > 0 else '' }}
       args:
         chdir: "{{ playbook_dir }}"
       register: sc_summary
