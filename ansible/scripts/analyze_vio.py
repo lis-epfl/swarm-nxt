@@ -11,7 +11,8 @@ relative to each other. Called by analyze_logs.py; also runs alone:
 It reads, per drone: bag/*.mcap (the estimator's poses, the stream placed in the room by
 vision_pose_node, its status, the mocap, PX4's land detector and arming state),
 vio/run.json (flags and deployed mount, written by the launch file), vio/latency.txt
-(written by the estimator while it runs) and the launch log. Nothing is printed when no
+(written by the estimator while it runs) and the launch log (also for an estimator that died:
+when, and the assertion or crash signal it printed). Nothing is printed when no
 drone has VIO data. All numbers are over the flight, takeoff to landing by PX4's land
 detector; a recording without a flight gives the compute columns over the whole recording.
 """
@@ -21,6 +22,7 @@ import json
 import os
 import re
 import sys
+import time
 
 import numpy as np
 
@@ -80,15 +82,45 @@ def read_bag(drone_dir, ns):
     return {k: np.array(v, float).reshape(len(v), -1) for k, v in out.items()}
 
 
+SIGNALS = {-6: "SIGABRT", -7: "SIGBUS", -9: "SIGKILL", -11: "SIGSEGV", -15: "SIGTERM"}
+
+
+def read_latency(path):
+    """vio/latency.txt as an array, None when it holds no complete line. An estimator that did
+    not exit cleanly (crash, kill, power cut) leaves its buffered last line half written: dropped."""
+    with open(path, errors="replace") as f:
+        lines = f.read().splitlines(keepends=True)
+    if lines and not lines[-1].endswith("\n"):
+        lines.pop()
+    return np.atleast_2d(np.loadtxt(lines)) if lines else None
+
+
 def read_launch_log(drone_dir):
-    """What the estimator itself logged: its settings and its counters."""
+    """What the estimator itself logged: its settings and its counters, and its death when it died."""
     info = {}
     logs = sorted(glob.glob(os.path.join(drone_dir, "*", "launch.log")))
     if not logs:
         return info
     live = None
+    # The process tag of the estimator ([env-15]) is known only from the launch's death line, which
+    # comes last: keep the last assertion and crash signal of every tag until then.
+    asserted, crashed, stop_t = {}, {}, None
     with open(logs[-1], errors="replace") as f:
         for line in f:
+            m = re.match(r"(\d+\.\d+) \[([\w.-]+)\] ", line)
+            if m and "Assertion `" in line:
+                a = re.search(r"([\w.]+:\d+): .*(Assertion `.*' failed)", line)
+                asserted[m.group(2)] = (float(m.group(1)), "%s: %s" % a.groups() if a else line.split("] ", 1)[1].strip())
+            elif m and "[crash]: signal" in line:
+                crashed[m.group(2)] = (float(m.group(1)), re.search(r"\[crash\]: signal \d+", line).group(0))
+            if "[launch]: user interrupted" in line and stop_t is None:
+                stop_t = float(line.split(" ", 1)[0])
+            d = re.match(r"(\d+\.\d+) \[ERROR\] \[([\w.-]+)\]: process has died \[pid \d+, exit code (-?\d+), "
+                         r"cmd '[^']*run_online_msckf", line)
+            if d:
+                tag, code = d.group(2), int(d.group(3))
+                t, why = asserted.get(tag) or crashed.get(tag) or (float(d.group(1)), "")
+                info["died"] = {"t": t, "code": code, "why": why, "stopping": stop_t is not None and stop_t <= t}
             if "[xcam-cfg]" in line:
                 m = re.search(r"\[xcam-cfg\] on=(\d)", line)
                 if m:
@@ -197,8 +229,15 @@ def analyze_drone(drone_dir):
 
     # --- compute: how the estimator kept up
     lat_path = os.path.join(drone_dir, "vio", "latency.txt")
+    lat = None
     if os.path.isfile(lat_path) and os.path.getsize(lat_path):
-        lat = np.atleast_2d(np.loadtxt(lat_path))
+        try:
+            lat = read_latency(lat_path)
+            if lat is None:
+                r["lat_problem"] = "vio/latency.txt has no complete line"
+        except ValueError as e:             # the feed and queue columns only, not the whole drone
+            r["lat_problem"] = "vio/latency.txt not read (%s)" % str(e)[:80]
+    if lat is not None:
         lat = lat[(lat[:, 0] >= t0) & (lat[:, 0] <= t1)]
         if len(lat):
             r["feed"] = (lat[:, 2].mean(), np.percentile(lat[:, 2], 99), lat[:, 2].max())
@@ -278,6 +317,28 @@ def _f(v, fmt="%.1f"):
 
 def _trio(v, fmt="%.0f"):
     return "-" if v is None else "/".join(_f(float(x), fmt) for x in v)
+
+
+def death_note(r):
+    """One line on an estimator that died, placed against the flight; None when it did not."""
+    d = r.get("died")
+    if not d:
+        return None
+    t0, t1 = r.get("t0"), r.get("t1")
+    when = time.strftime("%H:%M:%S", time.localtime(d["t"])) + ("%.1f" % (d["t"] % 1.0))[1:]
+    if not r.get("flight") or t0 is None:
+        where = "at " + when
+    elif d["t"] < t0:
+        where = "%.1f s before the takeoff (%s)" % (t0 - d["t"], when)
+    elif d["t"] <= t1:
+        where = "IN FLIGHT, %.1f s after the takeoff (%s)" % (d["t"] - t0, when)
+    else:
+        where = "%.1f s after the landing (%s)" % (d["t"] - t1, when)
+    code = "exit code %d%s" % (d["code"], " " + SIGNALS[d["code"]] if d["code"] in SIGNALS else "")
+    in_flight = bool(r.get("flight")) and t0 is not None and t0 <= d["t"] <= t1
+    return "the estimator died %s%s, %s%s%s" % (where, " while the stack was stopping" if d["stopping"] else "",
+                                               code, ": " + d["why"] if d["why"] else "",
+                                               "; the numbers above stop there" if in_flight else "")
 
 
 def table(title, header, rows, notes=()):
@@ -367,8 +428,9 @@ def print_tables(log_dir):
               ["error of the vector between two drones as their placed VIOs see it, and of its length"])
 
     for r in res:
-        if r.get("note"):
-            print("  ! %s: %s" % (r["drone"], r["note"]))
+        for n in (death_note(r), r.get("note"), r.get("lat_problem")):
+            if n:
+                print("  ! %s: %s" % (r["drone"], n))
     return len(res)
 
 
