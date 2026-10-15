@@ -15,7 +15,9 @@ several flights before it actually fails one.
 """
 import argparse
 import json
+import math
 import os
+import re
 import sys
 
 # Thresholds mirror selfcalib/tool (STEP_STOP in run_tool.py, the rest in diagnose.py).
@@ -52,6 +54,32 @@ def used_after_takeoff(r):
     if end is None:
         return 'all' if 'window_s' in r else None
     return max(0.0, end - r['takeoff_s'])
+
+
+def baselines(drone_dir, r):
+    """Distances between neighbouring cameras' optical centres, cm: cam0-1, 1-2, 2-3, 3-0, from the
+    published chain the playbook pulled next to report.json. None without a chain or four cameras."""
+    names = [os.path.basename(r['published'])] if isinstance(r.get('published'), str) else []
+    names += sorted(n for n in os.listdir(drone_dir) if n.endswith('_published_chain.yaml'))
+    for n in names:
+        path = os.path.join(drone_dir, n)
+        if not os.path.isfile(path):
+            continue
+        # Kalibr's file opens with %YAML:1.0, which PyYAML refuses: read the T_imu_cam rows directly.
+        # Their last column is the camera's optical centre in the IMU frame. A chain that does not
+        # read is a dash in the table, not the end of it.
+        pos = {}
+        try:
+            for m in re.finditer(r'^cam(\d+):\s*\n\s*T_imu_cam:\s*\n((?:\s*- \[[^\]]*\]\s*\n){3})',
+                                 open(path).read(), re.M):
+                pos[int(m.group(1))] = [float(row.split('[')[1].split(']')[0].split(',')[3])
+                                        for row in m.group(2).strip().splitlines()]
+        except (OSError, ValueError, IndexError):
+            return None
+        if all(c in pos for c in range(4)):
+            return [100.0 * math.dist(pos[a], pos[(a + 1) % 4]) for a in range(4)]
+        return None
+    return None
 
 
 def load(collect_dir):
@@ -91,6 +119,7 @@ def load(collect_dir):
             'cxcy': dist.get('cxcy_vs_circlefit_px'),
             'rot': dist.get('extr_rot_vs_fleet_deg'),
             'trans': dist.get('extr_trans_vs_fleet_cm'),
+            'base': baselines(os.path.join(collect_dir, drone), r),
             'toff': dist.get('toff_vs_fleet_ms'),
             'ate': ate.get('postg_m') if ate.get('postg_m') is not None else ate.get('global_m'),
             'ate_skipped': ate.get('skipped', False),
@@ -163,8 +192,8 @@ def main():
     # holds the ! / ~ mark -- a space in the header -- so a title ends exactly above the last
     # digit of its values.
     COLS = [('STEP', '/2.0', 6), ('FOCAL%', '/2.0', 6), ('ROT°', '/8.0', 6), ('TRANS cm', '/15.0', 8),
-            ('t_d ms', '/20.0', 6), ('ATE m', '/0.20', 7), ('NOUMCAL m', '', 9), ('STILL s', '', 7),
-            ('USED s', '', 6)]
+            ('BASE cm', '0-1/1-2/2-3/3-0', 19), ('t_d ms', '/20.0', 6), ('ATE m', '/0.20', 7),
+            ('NOUMCAL m', '', 9), ('STILL s', '', 7), ('USED s', '', 6)]
 
     def line(drone, verdict, passes, cells, fails):
         return ('%-8s %-17s %4s' % (drone, verdict, passes)
@@ -192,6 +221,7 @@ def main():
             cell(r['focal'], '%.2f', mark(r['focal'], THR['focal'][1], 'focal' in f)),
             cell(r['rot'], '%.2f', mark(r['rot'], THR['rot'][1], 'extrinsics' in f)),
             cell(r['trans'], '%.2f', mark(r['trans'], THR['trans'][1], 'extrinsics' in f)),
+            cell(r['base'] and '/'.join('%.1f' % b for b in r['base']), '%s'),
             cell(r['toff'], '%.2f', mark(r['toff'], THR['toff'][1], 'toff' in f)),
             (('skipped', ' ') if r['ate_skipped'] else
              cell(r['ate'], '%.4f', mark(r['ate'], THR['ate'][1], r['ate'] is not None and r['ate'] >= THR['ate'][1]))),
@@ -221,6 +251,10 @@ def main():
     print('  FOCAL%    focal length vs the fleet lens-batch mean, in %')
     print('  ROT°      camera-IMU extrinsic rotation vs the fleet mean for that mount position, degrees')
     print('  TRANS cm  camera-IMU extrinsic translation vs the fleet mean, cm')
+    print('  BASE cm   distance between neighbouring cameras (their optical centres) in the published')
+    print('            calibration, cm, for the camera pairs on the line under the title; no budget. The rig is')
+    print('            a 14.96 cm square: nxt3 read 14.6-15.0 from 14 Oct 2026 on (cameras matched to each other,')
+    print('            90 s), 13.0-16.6 before')
     print('  t_d ms    camera-IMU time offset vs the fleet mean, ms')
     print('  ATE m     post-takeoff trajectory RMSE vs ground truth after SE(3) alignment, metres --')
     print('            "skipped" when the recording carries no mocap (then PLATFORM-DEFECT cannot be detected)')
