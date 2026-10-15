@@ -94,6 +94,20 @@
         path: "{{ drone_base_path }}/logs/latest"
       register: relaunch_prev
 
+    # Ubuntu's background jobs (updates, maintenance, the crash reporter) take CPU, disk and
+    # WiFi from the flight stack: a flight 78 s after a boot had its VIO poses up to 1.5 s late.
+    # Paused here until drones_postflight.yml or drones_selfcalib.yml resumes them; a reboot
+    # starts them again. What and how: scripts/background_jobs.sh.
+    - name: Pause Ubuntu's background jobs for the flight
+      ansible.builtin.script: scripts/background_jobs.sh off
+      become: true
+      register: bg_jobs
+      failed_when: false
+
+    - name: Say what was paused
+      ansible.builtin.debug:
+        msg: "{{ bg_jobs.stdout_lines | default([bg_jobs.msg | default('scripts/background_jobs.sh did not run')]) | select | list }}"
+
     - name: Make sure the MicroXRCE agent is running
       become: false            # user-scope systemd needs the lis session bus, not root's
       ansible.builtin.systemd:

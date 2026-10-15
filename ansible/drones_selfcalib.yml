@@ -270,6 +270,19 @@
     # Deliberately no restart: see STACK STATE at the top. Starting ros_packages here
     # would move logs/latest off the flight this play has just calibrated.
 
+    # ---- 7. Ubuntu's background jobs back on -----------------------------------
+    # Ubuntu's background jobs, paused for the flight by drones_preflight.yml or
+    # drones_relaunch.yml, run again from here (scripts/background_jobs.sh).
+    - name: Resume Ubuntu's background jobs
+      ansible.builtin.script: scripts/background_jobs.sh on
+      become: true
+      register: bg_jobs
+      failed_when: false
+
+    - name: Say what was resumed
+      ansible.builtin.debug:
+        msg: "{{ bg_jobs.stdout_lines | default([bg_jobs.msg | default('scripts/background_jobs.sh did not run')]) | select | list }}"
+
 
 - name: Report the fleet result
   hosts: localhost
@@ -296,7 +309,8 @@
         msg: >-
           {{ sc_summary.stdout_lines + ['',
              'The ROS stack is left STOPPED on every drone, so logs/latest stays on this flight.',
-             'Before the next flight: drones_preflight.yml, or drones_relaunch.yml to skip its checks.'] }}
+             'Before the next flight: drones_preflight.yml, or drones_relaunch.yml to skip its checks.',
+             'Until then Ubuntu runs its background jobs (updates, maintenance) again; both pause them.'] }}
 
     - name: Fail if the run produced nothing at all
       when: sc_summary.rc | default(0) | int != 0
