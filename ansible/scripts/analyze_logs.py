@@ -20,7 +20,8 @@ def load_csv_array(filepath):
         return np.array([])
 
 # --- CORE: Analyze individual drone stats ---
-def analyze_drone(drone_path):
+def analyze_drone(drone_path, offboard=None):
+    """offboard: [(enter, exit)] of PX4's offboard mode from the bag, or None (no vehicle status)"""
     stats = {}
     drone_name = drone_path.name
 
@@ -33,24 +34,34 @@ def analyze_drone(drone_path):
         try:
             df = pd.read_csv(mpc_states_file)
 
+            # Safety Check: Use FULL trajectory (including takeoff)
+            trajectory_df = df[['timestamp', 'x', 'y', 'z']].sort_values('timestamp').copy()
+
             # Stats Filter: Wait for error < 10cm (ignore takeoff spike)
             stable_indices = df.index[df['error_norm'] < 0.1].tolist()
             if stable_indices:
                 df_stats = df.iloc[stable_indices[0]:]
             else:
                 df_stats = df
-
-            stats['error_x_mean'] = df_stats['error_x'].abs().mean()
-            stats['error_x_max'] = df_stats['error_x'].abs().max()
-            stats['error_y_mean'] = df_stats['error_y'].abs().mean()
-            stats['error_y_max'] = df_stats['error_y'].abs().max()
-            stats['error_z_mean'] = df_stats['error_z'].abs().mean()
-            stats['error_z_max'] = df_stats['error_z'].abs().max()
-            stats['error_norm_mean'] = df_stats['error_norm'].mean()
-            stats['error_norm_max'] = df_stats['error_norm'].max()
-
-            # Safety Check: Use FULL trajectory (including takeoff)
-            trajectory_df = df[['timestamp', 'x', 'y', 'z']].sort_values('timestamp').copy()
+            # PX4 follows the MPC only in offboard mode: after a failsafe, a land command or a
+            # pilot taking over, the MPC keeps logging against a reference nobody flies
+            if offboard is not None:
+                t = df_stats['timestamp'].to_numpy()
+                inside = np.zeros(len(t), dtype=bool)
+                for a, b in offboard:
+                    inside |= (t >= a) & (t < b)
+                df_stats = df_stats[inside]
+            if df_stats.empty:
+                stats['tracking_note'] = 'no MPC state while PX4 was in offboard mode'
+            else:
+                stats['error_x_mean'] = df_stats['error_x'].abs().mean()
+                stats['error_x_max'] = df_stats['error_x'].abs().max()
+                stats['error_y_mean'] = df_stats['error_y'].abs().mean()
+                stats['error_y_max'] = df_stats['error_y'].abs().max()
+                stats['error_z_mean'] = df_stats['error_z'].abs().mean()
+                stats['error_z_max'] = df_stats['error_z'].abs().max()
+                stats['error_norm_mean'] = df_stats['error_norm'].mean()
+                stats['error_norm_max'] = df_stats['error_norm'].max()
         except Exception:
             pass
 
@@ -173,54 +184,126 @@ def analyze_drone(drone_path):
 
     return stats, trajectory_df
 
-# --- FLIGHT TIME: PX4's land detector in the drone's bag ---
-def flight_segments(drone_path):
-    """[(takeoff, landing)] in epoch seconds, one per stretch in the air; [] without a takeoff, None
-    without a land detector in the bag. A recording that ends in the air ends the last stretch."""
+# --- FLIGHT TIME AND HOW EACH FLIGHT ENDED: PX4's topics in the drone's bag ---
+OFFBOARD = 14
+NAV_NAMES = {0: "Manual", 1: "Altitude", 2: "Position", 3: "Mission", 4: "Hold", 5: "Return",
+             6: "Position slow", 10: "Acro", 12: "Descend", 13: "Termination", 14: "Offboard",
+             15: "Stabilized", 17: "Takeoff", 18: "Land", 20: "Precision land", 21: "Orbit"}
+PILOT_MODES = {0, 1, 2, 6, 10, 15}
+SET_NAV_STATE = 100001      # VehicleCommand VEHICLE_CMD_SET_NAV_STATE: what drone_state_manager sends
+
+
+def read_flight_bag(drone_path):
+    """PX4's land detector, mode and failsafe flag, battery warning and the mode commands sent to it,
+    as {name: [(epoch s, ...)]}; None without a bag. A message that does not decode is skipped."""
     from mcap.reader import make_reader
     from mcap_ros2.decoder import DecoderFactory
-    land, factory, decoders = [], DecoderFactory(), {}
-    for path in sorted((drone_path / "bag").glob("*.mcap")):
+    paths = sorted((drone_path / "bag").glob("*.mcap"))
+    if not paths:
+        return None
+    out = {"land": [], "status": [], "battery": [], "command": []}
+    topics = ["/fmu/out/vehicle_land_detected", "/fmu/out/vehicle_status_v1", "/fmu/out/vehicle_status",
+              "/fmu/out/battery_status", "/fmu/in/vehicle_command"]
+    factory, decoders = DecoderFactory(), {}
+    for path in paths:
         with open(path, "rb") as f:
-            for schema, channel, message in make_reader(f).iter_messages(topics=["/fmu/out/vehicle_land_detected"]):
+            for schema, channel, message in make_reader(f).iter_messages(topics=topics):
                 dec = decoders.get(channel.id)
                 if dec is None:
                     dec = decoders[channel.id] = factory.decoder_for(channel.message_encoding, schema)
-                land.append((message.log_time * 1e-9, bool(dec(message.data).landed)))
-    if not land:
+                try:
+                    m = dec(message.data)
+                except Exception:
+                    continue
+                t, topic = message.log_time * 1e-9, channel.topic
+                if topic.endswith("land_detected"):
+                    out["land"].append((t, bool(m.landed)))
+                elif "vehicle_status" in topic:
+                    out["status"].append((t, int(m.nav_state), bool(m.failsafe)))
+                elif topic.endswith("battery_status"):
+                    out["battery"].append((t, int(m.warning)))
+                else:
+                    out["command"].append((t, int(m.command), float(m.param1)))
+    return out
+
+
+def flight_segments(bag):
+    """[(takeoff, landing)] in epoch seconds, one per stretch in the air; [] without a takeoff, None
+    without a land detector. A recording that ends in the air ends the last stretch."""
+    if not bag or not bag["land"]:
         return None
     segments, up = [], None
-    for t, landed in land:
+    for t, landed in bag["land"]:
         if not landed and up is None:
             up = t
         elif landed and up is not None:
             segments.append((up, t))
             up = None
     if up is not None:
-        segments.append((up, land[-1][0]))
+        segments.append((up, bag["land"][-1][0]))
     return segments
 
 
-def print_flight_times(drone_dirs):
-    print("\nFLIGHT TIME (PX4's land detector)")
-    print("-" * 56)
-    print(f"{'Drone':<10} | {'takeoff':^9} | {'landing':^9} | {'in the air':>18}")
-    print("-" * 56)
-    for d in sorted(drone_dirs):
-        try:
-            seg = flight_segments(d)
-        except Exception as e:            # one drone's bag must not hide the others
-            print(f"{d.name:<10} | {'-':^9} | {'-':^9} | {'-':>18}   (bag not read: {type(e).__name__})")
+def offboard_intervals(bag):
+    """[(enter, exit)] of PX4's offboard mode; None without a vehicle status in the bag."""
+    if not bag or not bag["status"]:
+        return None
+    out, start = [], None
+    for t, nav, _ in bag["status"]:
+        if nav == OFFBOARD and start is None:
+            start = t
+        elif nav != OFFBOARD and start is not None:
+            out.append((start, t))
+            start = None
+    if start is not None:
+        out.append((start, float("inf")))
+    return out
+
+
+def how_it_ended(bag, takeoff, landing):
+    """How PX4 left offboard mode in this flight: a failsafe, a mode commanded by the stack, a pilot."""
+    st = [r for r in bag["status"] if r[0] <= landing]
+    if not st:
+        return "no vehicle status in the bag"
+    for (t0, nav0, _), (t, nav, failsafe) in zip(st, st[1:]):
+        if t < takeoff or nav0 != OFFBOARD or nav == OFFBOARD:
             continue
+        name, when = NAV_NAMES.get(nav, "nav_state %d" % nav), "at +%.1f s" % (t - takeoff)
+        if failsafe or any(f for tt, _, f in bag["status"] if t <= tt <= t + 0.5):
+            low = any(w > 0 for tt, w in bag["battery"] if t - 3.0 <= tt <= t + 1.0)
+            return "FAILSAFE: %s %s%s" % (name, when, ", battery warning" if low else "")
+        if any(c == SET_NAV_STATE and int(p) == nav for tt, c, p in bag["command"] if t - 1.0 <= tt <= t + 0.1):
+            return "%s commanded %s" % (name, when)
+        if nav in PILOT_MODES:
+            return "pilot took over (%s) %s" % (name, when)
+        return "switched to %s %s" % (name, when)
+    nav = st[-1][1]
+    return "landed in offboard" if nav == OFFBOARD else "flown in %s" % NAV_NAMES.get(nav, "nav_state %d" % nav)
+
+
+def print_flight_times(flights):
+    """flights: {drone: the dict of read_flight_bag, None without a bag, or the exception reading it}"""
+    print("\nFLIGHT TIME (PX4's land detector) AND HOW EACH FLIGHT ENDED")
+    print("-" * 90)
+    print(f"{'Drone':<10} | {'takeoff':^9} | {'landing':^9} | {'in the air':>18} | how it ended")
+    print("-" * 90)
+    hms = lambda t: time.strftime("%H:%M:%S", time.localtime(t))
+    for name, bag in flights.items():
+        if isinstance(bag, Exception):
+            print(f"{name:<10} | {'-':^9} | {'-':^9} | {'-':>18} | (bag not read: {type(bag).__name__})")
+            continue
+        seg = flight_segments(bag)
         if not seg:
-            note = "no takeoff" if seg == [] else "no land detector in the bag" if any((d / "bag").glob("*.mcap")) else "no bag"
-            print(f"{d.name:<10} | {'-':^9} | {'-':^9} | {'-':>18}   ({note})")
+            note = "no bag" if bag is None else "no land detector in the bag" if seg is None else "no takeoff"
+            print(f"{name:<10} | {'-':^9} | {'-':^9} | {'-':>18} | ({note})")
             continue
         air = sum(b - a for a, b in seg)
-        hms = lambda t: time.strftime("%H:%M:%S", time.localtime(t))
         cell = f"{air:.1f} s" + (f" ({len(seg)} flights)" if len(seg) > 1 else "")
-        print(f"{d.name:<10} | {hms(seg[0][0]):^9} | {hms(seg[-1][1]):^9} | {cell:>18}")
+        ends = "; ".join(how_it_ended(bag, a, b) for a, b in seg)
+        print(f"{name:<10} | {hms(seg[0][0]):^9} | {hms(seg[-1][1]):^9} | {cell:>18} | {ends}")
     print("  * in the air = from PX4's takeoff to its landing, summed over the flights in the recording")
+    print("  * how it ended = how PX4 left offboard mode (+s from the takeoff): FAILSAFE, a mode commanded by")
+    print("    the stack (drone_state_manager), a pilot taking over, or landed still in offboard")
 
 
 # --- SAFETY CHECK: Calculate Distances ---
@@ -324,14 +407,20 @@ def main():
 
     print(f"--- Processing {len(drone_dirs)} Drones in {root_dir.name} ---")
 
+    flights = {}
     for drone_dir in sorted(drone_dirs):
-        stats, traj = analyze_drone(drone_dir)
+        try:
+            flights[drone_dir.name] = read_flight_bag(drone_dir)
+        except Exception as e:                 # one drone's bag must not hide the others
+            flights[drone_dir.name] = e
+        bag = flights[drone_dir.name]
+        stats, traj = analyze_drone(drone_dir, offboard_intervals(bag) if isinstance(bag, dict) else None)
         all_stats[drone_dir.name] = stats
         if traj is not None and not traj.empty:
             trajectories[drone_dir.name] = traj
 
     # 0. FLIGHT TIME
-    print_flight_times(drone_dirs)
+    print_flight_times(flights)
 
     # 1. TRACKING ERRORS
     print("\nTRACKING ERRORS (Mean / Max in Meters)")
@@ -345,6 +434,10 @@ def main():
         mpc_t = f"{s.get('mpc_time_mean', 0):.1f} / {s.get('mpc_time_max', 0):.1f}"
         if 'error_x_mean' in s:
             print(f"{name:<10} | {fmt_err('error_x'):^15} | {fmt_err('error_y'):^15} | {fmt_err('error_z'):^15} | {fmt_err('error_norm'):^15} | {mpc_t:^15}")
+        elif 'tracking_note' in s:
+            print(f"{name:<10} | ({s['tracking_note']})")
+    print("  * from the first error under 10 cm on, while PX4 was in offboard mode (it flies the MPC only then);")
+    print("    a flight that left offboard is cut there, see FLIGHT TIME. Without PX4's mode in the bag: the whole log")
 
     # 2. PLANNING PIPELINE
     print_table(
