@@ -79,7 +79,10 @@ def read_bag(drone_dir, ns):
                     out["land"].append((t, float(m.landed)))
                 else:
                     out["arm"].append((t, float(m.arming_state == 2)))
-    return {k: np.array(v, float).reshape(len(v), -1) for k, v in out.items()}
+    # Fixed widths: a topic without a message (the recorder can miss a PX4 topic, see
+    # drone_launch.py.j2) gives an empty table instead of a ValueError that loses the drone.
+    widths = {"vio": 9, "odom": 4, "status": 8, "mocap": 8, "land": 2, "arm": 2}
+    return {k: np.array(v, float).reshape(len(v), widths[k]) for k, v in out.items()}
 
 
 SIGNALS = {-6: "SIGABRT", -7: "SIGBUS", -9: "SIGKILL", -11: "SIGSEGV", -15: "SIGTERM"}
