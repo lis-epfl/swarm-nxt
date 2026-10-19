@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+import time
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -172,6 +173,56 @@ def analyze_drone(drone_path):
 
     return stats, trajectory_df
 
+# --- FLIGHT TIME: PX4's land detector in the drone's bag ---
+def flight_segments(drone_path):
+    """[(takeoff, landing)] in epoch seconds, one per stretch in the air; [] without a takeoff, None
+    without a land detector in the bag. A recording that ends in the air ends the last stretch."""
+    from mcap.reader import make_reader
+    from mcap_ros2.decoder import DecoderFactory
+    land, factory, decoders = [], DecoderFactory(), {}
+    for path in sorted((drone_path / "bag").glob("*.mcap")):
+        with open(path, "rb") as f:
+            for schema, channel, message in make_reader(f).iter_messages(topics=["/fmu/out/vehicle_land_detected"]):
+                dec = decoders.get(channel.id)
+                if dec is None:
+                    dec = decoders[channel.id] = factory.decoder_for(channel.message_encoding, schema)
+                land.append((message.log_time * 1e-9, bool(dec(message.data).landed)))
+    if not land:
+        return None
+    segments, up = [], None
+    for t, landed in land:
+        if not landed and up is None:
+            up = t
+        elif landed and up is not None:
+            segments.append((up, t))
+            up = None
+    if up is not None:
+        segments.append((up, land[-1][0]))
+    return segments
+
+
+def print_flight_times(drone_dirs):
+    print("\nFLIGHT TIME (PX4's land detector)")
+    print("-" * 56)
+    print(f"{'Drone':<10} | {'takeoff':^9} | {'landing':^9} | {'in the air':>18}")
+    print("-" * 56)
+    for d in sorted(drone_dirs):
+        try:
+            seg = flight_segments(d)
+        except Exception as e:            # one drone's bag must not hide the others
+            print(f"{d.name:<10} | {'-':^9} | {'-':^9} | {'-':>18}   (bag not read: {type(e).__name__})")
+            continue
+        if not seg:
+            note = "no takeoff" if seg == [] else "no land detector in the bag" if any((d / "bag").glob("*.mcap")) else "no bag"
+            print(f"{d.name:<10} | {'-':^9} | {'-':^9} | {'-':>18}   ({note})")
+            continue
+        air = sum(b - a for a, b in seg)
+        hms = lambda t: time.strftime("%H:%M:%S", time.localtime(t))
+        cell = f"{air:.1f} s" + (f" ({len(seg)} flights)" if len(seg) > 1 else "")
+        print(f"{d.name:<10} | {hms(seg[0][0]):^9} | {hms(seg[-1][1]):^9} | {cell:>18}")
+    print("  * in the air = from PX4's takeoff to its landing, summed over the flights in the recording")
+
+
 # --- SAFETY CHECK: Calculate Distances ---
 def calculate_min_distances(trajectories):
     if len(trajectories) < 2:
@@ -278,6 +329,9 @@ def main():
         all_stats[drone_dir.name] = stats
         if traj is not None and not traj.empty:
             trajectories[drone_dir.name] = traj
+
+    # 0. FLIGHT TIME
+    print_flight_times(drone_dirs)
 
     # 1. TRACKING ERRORS
     print("\nTRACKING ERRORS (Mean / Max in Meters)")
