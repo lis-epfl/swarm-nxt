@@ -37,23 +37,61 @@ def generate_launch_description():
         arguments=["{{ drone_ros_path }}/config/bridge_config.yaml"],
     )
     bag_dir = os.path.join(os.environ.get("ROS_LOG_DIR"), "bag")
-    rosbag_start = ExecuteProcess(
-        cmd=[
-            "ros2",
-            "bag",
-            "record",
-            "-b",
-            "1_073_741_824",  # 1GiB
-            "-s",
-            "mcap",
-            "-o",
-            bag_dir,
-            "--regex",
-            "{{ drone_rosbag_topics | map('regex_replace', '^(.*)$', '(\\1)') | join('|') if drone_rosbag_topics else '' }}",
-            "--storage-config-file", 
-            "{{ drone_ros_path }}/config/mcap_bag_options.yml"
-        ]
-    )
+    rosbag_cmd = [
+        "ros2",
+        "bag",
+        "record",
+        "-b",
+        "1_073_741_824",  # 1GiB
+        "-s",
+        "mcap",
+        "-o",
+        bag_dir,
+        "--regex",
+        "{{ drone_rosbag_topics | map('regex_replace', '^(.*)$', '(\\1)') | join('|') if drone_rosbag_topics else '' }}",
+        "--storage-config-file",
+        "{{ drone_ros_path }}/config/mcap_bag_options.yml"
+    ]
+
+    # PX4's topics are recorded best effort, always. The recorder chooses the QoS of a topic
+    # once, when it subscribes, from the publishers it sees at that moment, and never
+    # subscribes again. PX4's publishers are best effort and are created anew whenever PX4
+    # sets up its uXRCE session again; a topic the recorder reached in that gap got the
+    # default, RELIABLE, which no PX4 publisher serves, and stayed empty for the whole run
+    # (nxt3, 19 Oct 2026 13:17: vehicle_status_v1, vehicle_odometry and three more).
+    # Best effort and volatile match any publisher, and record the same as before in a
+    # normal run: a best effort publisher sends no earlier sample to a reader that joins
+    # late, so transient_local would gain nothing and would refuse a volatile publisher.
+    # The names are every PX4 publication of dds_topics.yaml.j2 (the file PX4 is built
+    # from), each also with the _v<N> that PX4 appends to a versioned message; a name that
+    # never appears costs nothing. A file the recorder cannot use stops it, so the file is
+    # read back with the recorder's own parser and only then handed to it: anything that
+    # goes wrong costs the override, never the bag.
+    # To see it on a drone: launch.log has one "Overriding subscription profile for
+    # /fmu/out/..." line per PX4 topic, or a line starting with "[bag]" that says why not.
+    rosbag_notes = []
+    try:
+        import yaml
+        from rclpy.qos import ReliabilityPolicy
+        from ros2bag.api import convert_yaml_to_qos_profile
+
+        px4_out_topics = {{ (lookup('file', playbook_dir ~ '/templates/dds_topics.yaml.j2') | from_yaml).publications | map(attribute='topic') | product(['', '_v1', '_v2', '_v3']) | map('join') | list | to_json }}
+        px4_qos = {
+            t: {"history": "keep_last", "depth": 10, "reliability": "best_effort", "durability": "volatile"}
+            for t in px4_out_topics
+        }
+        px4_qos_file = os.path.join(os.environ.get("ROS_LOG_DIR"), "px4_qos_overrides.yaml")
+        os.makedirs(os.path.dirname(px4_qos_file), exist_ok=True)
+        with open(px4_qos_file, "w") as f:
+            yaml.safe_dump(px4_qos, f)
+        with open(px4_qos_file) as f:
+            parsed = convert_yaml_to_qos_profile(yaml.safe_load(f))
+        if set(parsed) != set(px4_qos) or any(p.reliability != ReliabilityPolicy.BEST_EFFORT for p in parsed.values()):
+            raise ValueError(px4_qos_file + " reads back differently from what was written")
+        rosbag_cmd += ["--qos-profile-overrides-path", px4_qos_file]
+    except Exception as e:
+        rosbag_notes.append(LogInfo(msg="[bag] PX4 topics recorded without the best effort override: " + repr(e)))
+    rosbag_start = ExecuteProcess(cmd=rosbag_cmd)
 
 {% if vio_flags %}
     # ---- Onboard VIO (enable_vio / vio_nav in group_vars/all) --------------------------------
@@ -621,5 +659,5 @@ def generate_launch_description():
             command_converter_node,
             trajectory_converter_node,
             multi_agent_planner_include,
-        ] + extra_nodes
+        ] + rosbag_notes + extra_nodes
     )
