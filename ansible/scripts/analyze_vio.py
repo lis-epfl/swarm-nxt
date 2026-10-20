@@ -70,11 +70,13 @@ def read_bag(drone_dir, ns):
                     out["status"].append((t, m.source, m.vio_ready, m.reason, m.fallbacks,
                                           m.dist_exceed_count, m.px4_mocap_dist_m, m.fallback_latched))
                 elif topic == mocap:
-                    if not m.rigid_body.tracking_valid:
+                    s = m.stamp.sec + m.stamp.nanosec * 1e-9
+                    # a stamp that goes back is a sample out of order, left out as vision_pose_node
+                    # does (nxt6 20 Oct 12:16: one stamped 0.1 s early read as a 14.5 cm error)
+                    if not m.rigid_body.tracking_valid or (out["mocap"] and s <= out["mocap"][-1][0]):
                         continue
                     p, q = m.rigid_body.pose.position, m.rigid_body.pose.orientation
-                    out["mocap"].append((m.stamp.sec + m.stamp.nanosec * 1e-9,
-                                         p.x, p.y, p.z, q.q_x, q.q_y, q.q_z, q.q_w))
+                    out["mocap"].append((s, p.x, p.y, p.z, q.q_x, q.q_y, q.q_z, q.q_w))
                 elif topic == "/fmu/out/vehicle_land_detected":
                     out["land"].append((t, float(m.landed)))
                 else:
