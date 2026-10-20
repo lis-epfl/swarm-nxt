@@ -117,6 +117,7 @@ def generate_launch_description():
         "vio_matching": {{ 'False' if (vio_matching | default(true) | string | lower) in ['false', '0', 'no', 'off'] else 'True' }},
         "vio_heading_trim": {{ 'True' if (vio_heading_trim | default(false) | bool) else 'False' }},
         "vio_fallback_dist_m": {{ vio_fallback_dist_m | default(0.15) | float }},
+        "vio_affinity": "{{ vio_affinity | default('') }}",
         "folder": os.path.realpath(vio_dir),
     }
 
@@ -217,6 +218,16 @@ def generate_launch_description():
             lens = _env_file(os.path.join(vio_dir, "flight_stiffness.env"))
             if "OV_NONRADIAL" in lens:
                 vio_env["OV_NONRADIAL"] = lens["OV_NONRADIAL"]
+            # vio_affinity (group_vars/all): the estimator's CPUs for this start,
+            # "<main threads>:<image decoding>", instead of campaign.env's OV_AFFINITY. A value the
+            # estimator cannot read would leave it unpinned altogether, so only CPU lists pass.
+            _aff = vio_run["vio_affinity"]
+            if _aff:
+                _parts = _aff.split(":")
+                if len(_parts) == 2 and all(p and set(p) <= set("0123456789,-") for p in _parts):
+                    vio_env["OV_AFFINITY"] = _aff
+                else:
+                    vio_run["vio_affinity_ignored"] = "not '<cpus>:<cpus>', campaign.env's kept"
             # The estimator takes a prior it cannot read as "not set" and says nothing, and
             # exits on lens terms it cannot read.
             bad = [k for k in ("OV_PRIOR_DT_SIG", "OV_PRIOR_EXTR_Q_SIG", "OV_PRIOR_EXTR_T_SIG",

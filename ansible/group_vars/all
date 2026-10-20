@@ -141,6 +141,14 @@ vio_nav: false
 vio_matching: true
 vio_fallback_dist_m: 0.15
 vio_heading_trim: false
+# vio_affinity: the estimator's CPUs, "<main threads>:<image decoding>", instead of vio_deploy's
+# campaign.env (OV_AFFINITY=0-3:4-7); empty: campaign.env's. With 0-3, in the flight of 20 Oct
+# 2026 16:34, its main threads waited 125-140 ms per second for a CPU, where the PX4 agent (CPU0)
+# and the PX4 serial interrupt (CPU1) also run, while 4-7 were 60 % idle. With 0-7 (16:55, nxt3
+# and nxt6): 45-77 ms per second, pose out 64 instead of 73 ms after its images, pose age
+# p50 110 instead of 118 ms and at most 153 instead of 210 ms (PX4 drops a pose older than
+# about 190 ms). PX4's own position error was unchanged.
+vio_affinity: "0-7:4-7"
 
 # OAK USB speed cap.  Default super_plus (10 Gbps).  In short tests nxt10's
 # link was marginal at SUPER_PLUS (X_LINK_ERROR / USB-disconnect stalls)
