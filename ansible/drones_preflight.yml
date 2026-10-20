@@ -307,8 +307,10 @@
     # interrupt, which holds off the UART's interrupt on the same CPU for longer than its
     # 32-byte FIFO lasts: the loss windows every ~31 s of the flights with the camera recorder
     # (bench on nxt6, 19 Oct 2026). Moves the UART's interrupt to CPU1 and the kernel's
-    # writeback workers to CPUs 4-7. After the agent start: the kernel registers the UART's
-    # interrupt only while the agent has the port open. A reboot undoes it, this does it again.
+    # writeback workers to CPUs 4-7, and has the disk written steadily (on nxt10's slow drive
+    # the bursts every ~31 s stopped the camera stream). After the agent start: the kernel
+    # registers the UART's interrupt only while the agent has the port open. A reboot undoes
+    # it, this does it again.
     # What and why: scripts/px4_uart_guard.sh.
     - name: Keep disk interrupts away from PX4's serial link
       ansible.builtin.script: scripts/px4_uart_guard.sh apply

@@ -1,11 +1,12 @@
 #!/bin/bash
-# Keeps disk-completion work away from the interrupt of PX4's serial link.
+# Keeps disk-completion work away from the interrupt of PX4's serial link, and has the disk
+# written steadily.
 #
 #   px4_uart_guard.sh apply     after the micro_xrce agent is started (drones_preflight.yml,
 #                               drones_relaunch.yml)
 #   px4_uart_guard.sh status    any time; drones_postflight.yml prints the flight's overruns
 #
-# Run as root (ansible become). Reads /proc and /sys; "apply" writes two settings there.
+# Run as root (ansible become). Reads /proc and /sys; "apply" writes three settings there.
 #
 # WHY. PX4 streams to the Jetson over /dev/ttyTHS1 (3100000.serial, 3 Mbaud). The port has no
 # receive DMA: its interrupt handler has to empty the 32-byte FIFO within about 50-100 us, or
@@ -28,12 +29,20 @@
 #      /sys/kernel/irq/*/actions). It then stays on CPU1 when the agent closes and reopens the
 #      port, until the next boot. CPU1 because it never completes disk requests: with
 #      rq_affinity 1, CPU0 completes those of CPUs 1-3, which share its cache.
-#   3. Says so if the NVMe's rq_affinity is not 1, and leaves it: with 2, CPU1 would complete
+#   3. The kernel writes cached data to the disk from 64 MB on (vm.dirty_background_bytes; by
+#      default from 10 % of the memory, which the camera recorder never reaches, so its 29 MB/s
+#      left ~900 MB at a time, every ~31 s). nxt10's 128 GB drive takes 11 s for those 900 MB
+#      (84 MB/s; nxt6's 0.8 s), and the camera stream stopped for 4-5 s at each, which failed its
+#      self-calibration of 20 Oct 2026 (ATE 62 cm, PLATFORM-DEFECT). On nxt10, 80 s at 29 MB/s:
+#      at most 65 MB cached and 80 MB being written, against 711 MB and 13.7 s of writing.
+#      Only with item 1 or 2 done: without both, steady flushes from CPUs 0-3 would reach PX4's
+#      link all the time instead of every 31 s.
+#   4. Says so if the NVMe's rq_affinity is not 1, and leaves it: with 2, CPU1 would complete
 #      its own requests, part of that with interrupts off (the IOMMU's TLB sync).
-#   4. Notes the counters that "status" compares with.
-# A reboot undoes items 1 and 2; the next "apply" does both again.
+#   5. Notes the counters that "status" compares with.
+# A reboot undoes items 1 to 3; the next "apply" does them again.
 #
-# Exit status: 0; 2 when item 1 or 2 could not be done (named in the output); 1 on a wrong call.
+# Exit status: 0; 2 when item 1, 2 or 3 could not be done (named in the output); 1 on a wrong call.
 
 set -u
 UART_DEV=3100000.serial          # PX4's port, /dev/ttyTHS1
@@ -41,6 +50,7 @@ UART_MMIO=0x03100000
 UART_CPU=1
 NVME=nvme0n1
 WB=/sys/devices/virtual/workqueue/writeback/cpumask
+DIRTY_BG=67108864                # bytes of cached data from which the kernel writes it out (64 MB)
 STATE=/run/swarmnxt_px4_uart     # "apply": time, overruns, disk interrupts, BLOCK softirqs off CPU0's cluster
 
 MODE=${1:-}
@@ -92,7 +102,7 @@ snapshot() {
 }
 
 apply() {
-  local rc=0 o=() m v irq="" eff rq oe irqs blk
+  local rc=0 o=() m v irq="" eff rq oe irqs blk wb_ok=0 uart_ok=0
   echo "PX4 serial link ($UART_DEV) kept clear of disk interrupts:"
 
   # 1. writeback workers
@@ -104,7 +114,7 @@ apply() {
     { echo "$m" > $WB; } 2>/dev/null
     v=$(tr -d ',\n' < $WB 2>/dev/null)
     if [ -n "$v" ] && [ $(( 16#$v )) = $(( 16#$m )) ]; then
-      echo "  writeback workers: on CPUs ${o[*]} (cpumask $m)"
+      echo "  writeback workers: on CPUs ${o[*]} (cpumask $m)"; wb_ok=1
     else
       echo "  writeback workers: NOT MOVED, $WB reads '${v:-nothing}'"; rc=2
     fi
@@ -118,17 +128,30 @@ apply() {
     { echo $UART_CPU > /proc/irq/"$irq"/smp_affinity_list; } 2>/dev/null
     read -r eff < /proc/irq/"$irq"/effective_affinity_list
     if [ "$eff" = "$UART_CPU" ]; then
-      echo "  UART interrupt $irq: on CPU$UART_CPU"
+      echo "  UART interrupt $irq: on CPU$UART_CPU"; uart_ok=1
     else
       echo "  UART interrupt $irq: NOT MOVED, it is on CPU '$eff'"; rc=2
     fi
   fi
 
-  # 3. rq_affinity, looked at only
+  # 3. steady disk writes, only with item 1 or 2 done
+  if [ $wb_ok = 1 ] || [ $uart_ok = 1 ]; then
+    { echo $DIRTY_BG > /proc/sys/vm/dirty_background_bytes; } 2>/dev/null
+    read -r v 2>/dev/null < /proc/sys/vm/dirty_background_bytes
+    if [ "${v:-}" = "$DIRTY_BG" ]; then
+      echo "  disk writes: steady, from $(( DIRTY_BG >> 20 )) MB of cached data on"
+    else
+      echo "  disk writes: NOT SET, vm.dirty_background_bytes reads '${v:-nothing}'"; rc=2
+    fi
+  else
+    echo "  disk writes: left as they are (bursts every ~31 s), since neither of the above was done"
+  fi
+
+  # 4. rq_affinity, looked at only
   read -r rq 2>/dev/null < /sys/block/$NVME/queue/rq_affinity
   [ "${rq:-}" = 1 ] || echo "  $NVME rq_affinity is '${rq:-?}', not 1: then CPU1 can complete disk requests (left as it is)"
 
-  # 4. counters for "status"
+  # 5. counters for "status"
   echo "$(date +%s) $(snapshot)" > $STATE
   read -r _ oe irqs blk < $STATE
   echo "  receive overruns since boot: $( [ "$oe" -ge 0 ] && echo "$oe" || echo "unknown, $UART_MMIO not in /proc/tty/driver/tegra_hsuart")"
@@ -136,7 +159,7 @@ apply() {
 }
 
 status() {
-  local m irq eff rq oe irqs blk t0 oe0 irqs0 blk0
+  local m v irq eff rq oe irqs blk t0 oe0 irqs0 blk0
   read -r m 2>/dev/null < $WB
   echo "writeback workers: cpumask ${m:-unknown} (CPUs outside CPU0's cluster: $(others | tr '\n' ' '))"
   if irq=$(uart_irq); then
@@ -147,6 +170,12 @@ status() {
   fi
   read -r rq 2>/dev/null < /sys/block/$NVME/queue/rq_affinity
   echo "$NVME rq_affinity: ${rq:-unknown}"
+  read -r v 2>/dev/null < /proc/sys/vm/dirty_background_bytes
+  if [ "${v:-0}" -gt 0 ]; then
+    echo "disk writes: from $(( v >> 20 )) MB of cached data on"
+  else
+    echo "disk writes: from $(cat /proc/sys/vm/dirty_background_ratio) % of the memory on (the default: bursts every ~31 s)"
+  fi
   read -r oe irqs blk <<< "$(snapshot)"
   echo "receive overruns since boot: $( [ "$oe" -ge 0 ] && echo "$oe" || echo unknown)"
   if [ -s $STATE ]; then
