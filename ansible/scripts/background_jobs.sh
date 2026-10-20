@@ -24,9 +24,9 @@
 #     else cannot start it again; masking stops it, which ends a running update check.
 #   - cron (sysstat, e2scrub, anacron) and apport (it writes a core dump of any process that
 #     crashes, in flight as well): stopped.
-#   - update-notifier (with the update-manager it opens, which runs in its scope), update-manager
-#     started any other way, gnome-software in the desktop session, and the tracker file indexer:
-#     frozen (systemctl freeze: the processes stay, without CPU) and thawed after.
+#   - update-notifier (with the update-manager it opens, which runs in its scope), gnome-software
+#     in the desktop session, and the tracker file indexer: frozen (systemctl freeze: the
+#     processes stay, without CPU) and thawed after.
 # What a flight needs is not touched: chrony, NetworkManager and wpa_supplicant, avahi, ssh,
 # the micro_xrce agent, nvfancontrol, nvpmodel, jetson_clocks.
 #
@@ -45,7 +45,7 @@ TIMERS=(apt-daily.timer apt-daily-upgrade.timer update-notifier-download.timer
         apport-autoreport.timer snapd.snap-repair.timer systemd-tmpfiles-clean.timer)
 DAEMONS=(cron.service apport.service)
 MASKED=packagekit.service
-SESSION_UNITS='update\\x2dnotifier|update\\x2dmanager|gnome\\x2dsoftware|^tracker-miner-fs-3\.service|^tracker-extract-3\.service'
+SESSION_UNITS='update\\x2dnotifier|gnome\\x2dsoftware|^tracker-miner-fs-3\.service|^tracker-extract-3\.service'
 
 MODE=${1:-}
 U=${2:-${SUDO_USER:-}}
