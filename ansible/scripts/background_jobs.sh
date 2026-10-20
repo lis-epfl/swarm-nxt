@@ -12,8 +12,10 @@
 # WiFi from the flight stack. Measured on nxt3 on 15 Oct 2026: in the 3 minutes after a boot,
 # PackageKit (fed by gnome-software, which downloads updates) used 57 s of CPU, update-notifier
 # (apt-check) 19 s and gnome-software 5 s. A flight 78 s after a boot had its VIO poses up to
-# 1.5 s late for 40 s. Later, timers start more: update-notifier-download 5 min after a boot,
-# apt-daily about 13 min, tmpfiles-clean 15 min, fstrim 33 min, then daily or weekly.
+# 1.5 s late for 40 s. On nxt6 on 20 Oct, the update-manager window that update-notifier opened
+# 1 min after a boot took a whole core until it was frozen 10 min later. Later, timers start
+# more: update-notifier-download 5 min after a boot, apt-daily about 13 min, tmpfiles-clean
+# 15 min, fstrim 33 min, then daily or weekly.
 #
 # WHAT IS PAUSED, AND HOW
 #   - the timers in TIMERS: stopped, and their job stopped too if it is running. A timer whose
@@ -22,7 +24,8 @@
 #     else cannot start it again; masking stops it, which ends a running update check.
 #   - cron (sysstat, e2scrub, anacron) and apport (it writes a core dump of any process that
 #     crashes, in flight as well): stopped.
-#   - update-notifier and gnome-software in the desktop session, and the tracker file indexer:
+#   - update-notifier (with the update-manager it opens, which runs in its scope), update-manager
+#     started any other way, gnome-software in the desktop session, and the tracker file indexer:
 #     frozen (systemctl freeze: the processes stay, without CPU) and thawed after.
 # What a flight needs is not touched: chrony, NetworkManager and wpa_supplicant, avahi, ssh,
 # the micro_xrce agent, nvfancontrol, nvpmodel, jetson_clocks.
@@ -42,7 +45,7 @@ TIMERS=(apt-daily.timer apt-daily-upgrade.timer update-notifier-download.timer
         apport-autoreport.timer snapd.snap-repair.timer systemd-tmpfiles-clean.timer)
 DAEMONS=(cron.service apport.service)
 MASKED=packagekit.service
-SESSION_UNITS='update\\x2dnotifier|gnome\\x2dsoftware|^tracker-miner-fs-3\.service|^tracker-extract-3\.service'
+SESSION_UNITS='update\\x2dnotifier|update\\x2dmanager|gnome\\x2dsoftware|^tracker-miner-fs-3\.service|^tracker-extract-3\.service'
 
 MODE=${1:-}
 U=${2:-${SUDO_USER:-}}
