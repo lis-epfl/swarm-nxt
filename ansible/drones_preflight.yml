@@ -303,6 +303,23 @@
         scope: user
         daemon_reload: true
 
+    # PX4's serial link loses bytes when a disk write is completed inside CPU0's NVMe
+    # interrupt, which holds off the UART's interrupt on the same CPU for longer than its
+    # 32-byte FIFO lasts: the loss windows every ~31 s of the flights with the camera recorder
+    # (bench on nxt6, 19 Oct 2026). Moves the UART's interrupt to CPU1 and the kernel's
+    # writeback workers to CPUs 4-7. After the agent start: the kernel registers the UART's
+    # interrupt only while the agent has the port open. A reboot undoes it, this does it again.
+    # What and why: scripts/px4_uart_guard.sh.
+    - name: Keep disk interrupts away from PX4's serial link
+      ansible.builtin.script: scripts/px4_uart_guard.sh apply
+      become: true
+      register: uart_guard
+      failed_when: false
+
+    - name: Say where PX4's serial link is handled
+      ansible.builtin.debug:
+        msg: "{{ uart_guard.stdout_lines | default([uart_guard.msg | default('scripts/px4_uart_guard.sh did not run')]) | select | list }}"
+
     - name: Start ros_packages service
       ansible.builtin.systemd:
         name: ros_packages

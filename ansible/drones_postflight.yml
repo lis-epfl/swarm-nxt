@@ -100,6 +100,21 @@
       delegate_to: localhost
       ignore_errors: true
 
+    # PX4's serial link during the flight: receive overruns (bytes lost on the UART; about
+    # 0.55 lost PX4 messages per overrun on the bench) since drones_preflight.yml or
+    # drones_relaunch.yml placed its interrupt, and where the disk writes were completed. A few
+    # is the idle level (bench: 2-7 in 3-4 min); hundreds mean disk completions reached the
+    # UART's CPU again (bench: 1566 in 3 min at the camera recorder's rate, UART on CPU0).
+    - name: Read PX4's serial link counters
+      ansible.builtin.script: scripts/px4_uart_guard.sh status
+      become: true
+      register: uart_guard
+      failed_when: false
+
+    - name: Say how PX4's serial link did
+      ansible.builtin.debug:
+        msg: "{{ uart_guard.stdout_lines | default([uart_guard.msg | default('scripts/px4_uart_guard.sh did not run')]) | select | list }}"
+
     # Ubuntu's background jobs, paused for the flight by drones_preflight.yml or
     # drones_relaunch.yml, run again from here (scripts/background_jobs.sh).
     - name: Resume Ubuntu's background jobs

@@ -115,6 +115,20 @@
         state: started
         scope: user
 
+    # The same as in drones_preflight.yml: PX4's UART interrupt on CPU1 and the kernel's
+    # writeback workers on CPUs 4-7, so that disk writes cannot make PX4's serial link lose
+    # bytes. After the agent start (the UART's interrupt exists only while the port is open);
+    # needed again after a reboot. What and why: scripts/px4_uart_guard.sh.
+    - name: Keep disk interrupts away from PX4's serial link
+      ansible.builtin.script: scripts/px4_uart_guard.sh apply
+      become: true
+      register: uart_guard
+      failed_when: false
+
+    - name: Say where PX4's serial link is handled
+      ansible.builtin.debug:
+        msg: "{{ uart_guard.stdout_lines | default([uart_guard.msg | default('scripts/px4_uart_guard.sh did not run')]) | select | list }}"
+
     - name: Restart ros_packages
       become: false
       ansible.builtin.systemd:
