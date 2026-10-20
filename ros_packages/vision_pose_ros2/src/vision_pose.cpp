@@ -227,6 +227,7 @@ void VisionPose::DeclareRosParameters() {
   DeclareDouble("vio_still_m", 0.03);
   DeclareDouble("vio_timeout_s", 0.33);
   DeclareDoubleArray("vio_lever_arm", {0.0, 0.0, 0.0});
+  DeclareDoubleArray("room_tilt_deg", {0.0, 0.0});
   DeclareDouble("vio_pos_var", 0.000001);
   DeclareDouble("vio_att_var", 0.000001);
   declare_parameter<bool>("correct_mocap_attitude", false, fixed);
@@ -311,6 +312,15 @@ Params VisionPose::InitializeRosParameters() {
   for (size_t i = 0; i < 3; ++i) {
     RequireFinite("vio_lever_arm", lever_arm[i]);
     params.vio_lever_arm(static_cast<Eigen::Index>(i)) = lever_arm[i];
+  }
+  const std::vector<double> room_tilt_deg =
+      get_parameter("room_tilt_deg").as_double_array();
+  if (room_tilt_deg.size() != 2) {
+    throw std::invalid_argument("parameter room_tilt_deg must hold 2 values");
+  }
+  for (size_t i = 0; i < 2; ++i) {
+    RequireFinite("room_tilt_deg", room_tilt_deg[i]);
+    params.room_tilt(static_cast<Eigen::Index>(i)) = Rad(room_tilt_deg[i]);
   }
   params.vio_pos_var = get_parameter("vio_pos_var").as_double();
   params.vio_att_var = get_parameter("vio_att_var").as_double();

@@ -70,6 +70,11 @@ struct Params {
   // (metres), from the calibration: the VIO is moved back by it onto the
   // point the mocap reports. Zero: the VIO is taken as it comes.
   Eigen::Vector3d vio_lever_arm = Eigen::Vector3d::Zero();
+  // tilt of the VIO's world in the room, from the calibration (radians, the
+  // rotation about the room's x and y axes that takes the room's vertical to
+  // the VIO's): placed against the mocap, the VIO is turned by it on top of
+  // the heading. Zero: the heading only, the two verticals taken as one.
+  Eigen::Vector2d room_tilt = Eigen::Vector2d::Zero();
   // after a fallback, send the attitude of the IMU body instead of the rigid
   // body's
   bool correct_mocap_attitude = false;
@@ -254,6 +259,10 @@ class VisionPoseCore {
   // placement against the mocap was made at this pose
   bool Place();
 
+  // the rotation that places the VIO in the room at this heading: against the
+  // mocap, with the room tilt of the calibration on top
+  Eigen::Quaterniond Placement(double psi) const;
+
   // pair the waiting VIO poses whose stamp the mocap has passed
   void PairWaiting(double now_s);
 
@@ -307,6 +316,8 @@ class VisionPoseCore {
   const int64_t settle_ns_;
   const int64_t hold_ns_;
   const int64_t trim_window_ns_;
+  // params_.room_tilt as a rotation
+  const Eigen::Quaterniond q_tilt_;
 
   // state machine
   Source source_ = Source::kNone;
@@ -346,7 +357,8 @@ class VisionPoseCore {
   double vio_held_s_ = 0.0;      // hold-ups of the node since the latest pose
   Reason reason_logged_ = Reason::kNone;  // of the latest "VIO not used" line
 
-  // placement: p_W = Rz(psi0 + trim) (p_v - p_v0) + p_0
+  // placement: p_W = T Rz(psi0 + trim) (p_v - p_v0) + p_0, with T the room
+  // tilt when placed against the mocap (Placement)
   bool placed_ = false;
   bool placement_from_mocap_ = false;
   int placement_pairs_ = 0;

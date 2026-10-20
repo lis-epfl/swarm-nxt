@@ -250,6 +250,19 @@ def generate_launch_description():
                 and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
                         and abs(v) < 0.3 for v in _lever)):
             vio_lever_arm = [float(v) for v in _lever]
+    # The tilt of the VIO's world in the room (deg, about the room's x and y axes), when the
+    # calibration solved it (mount.json, room_tilt_deg; perception_pkgs selfcalib, from the
+    # positions of its flight). Placed with the heading only, the VIO's vertical is taken for the
+    # mocap's; on 19/20 Oct 2026 they were 0.5 to 1.1 deg apart, about 1.4 cm of height per metre
+    # from the start, partly the room (Motive's ground plane) and partly the drone. Zeros: the
+    # heading only, as before.
+    vio_room_tilt = [0.0, 0.0]
+    if vio_mount is not None:
+        _tilt = vio_mount.get("room_tilt_deg")
+        if (isinstance(_tilt, list) and len(_tilt) == 2
+                and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+                        and abs(v) < 3.0 for v in _tilt)):
+            vio_room_tilt = [float(v) for v in _tilt]
 
     vio_actions = []      # joins the launch description at the end of this file
     vision_pose_vio = {}  # parameters of vision_pose_node on top of its mocap ones
@@ -324,6 +337,7 @@ def generate_launch_description():
             "has_mount": vio_mount is not None,
             "mount_yaw_deg": float(vio_mount["mount_yaw_deg"]) if vio_mount else 0.0,
             "vio_lever_arm": vio_lever_arm,
+            "room_tilt_deg": vio_room_tilt,
             # Back to the mocap, until the node is started again, when PX4's position is further
             # than this from the mocap. The node's other reasons to go back keep its defaults
             # (group_vars/all lists them).

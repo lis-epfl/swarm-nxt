@@ -75,6 +75,16 @@ Eigen::Quaterniond Rz(double angle) {
   return Eigen::Quaterniond(Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ()));
 }
 
+// a rotation about a horizontal axis, given as its rotation vector (radians)
+Eigen::Quaterniond Tilt(const Eigen::Vector2d &v) {
+  const Eigen::Vector3d r(v.x(), v.y(), 0.0);
+  const double angle = r.norm();
+  if (angle == 0.0) {
+    return Eigen::Quaterniond::Identity();
+  }
+  return Eigen::Quaterniond(Eigen::AngleAxisd(angle, r / angle));
+}
+
 size_t VioRingSize(double settle_s) {
   const double poses = std::ceil(settle_s * kVioMaxRateHz) + 8.0;
   return static_cast<size_t>(std::min(std::max(poses, 64.0), 65536.0));
@@ -136,6 +146,7 @@ VisionPoseCore::VisionPoseCore(const Params &params)
       settle_ns_(static_cast<int64_t>(params.vio_settle_s * 1e9)),
       hold_ns_(static_cast<int64_t>(params.fallback_hold_s * 1e9)),
       trim_window_ns_(static_cast<int64_t>(params.heading_trim_window_s * 1e9)),
+      q_tilt_(Tilt(params.room_tilt)),
       mocap_ring_(kMocapRingSize),
       vio_ring_(VioRingSize(params.vio_settle_s)),
       pair_ring_(kPairRingSize),
@@ -308,7 +319,7 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
     const bool settled = IsSettled();
     // where the placement in use so far puts this pose
     const double psi_old = psi0_ + trim_;
-    const Eigen::Vector3d p_old = Rz(psi_old) * (p_v - p_v0_) + p_0_;
+    const Eigen::Vector3d p_old = Placement(psi_old) * (p_v - p_v0_) + p_0_;
     if (settled) {
       placed_now = Place();
     }
@@ -316,10 +327,12 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
     if (vio_ready_ && !was_ready) {
       if (placement_from_mocap_) {
         Log("VIO ready: heading %.2f deg (mount yaw %.2f deg), pin vio [%.3f, "
-            "%.3f, %.3f] room [%.3f, %.3f, %.3f], body tilt %.2f deg, %d pairs",
+            "%.3f, %.3f] room [%.3f, %.3f, %.3f], body tilt %.2f deg, room "
+            "tilt [%.2f, %.2f] deg, %d pairs",
             Deg(Wrap(psi0_)), Deg(params_.has_mount ? params_.mount_yaw : 0.0),
             p_v0_.x(), p_v0_.y(), p_v0_.z(), p_0_.x(), p_0_.y(), p_0_.z(),
-            Deg(body_tilt_), placement_pairs_);
+            Deg(body_tilt_), Deg(params_.room_tilt.x()),
+            Deg(params_.room_tilt.y()), placement_pairs_);
       } else {
         Log("VIO ready: placed at the start pose without mocap, heading %.2f "
             "deg, pin vio [%.3f, %.3f, %.3f] room [%.3f, %.3f, %.3f]",
@@ -339,7 +352,7 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
       const double turn_deg =
           std::round(Deg(Wrap(psi0_ + trim_ - psi_old)) * 100.0) / 100.0;
       Log("VIO placed again: step %.3f m, heading %+.2f deg, reset_counter %u",
-          (Rz(psi0_ + trim_) * (p_v - p_v0_) + p_0_ - p_old).norm(),
+          (Placement(psi0_ + trim_) * (p_v - p_v0_) + p_0_ - p_old).norm(),
           turn_deg + 0.0, static_cast<unsigned>(reset_counter_));
     }
   }
@@ -352,7 +365,7 @@ VisionPoseCore::VioResult VisionPoseCore::HandleVio(const VioPose &pose,
       }
       SlewTrim(pose.stamp_ns, prev_stamp_ns);
     }
-    const Eigen::Quaterniond q_psi = Rz(psi0_ + trim_);
+    const Eigen::Quaterniond q_psi = Placement(psi0_ + trim_);
     placed->stamp_ns = pose.stamp_ns;
     placed->p = q_psi * (p_v - p_v0_) + p_0_;
     placed->q = q_psi * q_v;
@@ -593,7 +606,8 @@ bool VisionPoseCore::Place() {
   const int64_t start_ns = vio_stamp_ns_ - kPlacementWindowNs;
 
   // pairs of the last second: heading from the two attitudes, pin from the
-  // two positions
+  // two positions. The heading is read with the room tilt taken off: the VIO
+  // is placed with the tilt on top of it.
   int pairs = 0;
   double sum_sin = 0.0;
   double sum_cos = 0.0;
@@ -604,8 +618,9 @@ bool VisionPoseCore::Place() {
     if (pair.stamp_ns < start_ns) {
       break;
     }
-    const double yaw =
-        Yaw((pair.q_m * pair.q_v.conjugate()).toRotationMatrix());
+    const Eigen::Quaterniond q_mv =
+        q_tilt_.conjugate() * pair.q_m * pair.q_v.conjugate();
+    const double yaw = Yaw(q_mv.toRotationMatrix());
     sum_sin += std::sin(yaw);
     sum_cos += std::cos(yaw);
     sum_v += pair.p_v;
@@ -615,9 +630,9 @@ bool VisionPoseCore::Place() {
   if (pairs >= kMinPlacementPoses) {
     const double psi0 = std::atan2(sum_sin, sum_cos) +
                         (params_.has_mount ? params_.mount_yaw : 0.0);
-    // rigid body -> IMU body: mean of R_v^T Rz(psi0)^T R_m over the pairs,
-    // projected onto a rotation
-    const Eigen::Quaterniond q_psi_inv = Rz(-psi0);
+    // rigid body -> IMU body: mean of R_v^T Rz(psi0)^T T^T R_m over the
+    // pairs (T the room tilt), projected onto a rotation
+    const Eigen::Quaterniond q_psi_inv = (q_tilt_ * Rz(psi0)).conjugate();
     Eigen::Matrix3d sum_c = Eigen::Matrix3d::Zero();
     for (size_t i = pair_ring_.size(); i-- > 0;) {
       const PairEntry &pair = pair_ring_[i];
@@ -681,6 +696,12 @@ bool VisionPoseCore::Place() {
   return false;
 }
 
+Eigen::Quaterniond VisionPoseCore::Placement(double psi) const {
+  // the room tilt is between the VIO's world and the mocap's room; placed at
+  // the start pose (no mocap) the VIO keeps its own vertical
+  return placement_from_mocap_ ? q_tilt_ * Rz(psi) : Rz(psi);
+}
+
 void VisionPoseCore::PairWaiting(double now_s) {
   while (!waiting_ring_.empty() && !mocap_ring_.empty() &&
          waiting_ring_.Oldest().stamp_ns <= mocap_ring_.Newest().stamp_ns) {
@@ -709,7 +730,7 @@ void VisionPoseCore::UpdateHeadingFit(int64_t stamp_ns,
   // horizontal displacement from the pin: the VIO placed without trim, and
   // the mocap. The rotation that maps the first onto the second, summed
   // over the flight, is atan2(sum of cross products, sum of dot products).
-  const Eigen::Vector3d d_v = Rz(psi0_) * (p_v - p_v0_);
+  const Eigen::Vector3d d_v = Placement(psi0_) * (p_v - p_v0_);
   const Eigen::Vector3d d_m = p_m - p_0_;
   fit_cross_ += d_v.x() * d_m.y() - d_v.y() * d_m.x();
   fit_dot_ += d_v.x() * d_m.x() + d_v.y() * d_m.y();

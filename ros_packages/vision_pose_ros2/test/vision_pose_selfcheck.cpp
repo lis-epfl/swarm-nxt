@@ -107,7 +107,9 @@ struct Scenario {
   double land = kInf;
   double slope = 0.0;                     // tilt of the ground it starts from
   double psi = 0.6;                       // VIO world -> room heading
-  Eigen::Vector3d shift{4.0, -7.0, 0.3};  // p_room = Rz(psi) p_vio + shift
+  Eigen::Vector3d shift{4.0, -7.0, 0.3};  // p_room = T Rz(psi) p_vio + shift
+  // T: the VIO's vertical tilted in the room (a room not level in the mocap)
+  Eigen::Quaterniond room_tilt = Eigen::Quaterniond::Identity();
   Eigen::Quaterniond c = Eigen::Quaterniond::Identity();  // rigid body -> IMU
   // position of the IMU from the rigid body's origin, in the IMU frame: the
   // estimator reports the IMU, the mocap the origin
@@ -290,16 +292,17 @@ Record Run(const Scenario &sc) {
             {event.arrival, false, px4, core.GetStatus(now).source});
       }
     } else if (event.kind == 1 || event.kind == 5) {
-      // IMU body in the VIO world: R_v = Rz(psi)^T R_m C^T
+      // IMU body in the VIO world: R_v = Rz(psi)^T T^T R_m C^T
       const bool restarted = event.t >= sc.vio_restart_at;
+      const Eigen::Quaterniond to_vio = Rz(-sc.psi) * sc.room_tilt.conjugate();
       vision_pose::VioPose pose;
       pose.stamp_ns = Stamp(event.t - (event.kind == 5 ? 10.0 : 0.0) +
                             (restarted ? sc.vio_restart_stamp_s : 0.0));
-      pose.p = Rz(-sc.psi) * (truth.p + (truth.q * sc.c.conjugate()) * sc.lever +
-                              sc.vio_error(event.t) - sc.shift -
-                              (restarted ? Eigen::Vector3d(5.0, 0.0, 0.0)
-                                         : Eigen::Vector3d(0.0, 0.0, 0.0)));
-      pose.q = Rz(-sc.psi) * truth.q * sc.c.conjugate() *
+      pose.p = to_vio * (truth.p + (truth.q * sc.c.conjugate()) * sc.lever +
+                         sc.vio_error(event.t) - sc.shift -
+                         (restarted ? Eigen::Vector3d(5.0, 0.0, 0.0)
+                                    : Eigen::Vector3d(0.0, 0.0, 0.0)));
+      pose.q = to_vio * truth.q * sc.c.conjugate() *
                sc.vio_attitude_error(event.t);
       Px4Sample px4;
       PlacedPose placed;
@@ -623,6 +626,40 @@ void CheckTilt() {
         Fmt("error %.4f deg, placed VIO up to %.1f mm off",
             Wrap(sloped.last.heading_deg * kDeg - sc.psi) / kDeg,
             1e3 * position));
+}
+
+void CheckRoomTilt() {
+  std::printf("placement: the VIO's vertical tilted in the room\n");
+  Scenario sc;
+  sc.params.vio_enabled = true;
+  sc.params.has_mount = true;
+  // about the room tilt of the fleet's flights of 19/20 Oct 2026 (0.5-1.1 deg)
+  const Eigen::Vector3d tilt =
+      1.0 * kDeg * Eigen::Vector3d(-0.1, 1.0, 0.0).normalized();
+  sc.room_tilt =
+      Eigen::Quaterniond(Eigen::AngleAxisd(tilt.norm(), tilt.normalized()));
+  sc.arm = 9.5;
+  sc.takeoff = 10.5;
+  sc.duration = 26.0;
+  double position, angle;
+  const Record level = Run(sc);
+  PlacedError(sc, level, 0.0, &position, &angle);
+  Check(position > 0.02,
+        "placed with the heading only, the VIO is cm off over the figure",
+        Fmt("max %.1f mm", 1e3 * position));
+  sc.params.room_tilt = Eigen::Vector2d(tilt.x(), tilt.y());
+  const Record tilted = Run(sc);
+  PlacedError(sc, tilted, 0.0, &position, &angle);
+  Check(position < 1e-5 && angle < 1e-5,
+        "with the room tilt, placed VIO within 0.01 mm and 1e-5 rad",
+        Fmt("max %.4f mm, %.2e rad", 1e3 * position, angle));
+  Check(std::abs(Wrap(tilted.last.heading_deg * kDeg - sc.psi)) / kDeg < 1e-3,
+        "heading read with the tilt taken off",
+        Fmt("error %.5f deg",
+            Wrap(tilted.last.heading_deg * kDeg - sc.psi) / kDeg));
+  Check(tilted.last.body_tilt_deg < 1e-3,
+        "no body tilt identified from the room's",
+        Fmt("%.4f deg", tilted.last.body_tilt_deg));
 }
 
 void CheckVioNav() {
@@ -2283,6 +2320,7 @@ int main() {
   CheckPlacementExact();
   CheckTilt();
   CheckLeverArm();
+  CheckRoomTilt();
   CheckVioNav();
   CheckArmedBeforeReady();
   CheckDistanceFallback();
