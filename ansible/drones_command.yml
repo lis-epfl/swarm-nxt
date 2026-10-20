@@ -39,6 +39,24 @@
     #     path: /home/lis/logs
     #     state: absent
 
+    # ---- the planner's settings, without drones_update.yml ----
+    # Copies agent_omninxt_config.yaml of the planner commit in group_vars/all
+    # (planner_version) into the planner's package on the drones. The install space links
+    # to it (colcon --symlink-install), so the planner reads it at its next start
+    # (drones_preflight.yml or drones_relaunch.yml), without a build. Enough for a commit
+    # that changes only that file; one that changes the planner's code needs
+    # drones_update.yml. This computer downloads the file, so the drones need no internet.
+    # Only this task: ansible-playbook drones_command.yml --tags planner_config
+    - name: Copy the planner's settings of {{ planner_version[:7] }}
+      become: false # the workspace is lis's
+      ansible.builtin.copy:
+        content: "{{ lookup('ansible.builtin.url', planner_config_url, split_lines=false) }}"
+        dest: "{{ drone_ros_path }}/src/multi_agent_pkgs/multi_agent_planner/config/agent_omninxt_config.yaml"
+        mode: "0644"
+      vars:
+        planner_config_url: "https://raw.githubusercontent.com/ctoumieh/multi_agent_pkgs/{{ planner_version }}/multi_agent_planner/config/agent_omninxt_config.yaml"
+      tags: planner_config
+
     # ---- backfill the perception dependencies on already-provisioned drones ----
     # These live in tasks/setup-common.yml, which is only included from
     # drone_setup.yml — the one-time provisioning playbook. A drone that was set up

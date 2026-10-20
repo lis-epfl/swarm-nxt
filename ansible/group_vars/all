@@ -30,6 +30,17 @@ drone_num: "{{ ns | regex_search('[0-9]+$') | default('0', true) }}"
 
 optitrack_server_address: "192.168.194.3"
 
+# The planner the drones run (HDSM): a commit of the branch swarm-nxt of
+# https://github.com/ctoumieh/multi_agent_pkgs, rather than the branch name, so what a drone runs
+# changes only when this line does. drones_update.yml checks it out and builds it.
+# drones_command.yml copies only its settings (agent_omninxt_config.yaml) into the planner's
+# package on the drones, which is enough when nothing else changed: the install space links to
+# the package (colcon --symlink-install), and the planner reads the file at its next start.
+# abc64cc: 353ad00 (the fix for the planner dying on start planning), then only settings: the
+# state-correction threshold raised from 0.25 to 0.35 m (fa4c201) and min_acc_z from -10 to
+# -8.5 m/s2 (abc64cc, after nxt3 flipped hopping over nxt10 on 20 Oct 2026).
+planner_version: abc64cc3e5335bfbb25147bd5f1623073a51ba01
+
 # Camera/vision modes — independent flags. Either flag enables the oak camera driver
 # and the camera sync/focus preflight checks. enable_depth additionally launches the
 # depth estimation node (and its consumers in the planner). You can override per-drone

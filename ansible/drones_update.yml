@@ -69,10 +69,8 @@
       repo: https://github.com/ctoumieh/multi_agent_pkgs/
       dest: "{{ drone_ros_path }}/src/multi_agent_pkgs"
       force: yes
-      # Tip of the branch `swarm-nxt`: 353ad00 (the fix for the planner dying on start
-      # planning) plus the state-correction threshold raised from 0.25 to 0.35 m. A commit
-      # rather than the branch name, so what a drone runs changes only when this line does.
-      version: fa4c20186b9a01c863b56af776e70f5c414fec7a
+      # A commit of the branch `swarm-nxt`, and what it has: planner_version in group_vars/all
+      version: "{{ planner_version }}"
 
   - name: SwarmNXT Nodes
     block: 
