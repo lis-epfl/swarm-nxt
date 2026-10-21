@@ -354,7 +354,7 @@ class DroneGUINode(Node):
     def battery_status_callback(self, msg: BatteryStatus, drone_name: str):
         self.drone_battery_statuses[drone_name] = {
             "soc_estimate": msg.volt_based_soc_estimate,
-            "voltage_v": msg.ocv_estimate_filtered,
+            "voltage_v": msg.voltage_v,
             "warning": msg.warning
         }
 
